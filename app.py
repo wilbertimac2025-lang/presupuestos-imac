@@ -30,7 +30,7 @@ def conectar_sheets():
         sheet = cliente.open_by_key("1-grdT2H5dBlGVPvJbZ5wVYDdtVjQEEmUPGpvEm6C0Gc").worksheet("Presupuestos")
         return sheet
     except Exception as e:
-        st.error("Error de conexión a la base de datos.")
+        st.error(f"El error técnico exacto es: {e}")
         return None
 
 # --- ESTILO ---

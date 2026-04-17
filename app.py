@@ -32,16 +32,15 @@ SISTEMAS_CATALOGO = [
 # --- CLASE PARA EL PDF (ESTILO TARC / IMAC) ---
 class PDF(FPDF):
     def header(self):
-        # LOGO TARC (Se ubica en la esquina superior izquierda)
-        if os.path.exists("logo_tarc.png"):
-            self.image("logo_tarc.png", x=10, y=8, w=65) 
+        # LOGO TARC (Buscando el archivo .jpg)
+        if os.path.exists("logo_tarc.jpg"):
+            self.image("logo_tarc.jpg", x=10, y=8, w=65) 
         else:
             self.set_font('Arial', 'B', 14)
             self.cell(0, 6, 'TARC S.A. DE C.V.', ln=True, align='L')
             self.set_font('Arial', 'B', 12)
             self.cell(0, 6, 'IMAC', ln=True, align='L')
         
-        # Bajamos el cursor para que el texto de la fecha no se encime con el logo
         self.set_y(28)
 
 # --- CONEXIÓN A GOOGLE SHEETS ---
@@ -62,7 +61,6 @@ def conectar_sheets():
 
 # --- INTERFAZ WEB DINÁMICA ---
 st.title("🍊 Presupuestos Multizona")
-st.info(f"Archivos que el servidor está viendo ahorita: {os.listdir()}")
 st.write("Generador de Propuestas Comerciales IMAC")
 
 num_areas = st.number_input("¿Cuántas áreas distintas vas a cotizar en este proyecto?", min_value=1, max_value=10, value=1, step=1)
@@ -199,13 +197,12 @@ if boton:
             pdf.cell(0, 5, fecha_validez.strftime("%d/%m/%Y"), ln=True)
             pdf.ln(8)
             
-            # --- ZONA DE BANCOS (Con Logo) ---
+            # --- ZONA DE BANCOS (Buscando .jpg) ---
             if pdf.get_y() > 240:
                 pdf.add_page()
             
-            if os.path.exists("logo_bbva.png"):
-                # Si subes la imagen, la coloca de buen tamaño y se salta el texto manual
-                pdf.image("logo_bbva.png", x=10, y=pdf.get_y(), w=65)
+            if os.path.exists("logo_bbva.jpg"):
+                pdf.image("logo_bbva.jpg", x=10, y=pdf.get_y(), w=65)
                 pdf.ln(25)
             else:
                 pdf.set_font('Arial', 'B', 9)
@@ -231,13 +228,12 @@ if boton:
             pdf.cell(0, 4, 'TEL. (229) 935 39 40 | ventas1@grupo-imac.com | www.grupo-imac.com', ln=True)
             pdf.ln(10)
 
-            # --- FOOTER DE MARCAS PROVEEDORAS ---
+            # --- FOOTER DE MARCAS PROVEEDORAS (Buscando .jpg) ---
             if pdf.get_y() > 250: 
                 pdf.add_page()
             
-            if os.path.exists("footer_marcas.png"):
-                # w=190 ocupa todo el ancho horizontal de la hoja tamaño carta
-                pdf.image("footer_marcas.png", x=10, y=pdf.get_y(), w=190)
+            if os.path.exists("footer_marcas.jpg"):
+                pdf.image("footer_marcas.jpg", x=10, y=pdf.get_y(), w=190)
 
             # Guardar en Excel
             hoja = conectar_sheets()

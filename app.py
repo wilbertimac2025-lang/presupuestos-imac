@@ -29,16 +29,17 @@ SISTEMAS_CATALOGO = [
     "MASTER LASSER 4.5 MM FIBRA POLIESTER ROJO"
 ]
 
-# --- CLASE PARA EL PDF (ESTILO TARC / IMAC) ---
+# --- CLASE PARA EL PDF (DISEÑO AZUL ELEGANTE) ---
 class PDF(FPDF):
     def header(self):
-        # LOGO TARC (Buscando el archivo .jpg)
         if os.path.exists("logo_tarc.jpg"):
             self.image("logo_tarc.jpg", x=10, y=8, w=65) 
         else:
             self.set_font('Arial', 'B', 14)
+            self.set_text_color(15, 60, 140) # Azul Marino
             self.cell(0, 6, 'TARC S.A. DE C.V.', ln=True, align='L')
             self.set_font('Arial', 'B', 12)
+            self.set_text_color(41, 128, 185) # Azul Claro
             self.cell(0, 6, 'IMAC', ln=True, align='L')
         
         self.set_y(28)
@@ -93,7 +94,7 @@ if boton:
     if not cliente or not zonas_data[0]["area"]:
         st.error("⚠️ Faltan datos del cliente o nombres de las áreas.")
     else:
-        with st.spinner("Armando el documento multizona con logotipos..."):
+        with st.spinner("Aplicando diseño corporativo azul y acomodando logos..."):
             subtotal_general = 0
             
             pdf = PDF()
@@ -102,13 +103,16 @@ if boton:
             
             fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
             pdf.set_font('Arial', '', 10)
+            pdf.set_text_color(0, 0, 0)
             pdf.cell(0, 5, f'VERACRUZ, VER. A {fecha_hoy}', ln=True, align='R')
             pdf.ln(5)
             
             pdf.set_font('Arial', 'B', 11)
+            pdf.set_text_color(15, 60, 140) # Azul Marino para el cliente
             pdf.cell(0, 5, cliente.upper(), ln=True)
             if proyecto:
                 pdf.cell(0, 5, proyecto.upper(), ln=True)
+            pdf.set_text_color(0, 0, 0)
             pdf.cell(0, 5, 'PRESENTE', ln=True)
             pdf.ln(5)
             
@@ -126,7 +130,7 @@ if boton:
                 subtotal_general += subtotal_zona
                 
                 pdf.set_font('Arial', 'B', 10)
-                pdf.set_text_color(255, 0, 0)
+                pdf.set_text_color(41, 128, 185) # Azul Acento para subtítulos de área
                 pdf.multi_cell(0, 6, txt=f"SUMINISTRO Y APLICACION DE IMPERMEABILIZANTE EN {zona['area'].upper()}:")
                 
                 pdf.set_font('Arial', 'B', 11)
@@ -138,17 +142,22 @@ if boton:
                 pdf.ln(3)
                 
                 pdf.set_font('Arial', 'B', 9)
+                pdf.set_text_color(15, 60, 140)
                 pdf.cell(0, 5, "ESPECIFICACIONES", ln=True)
+                pdf.set_text_color(0, 0, 0)
                 pdf.set_font('Arial', '', 9)
                 pdf.multi_cell(0, 4, txt=TEXTO_ESPECIFICACIONES)
                 pdf.ln(4)
                 
-                pdf.set_fill_color(230, 230, 230)
+                # Tablas con fondo azul muy claro y texto oscuro
+                pdf.set_fill_color(235, 245, 255) 
+                pdf.set_text_color(15, 60, 140)
                 pdf.set_font('Arial', 'B', 9)
                 pdf.cell(60, 6, "AREA APROXIMADA LOSA (M2)", border=1, fill=True, align='C')
                 pdf.cell(60, 6, "PRECIO POR M2", border=1, fill=True, align='C')
                 pdf.cell(70, 6, "SUBTOTAL", border=1, fill=True, align='C')
                 pdf.ln()
+                pdf.set_text_color(0, 0, 0)
                 pdf.set_font('Arial', '', 9)
                 pdf.cell(60, 6, f"{area_m2:,.2f}", border=1, align='C')
                 pdf.cell(60, 6, f"${precio_u:,.2f}", border=1, align='C')
@@ -162,6 +171,7 @@ if boton:
             if pdf.get_y() > 220:
                 pdf.add_page()
 
+            # Tabla final
             pdf.set_font('Arial', 'B', 10)
             pdf.cell(120, 6, "SUBTOTAL DE PRESUPUESTO", border=1, align='R')
             pdf.cell(70, 6, f"${subtotal_general:,.2f}", border=1, align='R')
@@ -169,14 +179,22 @@ if boton:
             pdf.cell(120, 6, "IVA", border=1, align='R')
             pdf.cell(70, 6, f"${iva:,.2f}", border=1, align='R')
             pdf.ln()
-            pdf.set_fill_color(200, 200, 200)
-            pdf.cell(120, 6, "TOTAL", border=1, fill=True, align='R')
+            
+            # FILA DE TOTAL PREMIUM (Fondo Azul Marino, Letras Blancas)
+            pdf.set_fill_color(15, 60, 140)
+            pdf.set_text_color(255, 255, 255)
+            pdf.cell(120, 8, "TOTAL", border=1, fill=True, align='R')
             gran_total_redondeado = round(gran_total)
-            pdf.cell(70, 6, f"${gran_total_redondeado:,.2f}", border=1, fill=True, align='R')
-            pdf.ln(10)
+            pdf.cell(70, 8, f"${gran_total_redondeado:,.2f}", border=1, fill=True, align='R')
+            pdf.ln(12)
+            
+            # Regresamos a texto negro para las notas
+            pdf.set_text_color(0, 0, 0)
             
             pdf.set_font('Arial', 'B', 9)
+            pdf.set_text_color(15, 60, 140)
             pdf.cell(0, 5, "NOTAS:", ln=True)
+            pdf.set_text_color(0, 0, 0)
             pdf.set_font('Arial', '', 8)
             pdf.multi_cell(0, 4, txt="- SE DEBERA HACER UN LEVANTAMIENTO FISICO PARA PODER DETERMINAR LOS ALCANCES POR TRABAJO SOLICITADO.\n- ESTO PARA PODER COTIZAR SI EXISTIERAN TRABAJOS EXTRAORDINARIOS, COTIZAR EL SISTEMA MAS ADECUADO Y VERIFICAR LAS MEDIDAS.\n- NO INCLUYE TRABAJOS DE ALBAÑILERIA")
             pdf.ln(3)
@@ -197,38 +215,45 @@ if boton:
             pdf.cell(0, 5, fecha_validez.strftime("%d/%m/%Y"), ln=True)
             pdf.ln(8)
             
-            # --- ZONA DE BANCOS (Buscando .jpg) ---
+            # --- ZONA DE BANCOS (A LA DERECHA) ---
             if pdf.get_y() > 240:
                 pdf.add_page()
             
+            # Guardamos el nivel 'Y' para que texto y logo queden alineados
+            y_bancos = pdf.get_y()
+            
             if os.path.exists("logo_bbva.jpg"):
-                pdf.image("logo_bbva.jpg", x=10, y=pdf.get_y(), w=65)
-                pdf.ln(25)
+                # x=145 lo pega a la derecha de la hoja (210mm ancho - 10 margen - 55 logo = 145)
+                pdf.image("logo_bbva.jpg", x=145, y=y_bancos, w=55)
+                pdf.ln(18)
             else:
-                pdf.set_font('Arial', 'B', 9)
-                pdf.cell(0, 5, "BBVA Bancomer", ln=True)
-                pdf.set_font('Arial', '', 9)
-                pdf.cell(20, 5, "CUENTA:")
-                pdf.cell(0, 5, "450187690", ln=True)
-                pdf.cell(20, 5, "CLABE:")
-                pdf.cell(0, 5, "012905004501876903", ln=True)
-                pdf.cell(20, 5, "RFC:")
-                pdf.cell(0, 5, "TAR9803175MA", ln=True)
-                pdf.ln(10)
+                pdf.set_font('Arial', 'B', 10)
+                pdf.set_text_color(15, 60, 140)
+                pdf.cell(0, 5, "BBVA Bancomer", ln=True, align='R')
+            
+            pdf.set_font('Arial', 'B', 9)
+            pdf.set_text_color(0, 0, 0)
+            # Todo alineado a la derecha ('R')
+            pdf.cell(0, 5, "CUENTA: 450187690", ln=True, align='R')
+            pdf.cell(0, 5, "CLABE: 012905004501876903", ln=True, align='R')
+            pdf.cell(0, 5, "RFC: TAR9803175MA", ln=True, align='R')
+            pdf.ln(12)
 
             # --- FIRMA FINAL ---
             if pdf.get_y() > 250:
                 pdf.add_page()
                 
             pdf.set_font('Arial', 'B', 9)
+            pdf.set_text_color(15, 60, 140) # Azul para la firma
             pdf.cell(0, 5, 'CORDIALMENTE', ln=True)
             pdf.cell(0, 5, 'TARC S.A. DE C.V.', ln=True)
+            pdf.set_text_color(0, 0, 0)
             pdf.set_font('Arial', '', 8)
             pdf.cell(0, 4, 'BOULEVARD MIGUEL ALEMAN 759, COL. CENTRO. VERACRUZ, VER. C.P. 91700', ln=True)
-            pdf.cell(0, 4, 'TEL. (229) 935 39 40 | rh@grupo-imac.com | www.grupo-imac.com', ln=True)
+            pdf.cell(0, 4, 'TEL. (229) 935 39 40 | ventas1@grupo-imac.com | www.grupo-imac.com', ln=True)
             pdf.ln(10)
 
-            # --- FOOTER DE MARCAS PROVEEDORAS (Buscando .jpg) ---
+            # --- FOOTER DE MARCAS PROVEEDORAS ---
             if pdf.get_y() > 250: 
                 pdf.add_page()
             
@@ -242,5 +267,5 @@ if boton:
                 hoja.append_row([fecha_hoy, "Asesor", cliente, proyecto, resumen_zonas, subtotal_general, gran_total_redondeado])
 
             pdf_output = pdf.output(dest='S').encode('latin-1')
-            st.success("✅ Documento corregido y generado con éxito.")
+            st.success("✅ Diseño Azul Premium aplicado.")
             st.download_button("📥 DESCARGAR PRESUPUESTO TARC / IMAC", data=pdf_output, file_name=f"Presupuesto_{cliente}.pdf")

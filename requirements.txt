@@ -3,3 +3,4 @@ gspread
 google-auth
 fpdf
 pillow
+google-api-python-client

@@ -215,29 +215,27 @@ if boton:
             pdf.cell(0, 5, fecha_validez.strftime("%d/%m/%Y"), ln=True)
             pdf.ln(8)
             
-            # --- ZONA DE BANCOS (A LA DERECHA) ---
-            if pdf.get_y() > 240:
+            # --- ZONA DE BANCOS (CORREGIDA PARA NO ENCIMAR) ---
+            if pdf.get_y() > 230:
                 pdf.add_page()
             
-            # Guardamos el nivel 'Y' para que texto y logo queden alineados
             y_bancos = pdf.get_y()
             
             if os.path.exists("logo_bbva.jpg"):
-                # x=145 lo pega a la derecha de la hoja (210mm ancho - 10 margen - 55 logo = 145)
+                # Si existe la imagen, la pega a la derecha y NO escribe el texto manual
                 pdf.image("logo_bbva.jpg", x=145, y=y_bancos, w=55)
-                pdf.ln(18)
+                pdf.set_y(y_bancos + 35) # Damos el espacio exacto hacia abajo para que la firma no choque
             else:
+                # Si no existe la imagen (por si acaso), entonces sí escribe el texto
                 pdf.set_font('Arial', 'B', 10)
                 pdf.set_text_color(15, 60, 140)
                 pdf.cell(0, 5, "BBVA Bancomer", ln=True, align='R')
-            
-            pdf.set_font('Arial', 'B', 9)
-            pdf.set_text_color(0, 0, 0)
-            # Todo alineado a la derecha ('R')
-            pdf.cell(0, 5, "CUENTA: 450187690", ln=True, align='R')
-            pdf.cell(0, 5, "CLABE: 012905004501876903", ln=True, align='R')
-            pdf.cell(0, 5, "RFC: TAR9803175MA", ln=True, align='R')
-            pdf.ln(12)
+                pdf.set_font('Arial', 'B', 9)
+                pdf.set_text_color(0, 0, 0)
+                pdf.cell(0, 5, "CUENTA: 450187690", ln=True, align='R')
+                pdf.cell(0, 5, "CLABE: 012905004501876903", ln=True, align='R')
+                pdf.cell(0, 5, "RFC: TAR9803175MA", ln=True, align='R')
+                pdf.ln(12)
 
             # --- FIRMA FINAL ---
             if pdf.get_y() > 250:
@@ -267,5 +265,5 @@ if boton:
                 hoja.append_row([fecha_hoy, "Asesor", cliente, proyecto, resumen_zonas, subtotal_general, gran_total_redondeado])
 
             pdf_output = pdf.output(dest='S').encode('latin-1')
-            st.success("✅ Diseño Azul Premium aplicado.")
+            st.success("✅ Diseño Azul Premium y bancos corregidos.")
             st.download_button("📥 DESCARGAR PRESUPUESTO TARC / IMAC", data=pdf_output, file_name=f"Presupuesto_{cliente}.pdf")

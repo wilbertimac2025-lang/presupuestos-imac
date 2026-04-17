@@ -4,7 +4,6 @@ from google.oauth2.service_account import Credentials
 from fpdf import FPDF
 import datetime
 import json
-import os
 
 # --- CONFIGURACIÓN ---
 st.set_page_config(page_title="Cotizador Multizona IMAC", page_icon="📝", layout="centered")
@@ -40,7 +39,8 @@ class PDF(FPDF):
         self.ln(5)
 
     def footer(self):
-        self.set_y(-40)
+        # Aseguramos que el pie de página tenga su propio espacio reservado
+        self.set_y(-35) 
         self.set_font('Arial', 'B', 9)
         self.cell(0, 5, 'CORDIALMENTE', ln=True)
         self.cell(0, 5, 'TARC S.A. DE C.V.', ln=True)
@@ -81,7 +81,6 @@ with st.form("form_presupuesto"):
     st.write(f"### Detalles de las {num_areas} Áreas")
     
     zonas_data = []
-    # Generador de bloques dinámicos
     for i in range(int(num_areas)):
         st.markdown(f"**Área {i+1}**")
         col1, col2 = st.columns(2)
@@ -92,7 +91,7 @@ with st.form("form_presupuesto"):
             m2 = st.number_input(f"Metros Cuadrados (m²)", min_value=0.0, key=f"m2_{i}")
             precio = st.number_input(f"Precio Unitario por m²", min_value=0.0, key=f"precio_{i}")
         zonas_data.append({"area": nombre_area, "sistema": sistema, "m2": m2, "precio": precio})
-        st.write("") # Espacio
+        st.write("") 
     
     boton = st.form_submit_button("GENERAR DOCUMENTO TARC / IMAC")
 
@@ -100,12 +99,14 @@ if boton:
     if not cliente or not zonas_data[0]["area"]:
         st.error("⚠️ Faltan datos del cliente o nombres de las áreas.")
     else:
-        with st.spinner("Armando el documento multizona..."):
+        with st.spinner("Armando el documento multizona sin traslapes..."):
             
             subtotal_general = 0
             
             # --- CREACIÓN DEL PDF ---
             pdf = PDF()
+            # 🚨 EL FRENO AUTOMÁTICO: Le decimos que salte de página 4.5 cm antes del final
+            pdf.set_auto_page_break(auto=True, margin=45)
             pdf.add_page()
             
             # Encabezado Fecha
@@ -128,9 +129,9 @@ if boton:
                      "CONSIDERACION LA SIGUIENTE COTIZACION, SOBRE TRABAJOS DE IMPERMEABILIZACION EN LOSAS "
                      "DE CONCRETO CONSISTENTE EN:")
             pdf.multi_cell(0, 5, txt=intro)
-            pdf.ln(5)
+            pdf.ln(8)
             
-            # --- BUCLE DE ZONAS (Aquí se imprime cada área que agregaste) ---
+            # --- BUCLE DE ZONAS ---
             for idx, zona in enumerate(zonas_data):
                 area_m2 = zona["m2"]
                 precio_u = zona["precio"]
@@ -139,7 +140,7 @@ if boton:
                 
                 # Título de la zona
                 pdf.set_font('Arial', 'B', 10)
-                pdf.set_text_color(255, 0, 0) # Rojo para el título de suministro
+                pdf.set_text_color(255, 0, 0)
                 pdf.multi_cell(0, 6, txt=f"SUMINISTRO Y APLICACION DE IMPERMEABILIZANTE EN {zona['area'].upper()}:")
                 
                 # Nombre del Sistema
@@ -150,14 +151,14 @@ if boton:
                 # Descripción General
                 pdf.set_font('Arial', '', 9)
                 pdf.multi_cell(0, 4, txt=TEXTO_DESCRIPCION)
-                pdf.ln(2)
+                pdf.ln(3)
                 
                 # Especificaciones
                 pdf.set_font('Arial', 'B', 9)
                 pdf.cell(0, 5, "ESPECIFICACIONES", ln=True)
                 pdf.set_font('Arial', '', 9)
                 pdf.multi_cell(0, 4, txt=TEXTO_ESPECIFICACIONES)
-                pdf.ln(3)
+                pdf.ln(4)
                 
                 # Tabla de Subtotal de esta zona
                 pdf.set_fill_color(230, 230, 230)
@@ -170,12 +171,18 @@ if boton:
                 pdf.cell(60, 6, f"{area_m2:,.2f}", border=1, align='C')
                 pdf.cell(60, 6, f"${precio_u:,.2f}", border=1, align='C')
                 pdf.cell(70, 6, f"${subtotal_zona:,.2f}", border=1, align='C')
-                pdf.ln(10)
+                
+                # Espacio extra garantizado después de cada tabla
+                pdf.ln(12) 
             
             # --- GRAN TOTAL (Tabla Final) ---
             iva = subtotal_general * 0.16
             gran_total = subtotal_general + iva
             
+            # Chequeo de espacio para que la tabla total no se corte por la mitad
+            if pdf.get_y() > 220:
+                pdf.add_page()
+
             pdf.set_font('Arial', 'B', 10)
             pdf.cell(120, 6, "SUBTOTAL DE PRESUPUESTO", border=1, align='R')
             pdf.cell(70, 6, f"${subtotal_general:,.2f}", border=1, align='R')
@@ -185,7 +192,9 @@ if boton:
             pdf.ln()
             pdf.set_fill_color(200, 200, 200)
             pdf.cell(120, 6, "TOTAL", border=1, fill=True, align='R')
-            pdf.cell(70, 6, f"${gran_total:,.2f}", border=1, fill=True, align='R')
+            # Forzamos el total a terminar siempre en .00 como lo pediste
+            gran_total_redondeado = round(gran_total)
+            pdf.cell(70, 6, f"${gran_total_redondeado:,.2f}", border=1, fill=True, align='R')
             pdf.ln(10)
             
             # --- NOTAS Y CONDICIONES ---
@@ -193,7 +202,7 @@ if boton:
             pdf.cell(0, 5, "NOTAS:", ln=True)
             pdf.set_font('Arial', '', 8)
             pdf.multi_cell(0, 4, txt="- SE DEBERA HACER UN LEVANTAMIENTO FISICO PARA PODER DETERMINAR LOS ALCANCES POR TRABAJO SOLICITADO.\n- ESTO PARA PODER COTIZAR SI EXISTIERAN TRABAJOS EXTRAORDINARIOS, COTIZAR EL SISTEMA MAS ADECUADO Y VERIFICAR LAS MEDIDAS.\n- NO INCLUYE TRABAJOS DE ALBAÑILERIA")
-            pdf.ln(2)
+            pdf.ln(3)
             
             pdf.set_font('Arial', 'B', 9)
             pdf.cell(60, 5, "GARANTIA DEL SISTEMA EN AÑOS:")
@@ -209,9 +218,12 @@ if boton:
             pdf.cell(60, 5, "COTIZACION VALIDA AL:")
             pdf.set_font('Arial', '', 9)
             pdf.cell(0, 5, fecha_validez.strftime("%d/%m/%Y"), ln=True)
-            pdf.ln(5)
+            pdf.ln(8)
             
             # Datos Bancarios
+            if pdf.get_y() > 240:
+                pdf.add_page()
+            
             pdf.set_font('Arial', 'B', 9)
             pdf.cell(0, 5, "BBVA Bancomer", ln=True)
             pdf.set_font('Arial', '', 9)
@@ -222,13 +234,12 @@ if boton:
             pdf.cell(20, 5, "RFC:")
             pdf.cell(0, 5, "TAR9803175MA", ln=True)
 
-            # Registro en Excel (Guarda un resumen)
+            # Registro en Excel
             hoja = conectar_sheets()
             if hoja:
-                # Extraer un resumen de las zonas para el Excel
                 resumen_zonas = " / ".join([f"{z['area']} ({z['m2']}m2)" for z in zonas_data])
-                hoja.append_row([fecha_hoy, "Asesor", cliente, proyecto, resumen_zonas, subtotal_general, gran_total])
+                hoja.append_row([fecha_hoy, "Asesor", cliente, proyecto, resumen_zonas, subtotal_general, gran_total_redondeado])
 
             pdf_output = pdf.output(dest='S').encode('latin-1')
-            st.success("✅ Documento generado con éxito.")
-            st.download_button("📥 DESCARGAR PRESUPUESTO OFICIAL", data=pdf_output, file_name=f"Presupuesto_{cliente}.pdf")
+            st.success("✅ Documento corregido y generado con éxito.")
+            st.download_button("📥 DESCARGAR PRESUPUESTO TARC / IMAC", data=pdf_output, file_name=f"Presupuesto_{cliente}.pdf")

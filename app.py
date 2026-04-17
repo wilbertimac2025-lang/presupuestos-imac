@@ -62,6 +62,7 @@ def conectar_sheets():
 
 # --- INTERFAZ WEB DINÁMICA ---
 st.title("🍊 Presupuestos Multizona")
+st.info(f"Archivos que el servidor está viendo ahorita: {os.listdir()}")
 st.write("Generador de Propuestas Comerciales IMAC")
 
 num_areas = st.number_input("¿Cuántas áreas distintas vas a cotizar en este proyecto?", min_value=1, max_value=10, value=1, step=1)

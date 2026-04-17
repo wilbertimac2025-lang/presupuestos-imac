@@ -1,22 +1,52 @@
 import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
-import math
 from fpdf import FPDF
 import datetime
 import json
 import os
 
 # --- CONFIGURACIÓN ---
-st.set_page_config(page_title="Presupuestos IMAC", page_icon="📝", layout="centered")
+st.set_page_config(page_title="Cotizador Multizona IMAC", page_icon="📝", layout="centered")
 
-# --- CLASE PARA EL PDF ---
+# --- TEXTOS PREDEFINIDOS DEL PDF OFICIAL ---
+TEXTO_DESCRIPCION = ("ES UN SISTEMA DE IMPERMEABILIZACION PREFABRICADO, CONSISTE EN UNA MEMBRANA MULTICAPA ELABORADA A BASE DE "
+                    "ASFALTOS MODIFICADOS UN REFUERZO CENTRAL DE FIBRA POLIESTER, SON DE LARGA VIDA, RESISTIENDO MUCHO MAS AL "
+                    "INTEMPERISMO, SON DE FACIL APLICACION PUES SE ADHIERE POR FUSION TERMICA A CUALQUIER TECHO O SUSTRATO, ES "
+                    "FLEXIBLE POR LO QUE SE PUEDE COLOCAR EN CUALQUIER SUPERFICIE LOGRANDOSE TOTAL SEGURIDAD A LO LARGO DE "
+                    "TODAS SUS UNIONES Y REMATES PUES QUEDAN PRACTICAMENTE SOLDADAS, OBTENIENDOSE ASI UNA TOTAL IMPERMEABILIDAD.")
+
+TEXTO_ESPECIFICACIONES = ("PREPARACION DE LA SUPERFICIE A IMPERMEABILIZAR.\n"
+                         "- LIMPIEZA DEL AREA HASTA QUEDAR LIBRE DE POLVO\n"
+                         "- APLICACION DE HIDROFLEX COMO PRIMARIO SELLADOR.\n\n"
+                         "COLOCACION DEL IMPERMEABILIZANTE PREFABRICADO\n"
+                         "- SELLADO DE ORILLAS Y TRASLAPES POR MEDIO DE FUSION")
+
+SISTEMAS_CATALOGO = [
+    "MASTER LASSER 3.0 MM FIBRA POLIESTER LISO ARENADO",
+    "MASTER LASSER 3.5 MM FIBRA POLIESTER BLANCO",
+    "MASTER LASSER 4.0 MM FIBRA POLIESTER BLANCO",
+    "MASTER LASSER 4.5 MM FIBRA POLIESTER ROJO"
+]
+
+# --- CLASE PARA EL PDF (ESTILO TARC / IMAC) ---
 class PDF(FPDF):
+    def header(self):
+        self.set_font('Arial', 'B', 14)
+        self.set_text_color(0, 0, 0)
+        self.cell(0, 6, 'TARC S.A. DE C.V.', ln=True, align='L')
+        self.set_font('Arial', 'B', 12)
+        self.cell(0, 6, 'IMAC', ln=True, align='L')
+        self.ln(5)
+
     def footer(self):
-        self.set_y(-15)
-        self.set_font('Arial', 'I', 8)
-        self.set_text_color(150, 150, 150)
-        self.cell(0, 10, f'Grupo IMAC | Presupuesto de Obra | Pagina {self.page_no()}', 0, 0, 'C')
+        self.set_y(-40)
+        self.set_font('Arial', 'B', 9)
+        self.cell(0, 5, 'CORDIALMENTE', ln=True)
+        self.cell(0, 5, 'TARC S.A. DE C.V.', ln=True)
+        self.set_font('Arial', '', 8)
+        self.cell(0, 4, 'BOULEVARD MIGUEL ALEMAN 759, COL. CENTRO. VERACRUZ, VER. C.P. 91700', ln=True)
+        self.cell(0, 4, 'TEL. (229) 935 39 40 | ventas1@grupo-imac.com | www.grupo-imac.com', ln=True)
 
 # --- CONEXIÓN A GOOGLE SHEETS ---
 @st.cache_resource
@@ -26,138 +56,179 @@ def conectar_sheets():
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(credenciales_dic, scopes=scopes)
         cliente = gspread.authorize(creds)
-        # ⚠️ PON AQUÍ TU ID REAL DE GOOGLE SHEETS
-        sheet = cliente.open_by_key("1-grdT2H5dBlGVPvJbZ5wVYDdtVjQEEmUPGpvEm6C0Gc").worksheet("Presupuestos")
+        # ⚠️ REEMPLAZA CON TU ID DE EXCEL DE PRESUPUESTOS
+        ID_DEL_EXCEL = "1-grdT2H5dBlGVPvJbZ5wVYDdtVjQEEmUPGpvEm6C0Gc" 
+        sheet = cliente.open_by_key(ID_DEL_EXCEL).worksheet("Presupuestos")
         return sheet
     except Exception as e:
-        st.error(f"El error técnico exacto es: {e}")
+        st.error(f"Error técnico: {e}")
         return None
 
-# --- ESTILO ---
-st.markdown("""
-    <style>
-    div.stButton > button:first-child {
-        background-color: #FF6600; color: white; height: 3em; width: 100%; border-radius: 10px; font-size: 20px; font-weight: bold;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+# --- INTERFAZ WEB DINÁMICA ---
+st.title("🍊 Presupuestos Multizona")
+st.write("Generador de Propuestas Comerciales IMAC")
 
-# --- INTERFAZ ---
-st.title("🍊 Generador de Presupuestos IMAC")
-st.subheader("Suministro y Aplicación de Impermeabilizante")
+# Control dinámico fuera del formulario
+num_areas = st.number_input("¿Cuántas áreas distintas vas a cotizar en este proyecto?", min_value=1, max_value=10, value=1, step=1)
 
-with st.form("presupuesto_form"):
-    st.write("### 1. Información General")
-    vendedor = st.text_input("Asesor Comercial")
-    cliente_nom = st.text_input("Nombre del Cliente")
-    obra_loc = st.text_input("Ubicación de la Obra")
+with st.form("form_presupuesto"):
+    st.write("### Datos Generales")
+    fecha_validez = st.date_input("Cotización válida hasta:")
+    cliente = st.text_input("Nombre del Cliente / Empresa (Ej. ING. JAVIER SEGURA)")
+    proyecto = st.text_input("Nombre del Proyecto (Ej. O+ ARQUITECTOS / ALTESE)")
     
     st.write("---")
-    st.write("### 2. Detalles del Trabajo")
-    col1, col2 = st.columns(2)
-    with col1:
-        sistema = st.selectbox("Sistema a Presupuestar:", [
-            "Master Lasser 3.5mm Fibra Poliester",
-            "Master Lasser 4.0mm Fibra Poliester",
-            "Master Lasser 4.5mm APP",
-            "Sistema Especial (Especificar en notas)"
-        ])
-        m2_obra = st.number_input("Metros Cuadrados (m²):", min_value=0.0, step=10.0)
+    st.write(f"### Detalles de las {num_areas} Áreas")
     
-    with col2:
-        precio_m2 = st.number_input("Precio Unitario (Mat + M.O.) por m²:", min_value=0.0, step=5.0)
-        garantia = st.selectbox("Garantía ofrecida:", ["3 años", "5 años", "8 años", "10 años"])
+    zonas_data = []
+    # Generador de bloques dinámicos
+    for i in range(int(num_areas)):
+        st.markdown(f"**Área {i+1}**")
+        col1, col2 = st.columns(2)
+        with col1:
+            nombre_area = st.text_input(f"Nombre de la zona (Ej. Losa de Azotea)", key=f"nombre_{i}")
+            sistema = st.selectbox(f"Sistema", SISTEMAS_CATALOGO, key=f"sist_{i}")
+        with col2:
+            m2 = st.number_input(f"Metros Cuadrados (m²)", min_value=0.0, key=f"m2_{i}")
+            precio = st.number_input(f"Precio Unitario por m²", min_value=0.0, key=f"precio_{i}")
+        zonas_data.append({"area": nombre_area, "sistema": sistema, "m2": m2, "precio": precio})
+        st.write("") # Espacio
+    
+    boton = st.form_submit_button("GENERAR DOCUMENTO TARC / IMAC")
 
-    notas = st.text_area("Descripción detallada de los trabajos (Ej: Limpieza, sellado de grietas, etc.)")
-
-    submit = st.form_submit_button("GENERAR PRESUPUESTO FORMAL")
-
-if submit:
-    if not cliente_nom or m2_obra <= 0 or precio_m2 <= 0:
-        st.warning("⚠️ Completa los datos del cliente, m² y precio para continuar.")
+if boton:
+    if not cliente or not zonas_data[0]["area"]:
+        st.error("⚠️ Faltan datos del cliente o nombres de las áreas.")
     else:
-        with st.spinner("Creando propuesta técnica-económica..."):
+        with st.spinner("Armando el documento multizona..."):
             
-            subtotal = m2_obra * precio_m2
-            iva = subtotal * 0.16
-            total_presupuesto = subtotal + iva
+            subtotal_general = 0
+            
+            # --- CREACIÓN DEL PDF ---
+            pdf = PDF()
+            pdf.add_page()
+            
+            # Encabezado Fecha
+            fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
+            pdf.set_font('Arial', '', 10)
+            pdf.cell(0, 5, f'VERACRUZ, VER. A {fecha_hoy}', ln=True, align='R')
+            pdf.ln(5)
+            
+            # Datos Cliente
+            pdf.set_font('Arial', 'B', 11)
+            pdf.cell(0, 5, cliente.upper(), ln=True)
+            if proyecto:
+                pdf.cell(0, 5, proyecto.upper(), ln=True)
+            pdf.cell(0, 5, 'PRESENTE', ln=True)
+            pdf.ln(5)
+            
+            # Intro
+            pdf.set_font('Arial', '', 10)
+            intro = ("POR ESTE MEDIO Y EN RESPUESTA A SU SOLICITUD, NOS PERMITIMOS PONER A SU AMABLE "
+                     "CONSIDERACION LA SIGUIENTE COTIZACION, SOBRE TRABAJOS DE IMPERMEABILIZACION EN LOSAS "
+                     "DE CONCRETO CONSISTENTE EN:")
+            pdf.multi_cell(0, 5, txt=intro)
+            pdf.ln(5)
+            
+            # --- BUCLE DE ZONAS (Aquí se imprime cada área que agregaste) ---
+            for idx, zona in enumerate(zonas_data):
+                area_m2 = zona["m2"]
+                precio_u = zona["precio"]
+                subtotal_zona = area_m2 * precio_u
+                subtotal_general += subtotal_zona
+                
+                # Título de la zona
+                pdf.set_font('Arial', 'B', 10)
+                pdf.set_text_color(255, 0, 0) # Rojo para el título de suministro
+                pdf.multi_cell(0, 6, txt=f"SUMINISTRO Y APLICACION DE IMPERMEABILIZANTE EN {zona['area'].upper()}:")
+                
+                # Nombre del Sistema
+                pdf.set_font('Arial', 'B', 11)
+                pdf.set_text_color(0, 0, 0)
+                pdf.cell(0, 6, zona["sistema"], ln=True)
+                
+                # Descripción General
+                pdf.set_font('Arial', '', 9)
+                pdf.multi_cell(0, 4, txt=TEXTO_DESCRIPCION)
+                pdf.ln(2)
+                
+                # Especificaciones
+                pdf.set_font('Arial', 'B', 9)
+                pdf.cell(0, 5, "ESPECIFICACIONES", ln=True)
+                pdf.set_font('Arial', '', 9)
+                pdf.multi_cell(0, 4, txt=TEXTO_ESPECIFICACIONES)
+                pdf.ln(3)
+                
+                # Tabla de Subtotal de esta zona
+                pdf.set_fill_color(230, 230, 230)
+                pdf.set_font('Arial', 'B', 9)
+                pdf.cell(60, 6, "AREA APROXIMADA LOSA (M2)", border=1, fill=True, align='C')
+                pdf.cell(60, 6, "PRECIO POR M2", border=1, fill=True, align='C')
+                pdf.cell(70, 6, "SUBTOTAL", border=1, fill=True, align='C')
+                pdf.ln()
+                pdf.set_font('Arial', '', 9)
+                pdf.cell(60, 6, f"{area_m2:,.2f}", border=1, align='C')
+                pdf.cell(60, 6, f"${precio_u:,.2f}", border=1, align='C')
+                pdf.cell(70, 6, f"${subtotal_zona:,.2f}", border=1, align='C')
+                pdf.ln(10)
+            
+            # --- GRAN TOTAL (Tabla Final) ---
+            iva = subtotal_general * 0.16
+            gran_total = subtotal_general + iva
+            
+            pdf.set_font('Arial', 'B', 10)
+            pdf.cell(120, 6, "SUBTOTAL DE PRESUPUESTO", border=1, align='R')
+            pdf.cell(70, 6, f"${subtotal_general:,.2f}", border=1, align='R')
+            pdf.ln()
+            pdf.cell(120, 6, "IVA", border=1, align='R')
+            pdf.cell(70, 6, f"${iva:,.2f}", border=1, align='R')
+            pdf.ln()
+            pdf.set_fill_color(200, 200, 200)
+            pdf.cell(120, 6, "TOTAL", border=1, fill=True, align='R')
+            pdf.cell(70, 6, f"${gran_total:,.2f}", border=1, fill=True, align='R')
+            pdf.ln(10)
+            
+            # --- NOTAS Y CONDICIONES ---
+            pdf.set_font('Arial', 'B', 9)
+            pdf.cell(0, 5, "NOTAS:", ln=True)
+            pdf.set_font('Arial', '', 8)
+            pdf.multi_cell(0, 4, txt="- SE DEBERA HACER UN LEVANTAMIENTO FISICO PARA PODER DETERMINAR LOS ALCANCES POR TRABAJO SOLICITADO.\n- ESTO PARA PODER COTIZAR SI EXISTIERAN TRABAJOS EXTRAORDINARIOS, COTIZAR EL SISTEMA MAS ADECUADO Y VERIFICAR LAS MEDIDAS.\n- NO INCLUYE TRABAJOS DE ALBAÑILERIA")
+            pdf.ln(2)
+            
+            pdf.set_font('Arial', 'B', 9)
+            pdf.cell(60, 5, "GARANTIA DEL SISTEMA EN AÑOS:")
+            pdf.set_font('Arial', '', 9)
+            pdf.cell(0, 5, "8 AÑOS", ln=True)
+            
+            pdf.set_font('Arial', 'B', 9)
+            pdf.cell(60, 5, "CONDICIONES DE PAGO:")
+            pdf.set_font('Arial', '', 9)
+            pdf.cell(0, 5, "70% DE ANTICIPO, 30% CONTRA ENTREGA", ln=True)
+            
+            pdf.set_font('Arial', 'B', 9)
+            pdf.cell(60, 5, "COTIZACION VALIDA AL:")
+            pdf.set_font('Arial', '', 9)
+            pdf.cell(0, 5, fecha_validez.strftime("%d/%m/%Y"), ln=True)
+            pdf.ln(5)
+            
+            # Datos Bancarios
+            pdf.set_font('Arial', 'B', 9)
+            pdf.cell(0, 5, "BBVA Bancomer", ln=True)
+            pdf.set_font('Arial', '', 9)
+            pdf.cell(20, 5, "CUENTA:")
+            pdf.cell(0, 5, "450187690", ln=True)
+            pdf.cell(20, 5, "CLABE:")
+            pdf.cell(0, 5, "012905004501876903", ln=True)
+            pdf.cell(20, 5, "RFC:")
+            pdf.cell(0, 5, "TAR9803175MA", ln=True)
 
+            # Registro en Excel (Guarda un resumen)
             hoja = conectar_sheets()
             if hoja:
-                fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
-                fila = [fecha_hoy, vendedor, cliente_nom, obra_loc, sistema, m2_obra, precio_m2, total_presupuesto]
-                hoja.append_row(fila)
-                st.success("✅ Registro guardado en la nube.")
+                # Extraer un resumen de las zonas para el Excel
+                resumen_zonas = " / ".join([f"{z['area']} ({z['m2']}m2)" for z in zonas_data])
+                hoja.append_row([fecha_hoy, "Asesor", cliente, proyecto, resumen_zonas, subtotal_general, gran_total])
 
-                pdf = PDF()
-                pdf.add_page()
-                
-                try:
-                    if os.path.exists("logo.jpg"): pdf.image("logo.jpg", x=10, y=8, w=50)
-                    elif os.path.exists("logo.png"): pdf.image("logo.png", x=10, y=8, w=50)
-                except: pass
-
-                pdf.set_font("Arial", 'B', 14)
-                pdf.set_text_color(255, 102, 0)
-                pdf.cell(0, 8, txt="GRUPO IMAC", ln=True, align='R')
-                pdf.set_font("Arial", size=9)
-                pdf.set_text_color(100, 100, 100)
-                pdf.cell(0, 4, txt="Presupuesto de Obra Profesional", ln=True, align='R')
-                pdf.ln(15)
-
-                pdf.set_fill_color(245, 245, 245)
-                pdf.set_text_color(0, 0, 0)
-                pdf.set_font("Arial", 'B', 11)
-                pdf.cell(0, 8, txt=f"  DIRIGIDO A: {cliente_nom}", ln=True, fill=True)
-                pdf.set_font("Arial", size=10)
-                pdf.cell(100, 6, txt=f"  Ubicacion: {obra_loc}")
-                pdf.cell(90, 6, txt=f"Fecha: {datetime.datetime.now().strftime('%d/%m/%Y')}", ln=True, align='R')
-                pdf.ln(5)
-
-                pdf.set_fill_color(255, 102, 0)
-                pdf.set_text_color(255, 255, 255)
-                pdf.set_font("Arial", 'B', 12)
-                pdf.cell(0, 10, txt="  PROPUESTA TECNICA Y ECONOMICA", ln=True, fill=True)
-                pdf.ln(3)
-
-                pdf.set_text_color(50, 50, 50)
-                pdf.set_font("Arial", 'B', 10)
-                pdf.cell(0, 6, txt="DESCRIPCION DE LOS TRABAJOS:", ln=True)
-                pdf.set_font("Arial", size=10)
-                pdf.multi_cell(0, 5, txt=notas if notas else "Suministro e instalacion de sistema impermeabilizante.")
-                pdf.ln(5)
-
-                pdf.set_font("Courier", 'B', 11)
-                pdf.set_text_color(0, 0, 0)
-                pdf.cell(120, 8, txt=f"CONCEPTO: {sistema}", border=1)
-                pdf.cell(70, 8, txt=f"AREA: {m2_obra} m2", border=1, ln=True, align='C')
-                
-                pdf.set_font("Courier", size=11)
-                pdf.cell(120, 8, txt="PRECIO UNITARIO (SUMINISTRO + MANO DE OBRA)", border=1)
-                pdf.cell(70, 8, txt=f"${precio_m2:,.2f} MXN", border=1, ln=True, align='R')
-
-                pdf.ln(5)
-                pdf.set_font("Courier", 'B', 12)
-                pdf.cell(120, 8, txt="")
-                pdf.cell(70, 8, txt=f"SUBTOTAL: ${subtotal:,.2f}", ln=True, align='R')
-                pdf.cell(120, 8, txt="")
-                pdf.cell(70, 8, txt=f"I.V.A. 16%: ${iva:,.2f}", ln=True, align='R')
-                pdf.set_text_color(255, 102, 0)
-                pdf.cell(120, 10, txt="")
-                pdf.cell(70, 10, txt=f"TOTAL: ${total_presupuesto:,.2f}", ln=True, align='R')
-
-                pdf.ln(5)
-                pdf.set_font("Arial", 'B', 10)
-                pdf.set_text_color(0, 102, 0)
-                pdf.cell(0, 6, txt=f"GARANTIA POR ESCRITO: {garantia} CONTRA DEFECTOS DE INSTALACION O MATERIAL.", ln=True)
-                
-                pdf.ln(10)
-                pdf.set_font("Arial", 'B', 10)
-                pdf.set_text_color(255, 102, 0)
-                pdf.cell(0, 6, txt="DATOS PARA PAGO:", ln=True)
-                pdf.set_font("Courier", size=9)
-                pdf.set_text_color(50, 50, 50)
-                pdf.multi_cell(0, 4, txt="Banco: BBVA\nCuenta: 0134508394\nCLABE: 012905001345083942\nRFC: IVE840928BS5")
-
-                archivo_pdf = pdf.output(dest='S').encode('latin-1')
-                st.download_button(label="📥 Descargar Presupuesto Formal", data=archivo_pdf, file_name=f"Presupuesto_{cliente_nom}.pdf", mime="application/pdf")
+            pdf_output = pdf.output(dest='S').encode('latin-1')
+            st.success("✅ Documento generado con éxito.")
+            st.download_button("📥 DESCARGAR PRESUPUESTO OFICIAL", data=pdf_output, file_name=f"Presupuesto_{cliente}.pdf")

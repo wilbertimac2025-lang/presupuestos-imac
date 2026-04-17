@@ -37,15 +37,8 @@ class PDF(FPDF):
         self.set_font('Arial', 'B', 12)
         self.cell(0, 6, 'IMAC', ln=True, align='L')
         self.ln(5)
-
-    def footer(self):
-        self.set_y(-35) 
-        self.set_font('Arial', 'B', 9)
-        self.cell(0, 5, 'CORDIALMENTE', ln=True)
-        self.cell(0, 5, 'TARC S.A. DE C.V.', ln=True)
-        self.set_font('Arial', '', 8)
-        self.cell(0, 4, 'BOULEVARD MIGUEL ALEMAN 759, COL. CENTRO. VERACRUZ, VER. C.P. 91700', ln=True)
-        self.cell(0, 4, 'TEL. (229) 935 39 40 | ventas1@grupo-imac.com | www.grupo-imac.com', ln=True)
+    
+    # Hemos eliminado el footer fijo para que no salga en cada hoja
 
 # --- CONEXIÓN A GOOGLE SHEETS ---
 @st.cache_resource
@@ -73,7 +66,6 @@ with st.form("form_presupuesto"):
     st.write("### Datos Generales")
     fecha_validez = st.date_input("Cotización válida hasta:")
     
-    # Textos limpios sin el (Ej.)
     cliente = st.text_input("Nombre del Cliente / Empresa")
     proyecto = st.text_input("Nombre del Proyecto")
     
@@ -85,7 +77,6 @@ with st.form("form_presupuesto"):
         st.markdown(f"**Área {i+1}**")
         col1, col2 = st.columns(2)
         with col1:
-            # Texto limpio sin el (Ej.)
             nombre_area = st.text_input(f"Nombre de la zona", key=f"nombre_{i}")
             sistema = st.selectbox(f"Sistema", SISTEMAS_CATALOGO, key=f"sist_{i}")
         with col2:
@@ -105,7 +96,8 @@ if boton:
             subtotal_general = 0
             
             pdf = PDF()
-            pdf.set_auto_page_break(auto=True, margin=45)
+            # Freno automático más pequeño ya que no hay footer gigante
+            pdf.set_auto_page_break(auto=True, margin=20)
             pdf.add_page()
             
             fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
@@ -217,6 +209,20 @@ if boton:
             pdf.cell(0, 5, "012905004501876903", ln=True)
             pdf.cell(20, 5, "RFC:")
             pdf.cell(0, 5, "TAR9803175MA", ln=True)
+
+            pdf.ln(15) # Espacio antes de la firma final
+            
+            # Chequeamos si la firma cabe, si no, saltamos de hoja
+            if pdf.get_y() > 250:
+                pdf.add_page()
+                
+            # --- FIRMA FINAL (Solo en la última hoja) ---
+            pdf.set_font('Arial', 'B', 9)
+            pdf.cell(0, 5, 'CORDIALMENTE', ln=True)
+            pdf.cell(0, 5, 'TARC S.A. DE C.V.', ln=True)
+            pdf.set_font('Arial', '', 8)
+            pdf.cell(0, 4, 'BOULEVARD MIGUEL ALEMAN 759, COL. CENTRO. VERACRUZ, VER. C.P. 91700', ln=True)
+            pdf.cell(0, 4, 'TEL. (229) 935 39 40 | ventas1@grupo-imac.com | www.grupo-imac.com', ln=True)
 
             hoja = conectar_sheets()
             if hoja:

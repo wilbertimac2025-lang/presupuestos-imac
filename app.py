@@ -58,8 +58,9 @@ def conectar_sheets():
         ID_DEL_EXCEL = "1-grdT2H5dBlGVPvJbZ5wVYDdtVjQEEmUPGpvEm6C0Gc" 
         sheet = cliente.open_by_key(ID_DEL_EXCEL).worksheet("Presupuestos")
         return sheet
-    except Exception:
-        return None
+    except Exception as e:
+        st.warning(f"🚨 Error exacto del correo: {e}")
+        return False
 
 def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor):
     try:

@@ -5,9 +5,8 @@ from fpdf import FPDF
 import datetime
 import json
 import os
-import io
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
+import smtplib
+from email.message import EmailMessage
 
 # --- CONFIGURACIÓN ---
 st.set_page_config(page_title="Cotizador Multizona IMAC", page_icon="📝", layout="centered")
@@ -46,40 +45,46 @@ class PDF(FPDF):
             self.cell(0, 6, 'IMAC', ln=True, align='L')
         self.set_y(28)
 
-# --- CONEXIÓN A GOOGLE SHEETS Y DRIVE ---
+# --- CONEXIONES: SHEETS Y CORREO ---
 @st.cache_resource
-def obtener_credenciales():
-    credenciales_dic = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
-    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-    return Credentials.from_service_account_info(credenciales_dic, scopes=scopes)
-
 def conectar_sheets():
     try:
-        creds = obtener_credenciales()
+        credenciales_dic = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
+        scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+        creds = Credentials.from_service_account_info(credenciales_dic, scopes=scopes)
         cliente = gspread.authorize(creds)
+        
         # ⚠️ 1. REEMPLAZA CON TU ID DE EXCEL DE PRESUPUESTOS
         ID_DEL_EXCEL = "1-grdT2H5dBlGVPvJbZ5wVYDdtVjQEEmUPGpvEm6C0Gc" 
-        # ⚠️ 2. REEMPLAZA CON EL ID DE TU NUEVA CARPETA DE DRIVE
-        global ID_CARPETA_DRIVE
-        ID_CARPETA_DRIVE = "1odK4HvNLN546ggKXpj6Hg0FGg16IyBm7" 
-        
         sheet = cliente.open_by_key(ID_DEL_EXCEL).worksheet("Presupuestos")
         return sheet
-    except Exception as e:
-        st.error(f"Error técnico de conexión: {e}")
+    except Exception:
         return None
 
-def subir_a_drive(pdf_bytes, nombre_archivo, carpeta_id):
+def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor):
     try:
-        creds = obtener_credenciales()
-        servicio_drive = build('drive', 'v3', credentials=creds)
-        file_metadata = {'name': nombre_archivo, 'parents': [carpeta_id]}
-        media = MediaIoBaseUpload(io.BytesIO(pdf_bytes), mimetype='application/pdf', resumable=True)
-        archivo = servicio_drive.files().create(body=file_metadata, media_body=media, fields='id').execute()
-        return archivo.get('id')
+        remitente = st.secrets["comercial@grupo-imac.com"]
+        password = st.secrets["2288402222884022"]
+        
+        # ⚠️ 2. PON AQUÍ EL CORREO DONDE QUIERES RECIBIR LAS COPIAS DE RESPALDO
+        correo_central = "tu_correo_gerencia@grupo-imac.com" 
+        
+        msg = EmailMessage()
+        msg['Subject'] = f'NUEVA COTIZACIÓN TARC: {cliente} (Asesor: {asesor})'
+        msg['From'] = remitente
+        msg['To'] = correo_central
+        
+        cuerpo = f"Se ha generado un nuevo presupuesto en el sistema.\n\n- Cliente: {cliente}\n- Asesor: {asesor}\n- Fecha: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M')}\n\nEl documento PDF oficial se encuentra adjunto a este correo para su respaldo y seguimiento."
+        msg.set_content(cuerpo)
+        msg.add_attachment(pdf_bytes, maintype='application', subtype='pdf', filename=nombre_archivo)
+        
+        with smtplib.SMTP('smtp.office365.com', 587) as smtp:
+            smtp.starttls()
+            smtp.login(remitente, password)
+            smtp.send_message(msg)
+        return True
     except Exception as e:
-        st.error(f"El error exacto de Google es: {e}")
-        return None
+        return False
 
 # --- INTERFAZ WEB DINÁMICA ---
 st.title("🍊 Presupuestos Multizona")
@@ -92,7 +97,7 @@ with st.form("form_presupuesto"):
     fecha_validez = st.date_input("Cotización válida hasta:")
     cliente = st.text_input("Nombre del Cliente / Empresa")
     proyecto = st.text_input("Nombre del Proyecto")
-    asesor = st.text_input("Tu Nombre (Asesor)") # Agregado para saber quién cotiza
+    asesor = st.text_input("Tu Nombre (Asesor)") 
     
     st.write("---")
     st.write(f"### Detalles de las {num_areas} Áreas")
@@ -116,7 +121,7 @@ if boton:
     if not cliente or not zonas_data[0]["area"] or not asesor:
         st.error("⚠️ Faltan datos del cliente, el asesor o nombres de las áreas.")
     else:
-        with st.spinner("Procesando documento y respaldando en la nube..."):
+        with st.spinner("Procesando documento y enviando copia de respaldo..."):
             subtotal_general = 0
             
             pdf = PDF()
@@ -259,7 +264,7 @@ if boton:
             pdf.set_text_color(0, 0, 0)
             pdf.set_font('Arial', '', 8)
             pdf.cell(0, 4, 'BOULEVARD MIGUEL ALEMAN 759, COL. CENTRO. VERACRUZ, VER. C.P. 91700', ln=True)
-            pdf.cell(0, 4, 'TEL. (229) 935 39 40 | rh@grupo-imac.com | www.grupo-imac.com', ln=True)
+            pdf.cell(0, 4, 'TEL. (229) 935 39 40 | ventas1@grupo-imac.com | www.grupo-imac.com', ln=True)
             pdf.ln(10)
 
             if pdf.get_y() > 250: 
@@ -269,7 +274,7 @@ if boton:
                 pdf.image("footer_marcas.jpg", x=10, y=pdf.get_y(), w=190)
 
             pdf_output = pdf.output(dest='S').encode('latin-1')
-            nombre_archivo_pdf = f"Presupuesto_{cliente.replace(' ', '_')}_{datetime.datetime.now().strftime('%H%M')}.pdf"
+            nombre_archivo_pdf = f"Presupuesto_{cliente.replace(' ', '_')}.pdf"
 
             # 1. Guardar en Excel
             hoja = conectar_sheets()
@@ -277,12 +282,13 @@ if boton:
                 resumen_zonas = " / ".join([f"{z['area']} ({z['m2']}m2)" for z in zonas_data])
                 hoja.append_row([fecha_hoy, asesor, cliente, proyecto, resumen_zonas, subtotal_general, gran_total_redondeado])
             
-            # 2. Subir a Google Drive
-            if ID_CARPETA_DRIVE != "TU_ID_DE_CARPETA_AQUÍ":
-                id_subido = subir_a_drive(pdf_output, nombre_archivo_pdf, ID_CARPETA_DRIVE)
-                if id_subido:
-                    st.success("✅ Archivo PDF respaldado automáticamente en Google Drive.")
-                else:
-                    st.warning("⚠️ El PDF se generó, pero hubo un problema al subirlo a Drive.")
+            # 2. Enviar copia por correo a la gerencia
+            envio_exitoso = enviar_respaldo_correo(pdf_output, nombre_archivo_pdf, cliente, asesor)
+
+            st.success("✅ Presupuesto generado correctamente.")
+            if envio_exitoso:
+                st.info("📧 Se ha enviado una copia automática a la bandeja central de la empresa.")
+            else:
+                st.warning("⚠️ El PDF se generó, pero recuerda configurar tus credenciales de correo en los Secrets.")
 
             st.download_button("📥 DESCARGAR PRESUPUESTO TARC / IMAC", data=pdf_output, file_name=nombre_archivo_pdf)

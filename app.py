@@ -225,7 +225,7 @@ if boton:
             pdf.cell(0, 5, 'TARC S.A. DE C.V.', ln=True)
             pdf.set_font('Arial', '', 8)
             pdf.cell(0, 4, 'BOULEVARD MIGUEL ALEMAN 759, COL. CENTRO. VERACRUZ, VER. C.P. 91700', ln=True)
-            pdf.cell(0, 4, 'TEL. (229) 935 39 40 | ventas1@grupo-imac.com | www.grupo-imac.com', ln=True)
+            pdf.cell(0, 4, 'TEL. (229) 935 39 40 | rh@grupo-imac.com | www.grupo-imac.com', ln=True)
             pdf.ln(10)
 
             # --- FOOTER DE MARCAS PROVEEDORAS (Buscando .jpg) ---

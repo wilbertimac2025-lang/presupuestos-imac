@@ -39,7 +39,6 @@ class PDF(FPDF):
         self.ln(5)
 
     def footer(self):
-        # Aseguramos que el pie de página tenga su propio espacio reservado
         self.set_y(-35) 
         self.set_font('Arial', 'B', 9)
         self.cell(0, 5, 'CORDIALMENTE', ln=True)
@@ -68,14 +67,15 @@ def conectar_sheets():
 st.title("🍊 Presupuestos Multizona")
 st.write("Generador de Propuestas Comerciales IMAC")
 
-# Control dinámico fuera del formulario
 num_areas = st.number_input("¿Cuántas áreas distintas vas a cotizar en este proyecto?", min_value=1, max_value=10, value=1, step=1)
 
 with st.form("form_presupuesto"):
     st.write("### Datos Generales")
     fecha_validez = st.date_input("Cotización válida hasta:")
-    cliente = st.text_input("Nombre del Cliente / Empresa (Ej. ING. JAVIER SEGURA)")
-    proyecto = st.text_input("Nombre del Proyecto (Ej. O+ ARQUITECTOS / ALTESE)")
+    
+    # Textos limpios sin el (Ej.)
+    cliente = st.text_input("Nombre del Cliente / Empresa")
+    proyecto = st.text_input("Nombre del Proyecto")
     
     st.write("---")
     st.write(f"### Detalles de las {num_areas} Áreas")
@@ -85,7 +85,8 @@ with st.form("form_presupuesto"):
         st.markdown(f"**Área {i+1}**")
         col1, col2 = st.columns(2)
         with col1:
-            nombre_area = st.text_input(f"Nombre de la zona (Ej. Losa de Azotea)", key=f"nombre_{i}")
+            # Texto limpio sin el (Ej.)
+            nombre_area = st.text_input(f"Nombre de la zona", key=f"nombre_{i}")
             sistema = st.selectbox(f"Sistema", SISTEMAS_CATALOGO, key=f"sist_{i}")
         with col2:
             m2 = st.number_input(f"Metros Cuadrados (m²)", min_value=0.0, key=f"m2_{i}")
@@ -99,23 +100,19 @@ if boton:
     if not cliente or not zonas_data[0]["area"]:
         st.error("⚠️ Faltan datos del cliente o nombres de las áreas.")
     else:
-        with st.spinner("Armando el documento multizona sin traslapes..."):
+        with st.spinner("Armando el documento multizona..."):
             
             subtotal_general = 0
             
-            # --- CREACIÓN DEL PDF ---
             pdf = PDF()
-            # 🚨 EL FRENO AUTOMÁTICO: Le decimos que salte de página 4.5 cm antes del final
             pdf.set_auto_page_break(auto=True, margin=45)
             pdf.add_page()
             
-            # Encabezado Fecha
             fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
             pdf.set_font('Arial', '', 10)
             pdf.cell(0, 5, f'VERACRUZ, VER. A {fecha_hoy}', ln=True, align='R')
             pdf.ln(5)
             
-            # Datos Cliente
             pdf.set_font('Arial', 'B', 11)
             pdf.cell(0, 5, cliente.upper(), ln=True)
             if proyecto:
@@ -123,7 +120,6 @@ if boton:
             pdf.cell(0, 5, 'PRESENTE', ln=True)
             pdf.ln(5)
             
-            # Intro
             pdf.set_font('Arial', '', 10)
             intro = ("POR ESTE MEDIO Y EN RESPUESTA A SU SOLICITUD, NOS PERMITIMOS PONER A SU AMABLE "
                      "CONSIDERACION LA SIGUIENTE COTIZACION, SOBRE TRABAJOS DE IMPERMEABILIZACION EN LOSAS "
@@ -131,36 +127,30 @@ if boton:
             pdf.multi_cell(0, 5, txt=intro)
             pdf.ln(8)
             
-            # --- BUCLE DE ZONAS ---
             for idx, zona in enumerate(zonas_data):
                 area_m2 = zona["m2"]
                 precio_u = zona["precio"]
                 subtotal_zona = area_m2 * precio_u
                 subtotal_general += subtotal_zona
                 
-                # Título de la zona
                 pdf.set_font('Arial', 'B', 10)
                 pdf.set_text_color(255, 0, 0)
                 pdf.multi_cell(0, 6, txt=f"SUMINISTRO Y APLICACION DE IMPERMEABILIZANTE EN {zona['area'].upper()}:")
                 
-                # Nombre del Sistema
                 pdf.set_font('Arial', 'B', 11)
                 pdf.set_text_color(0, 0, 0)
                 pdf.cell(0, 6, zona["sistema"], ln=True)
                 
-                # Descripción General
                 pdf.set_font('Arial', '', 9)
                 pdf.multi_cell(0, 4, txt=TEXTO_DESCRIPCION)
                 pdf.ln(3)
                 
-                # Especificaciones
                 pdf.set_font('Arial', 'B', 9)
                 pdf.cell(0, 5, "ESPECIFICACIONES", ln=True)
                 pdf.set_font('Arial', '', 9)
                 pdf.multi_cell(0, 4, txt=TEXTO_ESPECIFICACIONES)
                 pdf.ln(4)
                 
-                # Tabla de Subtotal de esta zona
                 pdf.set_fill_color(230, 230, 230)
                 pdf.set_font('Arial', 'B', 9)
                 pdf.cell(60, 6, "AREA APROXIMADA LOSA (M2)", border=1, fill=True, align='C')
@@ -172,14 +162,11 @@ if boton:
                 pdf.cell(60, 6, f"${precio_u:,.2f}", border=1, align='C')
                 pdf.cell(70, 6, f"${subtotal_zona:,.2f}", border=1, align='C')
                 
-                # Espacio extra garantizado después de cada tabla
                 pdf.ln(12) 
             
-            # --- GRAN TOTAL (Tabla Final) ---
             iva = subtotal_general * 0.16
             gran_total = subtotal_general + iva
             
-            # Chequeo de espacio para que la tabla total no se corte por la mitad
             if pdf.get_y() > 220:
                 pdf.add_page()
 
@@ -192,12 +179,10 @@ if boton:
             pdf.ln()
             pdf.set_fill_color(200, 200, 200)
             pdf.cell(120, 6, "TOTAL", border=1, fill=True, align='R')
-            # Forzamos el total a terminar siempre en .00 como lo pediste
             gran_total_redondeado = round(gran_total)
             pdf.cell(70, 6, f"${gran_total_redondeado:,.2f}", border=1, fill=True, align='R')
             pdf.ln(10)
             
-            # --- NOTAS Y CONDICIONES ---
             pdf.set_font('Arial', 'B', 9)
             pdf.cell(0, 5, "NOTAS:", ln=True)
             pdf.set_font('Arial', '', 8)
@@ -220,7 +205,6 @@ if boton:
             pdf.cell(0, 5, fecha_validez.strftime("%d/%m/%Y"), ln=True)
             pdf.ln(8)
             
-            # Datos Bancarios
             if pdf.get_y() > 240:
                 pdf.add_page()
             
@@ -234,7 +218,6 @@ if boton:
             pdf.cell(20, 5, "RFC:")
             pdf.cell(0, 5, "TAR9803175MA", ln=True)
 
-            # Registro en Excel
             hoja = conectar_sheets()
             if hoja:
                 resumen_zonas = " / ".join([f"{z['area']} ({z['m2']}m2)" for z in zonas_data])

@@ -78,6 +78,7 @@ def subir_a_drive(pdf_bytes, nombre_archivo, carpeta_id):
         archivo = servicio_drive.files().create(body=file_metadata, media_body=media, fields='id').execute()
         return archivo.get('id')
     except Exception as e:
+        st.error(f"El error exacto de Google es: {e}")
         return None
 
 # --- INTERFAZ WEB DINÁMICA ---

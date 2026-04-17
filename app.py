@@ -5,6 +5,9 @@ from fpdf import FPDF
 import datetime
 import json
 import os
+import io
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
 
 # --- CONFIGURACIÓN ---
 st.set_page_config(page_title="Cotizador Multizona IMAC", page_icon="📝", layout="centered")
@@ -36,28 +39,45 @@ class PDF(FPDF):
             self.image("logo_tarc.jpg", x=10, y=8, w=65) 
         else:
             self.set_font('Arial', 'B', 14)
-            self.set_text_color(15, 60, 140) # Azul Marino
+            self.set_text_color(15, 60, 140)
             self.cell(0, 6, 'TARC S.A. DE C.V.', ln=True, align='L')
             self.set_font('Arial', 'B', 12)
-            self.set_text_color(41, 128, 185) # Azul Claro
+            self.set_text_color(41, 128, 185)
             self.cell(0, 6, 'IMAC', ln=True, align='L')
-        
         self.set_y(28)
 
-# --- CONEXIÓN A GOOGLE SHEETS ---
+# --- CONEXIÓN A GOOGLE SHEETS Y DRIVE ---
 @st.cache_resource
+def obtener_credenciales():
+    credenciales_dic = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
+    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    return Credentials.from_service_account_info(credenciales_dic, scopes=scopes)
+
 def conectar_sheets():
     try:
-        credenciales_dic = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
-        scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-        creds = Credentials.from_service_account_info(credenciales_dic, scopes=scopes)
+        creds = obtener_credenciales()
         cliente = gspread.authorize(creds)
-        # ⚠️ REEMPLAZA CON TU ID DE EXCEL DE PRESUPUESTOS
+        # ⚠️ 1. REEMPLAZA CON TU ID DE EXCEL DE PRESUPUESTOS
         ID_DEL_EXCEL = "1-grdT2H5dBlGVPvJbZ5wVYDdtVjQEEmUPGpvEm6C0Gc" 
+        # ⚠️ 2. REEMPLAZA CON EL ID DE TU NUEVA CARPETA DE DRIVE
+        global ID_CARPETA_DRIVE
+        ID_CARPETA_DRIVE = "1odK4HvNLN546ggKXpj6Hg0FGg16IyBm7" 
+        
         sheet = cliente.open_by_key(ID_DEL_EXCEL).worksheet("Presupuestos")
         return sheet
     except Exception as e:
-        st.error(f"Error técnico: {e}")
+        st.error(f"Error técnico de conexión: {e}")
+        return None
+
+def subir_a_drive(pdf_bytes, nombre_archivo, carpeta_id):
+    try:
+        creds = obtener_credenciales()
+        servicio_drive = build('drive', 'v3', credentials=creds)
+        file_metadata = {'name': nombre_archivo, 'parents': [carpeta_id]}
+        media = MediaIoBaseUpload(io.BytesIO(pdf_bytes), mimetype='application/pdf', resumable=True)
+        archivo = servicio_drive.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        return archivo.get('id')
+    except Exception as e:
         return None
 
 # --- INTERFAZ WEB DINÁMICA ---
@@ -71,6 +91,7 @@ with st.form("form_presupuesto"):
     fecha_validez = st.date_input("Cotización válida hasta:")
     cliente = st.text_input("Nombre del Cliente / Empresa")
     proyecto = st.text_input("Nombre del Proyecto")
+    asesor = st.text_input("Tu Nombre (Asesor)") # Agregado para saber quién cotiza
     
     st.write("---")
     st.write(f"### Detalles de las {num_areas} Áreas")
@@ -91,10 +112,10 @@ with st.form("form_presupuesto"):
     boton = st.form_submit_button("GENERAR DOCUMENTO TARC / IMAC")
 
 if boton:
-    if not cliente or not zonas_data[0]["area"]:
-        st.error("⚠️ Faltan datos del cliente o nombres de las áreas.")
+    if not cliente or not zonas_data[0]["area"] or not asesor:
+        st.error("⚠️ Faltan datos del cliente, el asesor o nombres de las áreas.")
     else:
-        with st.spinner("Aplicando diseño corporativo azul y acomodando logos..."):
+        with st.spinner("Procesando documento y respaldando en la nube..."):
             subtotal_general = 0
             
             pdf = PDF()
@@ -108,7 +129,7 @@ if boton:
             pdf.ln(5)
             
             pdf.set_font('Arial', 'B', 11)
-            pdf.set_text_color(15, 60, 140) # Azul Marino para el cliente
+            pdf.set_text_color(15, 60, 140)
             pdf.cell(0, 5, cliente.upper(), ln=True)
             if proyecto:
                 pdf.cell(0, 5, proyecto.upper(), ln=True)
@@ -130,7 +151,7 @@ if boton:
                 subtotal_general += subtotal_zona
                 
                 pdf.set_font('Arial', 'B', 10)
-                pdf.set_text_color(41, 128, 185) # Azul Acento para subtítulos de área
+                pdf.set_text_color(41, 128, 185)
                 pdf.multi_cell(0, 6, txt=f"SUMINISTRO Y APLICACION DE IMPERMEABILIZANTE EN {zona['area'].upper()}:")
                 
                 pdf.set_font('Arial', 'B', 11)
@@ -149,7 +170,6 @@ if boton:
                 pdf.multi_cell(0, 4, txt=TEXTO_ESPECIFICACIONES)
                 pdf.ln(4)
                 
-                # Tablas con fondo azul muy claro y texto oscuro
                 pdf.set_fill_color(235, 245, 255) 
                 pdf.set_text_color(15, 60, 140)
                 pdf.set_font('Arial', 'B', 9)
@@ -162,7 +182,6 @@ if boton:
                 pdf.cell(60, 6, f"{area_m2:,.2f}", border=1, align='C')
                 pdf.cell(60, 6, f"${precio_u:,.2f}", border=1, align='C')
                 pdf.cell(70, 6, f"${subtotal_zona:,.2f}", border=1, align='C')
-                
                 pdf.ln(12) 
             
             iva = subtotal_general * 0.16
@@ -171,7 +190,6 @@ if boton:
             if pdf.get_y() > 220:
                 pdf.add_page()
 
-            # Tabla final
             pdf.set_font('Arial', 'B', 10)
             pdf.cell(120, 6, "SUBTOTAL DE PRESUPUESTO", border=1, align='R')
             pdf.cell(70, 6, f"${subtotal_general:,.2f}", border=1, align='R')
@@ -180,7 +198,6 @@ if boton:
             pdf.cell(70, 6, f"${iva:,.2f}", border=1, align='R')
             pdf.ln()
             
-            # FILA DE TOTAL PREMIUM (Fondo Azul Marino, Letras Blancas)
             pdf.set_fill_color(15, 60, 140)
             pdf.set_text_color(255, 255, 255)
             pdf.cell(120, 8, "TOTAL", border=1, fill=True, align='R')
@@ -188,9 +205,7 @@ if boton:
             pdf.cell(70, 8, f"${gran_total_redondeado:,.2f}", border=1, fill=True, align='R')
             pdf.ln(12)
             
-            # Regresamos a texto negro para las notas
             pdf.set_text_color(0, 0, 0)
-            
             pdf.set_font('Arial', 'B', 9)
             pdf.set_text_color(15, 60, 140)
             pdf.cell(0, 5, "NOTAS:", ln=True)
@@ -215,18 +230,14 @@ if boton:
             pdf.cell(0, 5, fecha_validez.strftime("%d/%m/%Y"), ln=True)
             pdf.ln(8)
             
-            # --- ZONA DE BANCOS (CORREGIDA PARA NO ENCIMAR) ---
             if pdf.get_y() > 230:
                 pdf.add_page()
             
             y_bancos = pdf.get_y()
-            
             if os.path.exists("logo_bbva.jpg"):
-                # Si existe la imagen, la pega a la derecha y NO escribe el texto manual
                 pdf.image("logo_bbva.jpg", x=145, y=y_bancos, w=55)
-                pdf.set_y(y_bancos + 35) # Damos el espacio exacto hacia abajo para que la firma no choque
+                pdf.set_y(y_bancos + 35) 
             else:
-                # Si no existe la imagen (por si acaso), entonces sí escribe el texto
                 pdf.set_font('Arial', 'B', 10)
                 pdf.set_text_color(15, 60, 140)
                 pdf.cell(0, 5, "BBVA Bancomer", ln=True, align='R')
@@ -237,12 +248,11 @@ if boton:
                 pdf.cell(0, 5, "RFC: TAR9803175MA", ln=True, align='R')
                 pdf.ln(12)
 
-            # --- FIRMA FINAL ---
             if pdf.get_y() > 250:
                 pdf.add_page()
                 
             pdf.set_font('Arial', 'B', 9)
-            pdf.set_text_color(15, 60, 140) # Azul para la firma
+            pdf.set_text_color(15, 60, 140)
             pdf.cell(0, 5, 'CORDIALMENTE', ln=True)
             pdf.cell(0, 5, 'TARC S.A. DE C.V.', ln=True)
             pdf.set_text_color(0, 0, 0)
@@ -251,19 +261,27 @@ if boton:
             pdf.cell(0, 4, 'TEL. (229) 935 39 40 | rh@grupo-imac.com | www.grupo-imac.com', ln=True)
             pdf.ln(10)
 
-            # --- FOOTER DE MARCAS PROVEEDORAS ---
             if pdf.get_y() > 250: 
                 pdf.add_page()
             
             if os.path.exists("footer_marcas.jpg"):
                 pdf.image("footer_marcas.jpg", x=10, y=pdf.get_y(), w=190)
 
-            # Guardar en Excel
+            pdf_output = pdf.output(dest='S').encode('latin-1')
+            nombre_archivo_pdf = f"Presupuesto_{cliente.replace(' ', '_')}_{datetime.datetime.now().strftime('%H%M')}.pdf"
+
+            # 1. Guardar en Excel
             hoja = conectar_sheets()
             if hoja:
                 resumen_zonas = " / ".join([f"{z['area']} ({z['m2']}m2)" for z in zonas_data])
-                hoja.append_row([fecha_hoy, "Asesor", cliente, proyecto, resumen_zonas, subtotal_general, gran_total_redondeado])
+                hoja.append_row([fecha_hoy, asesor, cliente, proyecto, resumen_zonas, subtotal_general, gran_total_redondeado])
+            
+            # 2. Subir a Google Drive
+            if ID_CARPETA_DRIVE != "TU_ID_DE_CARPETA_AQUÍ":
+                id_subido = subir_a_drive(pdf_output, nombre_archivo_pdf, ID_CARPETA_DRIVE)
+                if id_subido:
+                    st.success("✅ Archivo PDF respaldado automáticamente en Google Drive.")
+                else:
+                    st.warning("⚠️ El PDF se generó, pero hubo un problema al subirlo a Drive.")
 
-            pdf_output = pdf.output(dest='S').encode('latin-1')
-            st.success("✅ Diseño Azul Premium y bancos corregidos.")
-            st.download_button("📥 DESCARGAR PRESUPUESTO TARC / IMAC", data=pdf_output, file_name=f"Presupuesto_{cliente}.pdf")
+            st.download_button("📥 DESCARGAR PRESUPUESTO TARC / IMAC", data=pdf_output, file_name=nombre_archivo_pdf)

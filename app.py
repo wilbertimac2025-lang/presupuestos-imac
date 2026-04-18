@@ -116,13 +116,14 @@ if boton:
     if not cliente or not asesor:
         st.error("⚠️ El nombre del Cliente y el Asesor son obligatorios.")
     else:
-        with st.spinner("Alineando firmas y generando PDF..."):
+        with st.spinner("Generando PDF completo y alineado..."):
             subtotal_obras = sum(z["m2"] * z["precio"] for z in zonas_data)
             
             pdf = PDF()
             pdf.set_auto_page_break(auto=True, margin=20)
             pdf.add_page()
             
+            # --- ENCABEZADO DE DATOS ---
             fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
             pdf.set_font('Arial', '', 10)
             pdf.cell(0, 5, f'VERACRUZ, VER. A {fecha_hoy}', ln=True, align='R')
@@ -149,11 +150,19 @@ if boton:
             pdf.multi_cell(0, 5, txt="NOS PERMITIMOS PONER A SU AMABLE CONSIDERACION LA SIGUIENTE COTIZACION:")
             pdf.ln(5)
 
+            # --- BUCLE DE ZONAS ---
             for z in zonas_data:
                 pdf.set_font('Arial', 'B', 10); pdf.set_text_color(41, 128, 185)
                 pdf.multi_cell(0, 6, txt=f"SUMINISTRO Y APLICACION EN {z['area'].upper()}:")
                 pdf.set_font('Arial', 'B', 11); pdf.set_text_color(0, 0, 0); pdf.cell(0, 6, z["sistema"], ln=True)
                 pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, txt=TEXTO_DESCRIPCION)
+                
+                pdf.ln(3)
+                pdf.set_font('Arial', 'B', 9); pdf.set_text_color(15, 60, 140)
+                pdf.cell(0, 5, "ESPECIFICACIONES", ln=True)
+                pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 9)
+                pdf.multi_cell(0, 4, txt=TEXTO_ESPECIFICACIONES)
+                pdf.ln(4)
                 
                 pdf.set_fill_color(235, 245, 255); pdf.set_text_color(15, 60, 140); pdf.set_font('Arial', 'B', 9)
                 pdf.cell(60, 6, "AREA (M2)", 1, 0, 'C', True); pdf.cell(60, 6, "PRECIO UNIT.", 1, 0, 'C', True); pdf.cell(70, 6, "SUBTOTAL", 1, 1, 'C', True)
@@ -161,6 +170,7 @@ if boton:
                 pdf.cell(60, 6, f"{z['m2']:,.2f}", 1, 0, 'C'); pdf.cell(60, 6, f"${z['precio']:,.2f}", 1, 0, 'C'); pdf.cell(70, 6, f"${z['m2']*z['precio']:,.2f}", 1, 1, 'C')
                 pdf.ln(8)
 
+            # --- TOTALES Y COSTOS EXTRA ---
             subtotal_final = subtotal_obras + costo_extra
             iva = subtotal_final * 0.16
             total_final = round(subtotal_final + iva)
@@ -182,23 +192,47 @@ if boton:
             pdf.cell(120, 8, "TOTAL", border=1, fill=True, align='R')
             pdf.cell(70, 8, f"${total_final:,.2f}", border=1, fill=True, align='R', ln=True)
             
+            # --- NOTAS ESTÁNDAR (MODIFICADAS SEGÚN SOLICITUD) ---
+            pdf.ln(5)
+            pdf.set_text_color(15, 60, 140); pdf.set_font('Arial', 'B', 9)
+            pdf.cell(0, 5, "NOTAS:", ln=True)
+            pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 8)
+            # Aquí está el nuevo texto ajustado:
+            pdf.multi_cell(0, 4, txt="- SE DEBERA HACER UN LEVANTAMIENTO FISICO PARA PODER DETERMINAR LOS ALCANCES POR TRABAJO SOLICITADO.\n- NO INCLUYE TRABAJOS NO COTIZADOS")
+            pdf.ln(3)
+            
+            pdf.set_font('Arial', 'B', 9)
+            pdf.cell(60, 5, "GARANTIA DEL SISTEMA EN AÑOS:")
+            pdf.set_font('Arial', '', 9)
+            pdf.cell(0, 5, "8 AÑOS", ln=True)
+            
+            pdf.set_font('Arial', 'B', 9)
+            pdf.cell(60, 5, "CONDICIONES DE PAGO:")
+            pdf.set_font('Arial', '', 9)
+            pdf.cell(0, 5, "70% DE ANTICIPO, 30% CONTRA ENTREGA", ln=True)
+            
+            pdf.set_font('Arial', 'B', 9)
+            pdf.cell(60, 5, "COTIZACION VALIDA AL:")
+            pdf.set_font('Arial', '', 9)
+            pdf.cell(0, 5, fecha_validez.strftime("%d/%m/%Y"), ln=True)
+            pdf.ln(5)
+
+            # --- ANOTACIONES DEL ASESOR ---
             if anotaciones_asesor:
-                pdf.ln(5); pdf.set_text_color(15, 60, 140); pdf.set_font('Arial', 'B', 10)
+                pdf.set_text_color(15, 60, 140); pdf.set_font('Arial', 'B', 10)
                 pdf.cell(0, 6, "ANOTACIONES ESPECIALES:", ln=True)
                 pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 9)
                 pdf.multi_cell(0, 5, txt=anotaciones_asesor)
+                pdf.ln(5)
 
             # --- CIERRE CON FIRMA Y LOGO ALINEADOS ---
             if pdf.get_y() > 230: pdf.add_page()
             
-            # Guardamos la altura base para que ambos empiecen en la misma línea
             y_base = pdf.get_y() + 10 
             
-            # 1. Colocamos la imagen de BBVA a la derecha (Si existe)
             if os.path.exists("logo_bbva.jpg"):
                 pdf.image("logo_bbva.jpg", x=145, y=y_base, w=55)
             
-            # 2. Nos aseguramos de estar en la misma altura para la firma izquierda
             pdf.set_y(y_base) 
             pdf.set_font('Arial', 'B', 9); pdf.set_text_color(15, 60, 140)
             pdf.cell(0, 5, 'CORDIALMENTE', ln=True)
@@ -208,8 +242,6 @@ if boton:
             pdf.cell(0, 4, 'BOULEVARD MIGUEL ALEMAN 759, COL. CENTRO. VERACRUZ, VER. C.P. 91700', ln=True)
             pdf.cell(0, 4, 'TEL. (229) 935 39 40 | ventas1@grupo-imac.com | www.grupo-imac.com', ln=True)
             
-            # 3. Empujamos el cursor hacia abajo para que el footer de marcas no estorbe
-            # Aseguramos bajar al menos 40 espacios desde la y_base para librar el logo de BBVA
             pdf.set_y(y_base + 40)
             
             if os.path.exists("footer_marcas.jpg"):
@@ -226,6 +258,6 @@ if boton:
             
             enviar_respaldo_correo(pdf_output, nombre_file, cliente, asesor)
             
-            st.success(f"✅ Presupuesto de {asesor} generado con éxito.")
+            st.success(f"✅ Presupuesto generado con éxito.")
             st.download_button("📥 DESCARGAR PDF", data=pdf_output, file_name=nombre_file)
- 
+     

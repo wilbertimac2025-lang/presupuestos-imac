@@ -12,17 +12,17 @@ from email.message import EmailMessage
 st.set_page_config(page_title="Cotizador Multizona IMAC", page_icon="📝", layout="centered")
 
 # --- TEXTOS PREDEFINIDOS ---
-TEXTO_DESCRIPCION = ("ES UN SISTEMA DE IMPERMEABILIZACION PREFABRICADO, CONSISTE EN UNA MEMBRANA MULTICAPA ELABORADA A BASE DE "
-                    "ASFALTOS MODIFICADOS UN REFUERZO CENTRAL DE FIBRA POLIESTER, SON DE LARGA VIDA, RESISTIENDO MUCHO MAS AL "
-                    "INTEMPERISMO, SON DE FACIL APLICACION PUES SE ADHIERE POR FUSION TERMICA A CUALQUIER TECHO O SUSTRATO, ES "
-                    "FLEXIBLE POR LO QUE SE PUEDE COLOCAR EN CUALQUIER SUPERFICIE LOGRANDOSE TOTAL SEGURIDAD A LO LARGO DE "
-                    "TODAS SUS UNIONES Y REMATES PUES QUEDAN PRACTICAMENTE SOLDADAS, OBTENIENDOSE ASI UNA TOTAL IMPERMEABILIDAD.")
+TEXTO_DESCRIPCION = ("Es un sistema de impermeabilizacion prefabricado, consiste en una membrana multicapa elaborada a base de "
+                    "asfaltos modificados un refuerzo central de fibra poliester, son de larga vida, resistiendo mucho mas al "
+                    "intemperismo, son de facil aplicacion pues se adhiere por fusion termica a cualquier techo o sustrato, es "
+                    "flexible por lo que se puede colocar en cualquier superficie lograndose total seguridad a lo largo de "
+                    "todas sus uniones y remates pues quedan practicamente soldadas, obteniendose asi una total impermeabilidad.")
 
 TEXTO_ESPECIFICACIONES = ("PREPARACION DE LA SUPERFICIE A IMPERMEABILIZAR.\n"
-                         "- LIMPIEZA DEL AREA HASTA QUEDAR LIBRE DE POLVO\n"
-                         "- APLICACION DE HIDROFLEX COMO PRIMARIO SELLADOR.\n\n"
+                         "- Limpieza del area hasta quedar libre de polvo.\n"
+                         "- Aplicacion de hidroflex como primario sellador.\n\n"
                          "COLOCACION DEL IMPERMEABILIZANTE PREFABRICADO\n"
-                         "- SELLADO DE ORILLAS Y TRASLAPES POR MEDIO DE FUSION")
+                         "- Sellado de orillas y traslapes por medio de fusion.")
 
 SISTEMAS_CATALOGO = [
     "MASTER LASSER 3.0 MM FIBRA POLIESTER LISO ARENADO",
@@ -33,6 +33,12 @@ SISTEMAS_CATALOGO = [
 
 class PDF(FPDF):
     def header(self):
+        # 1. MARCA DE AGUA EN EL FONDO (Debe ser una imagen difuminada en tonos muy claros)
+        if os.path.exists("marca_agua.jpg"):
+            # Se coloca al centro de la hoja (x=30, y=80, ancho=150mm)
+            self.image("marca_agua.jpg", x=30, y=80, w=150)
+
+        # 2. LOGO PRINCIPAL
         if os.path.exists("logo_tarc.jpg"):
             self.image("logo_tarc.jpg", x=10, y=8, w=65) 
         else:
@@ -80,10 +86,7 @@ num_areas = st.number_input("¿Cuántas áreas distintas vas a cotizar?", min_va
 
 with st.form("form_presupuesto"):
     st.write("### 1. Datos de Contacto y Asignación")
-    
-    # ¡AQUÍ ESTÁ DE VUELTA EL CALENDARIO DE VIGENCIA!
     fecha_validez = st.date_input("Cotización válida hasta:") 
-    
     cliente = st.text_input("Nombre del Cliente")
     compania = st.text_input("Compañía / Empresa")
     telefono = st.text_input("Teléfono de Contacto")
@@ -120,26 +123,29 @@ if boton:
     if not cliente or not asesor:
         st.error("⚠️ El nombre del Cliente y el Asesor son obligatorios.")
     else:
-        with st.spinner("Generando PDF completo y alineado..."):
+        with st.spinner("Aplicando diseño 3D y colores modernos..."):
             subtotal_obras = sum(z["m2"] * z["precio"] for z in zonas_data)
             
             pdf = PDF()
             pdf.set_auto_page_break(auto=True, margin=20)
             pdf.add_page()
             
-            # --- ENCABEZADO DE DATOS ---
+            # --- ENCABEZADO MODERNO ---
             fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
-            pdf.set_font('Arial', '', 10)
-            pdf.cell(0, 5, f'VERACRUZ, VER. A {fecha_hoy}', ln=True, align='R')
+            pdf.set_font('Arial', 'I', 10) # Cursiva para la fecha
+            pdf.set_text_color(100, 100, 100) # Gris elegante
+            pdf.cell(0, 5, f'Veracruz, Ver. a {fecha_hoy}', ln=True, align='R')
             pdf.ln(5)
 
-            pdf.set_font('Arial', 'B', 11); pdf.set_text_color(15, 60, 140)
+            pdf.set_font('Arial', 'B', 12); pdf.set_text_color(15, 60, 140) # Azul Marino
             pdf.cell(0, 5, f"CLIENTE: {cliente.upper()}", ln=True)
-            if compania: pdf.cell(0, 5, f"COMPAÑÍA: {compania.upper()}", ln=True)
+            if compania: 
+                pdf.set_font('Arial', 'B', 10); pdf.set_text_color(0, 150, 255) # Cian vibrante
+                pdf.cell(0, 5, f"{compania.upper()}", ln=True)
             
-            pdf.set_font('Arial', '', 10); pdf.set_text_color(0, 0, 0)
-            if telefono: pdf.cell(0, 5, f"TELÉFONO: {telefono}", ln=True)
-            if correo_cliente: pdf.cell(0, 5, f"CORREO: {correo_cliente}", ln=True)
+            pdf.set_font('Arial', '', 10); pdf.set_text_color(50, 50, 50)
+            if telefono: pdf.cell(0, 5, f"Tel: {telefono}", ln=True)
+            if correo_cliente: pdf.cell(0, 5, f"Email: {correo_cliente}", ln=True)
             
             pdf.ln(2)
             pdf.set_font('Arial', 'B', 10); pdf.set_text_color(15, 60, 140)
@@ -150,81 +156,102 @@ if boton:
                 pdf.set_font('Arial', 'B', 11); pdf.set_text_color(0, 0, 0)
                 pdf.cell(0, 5, f"PROYECTO: {proyecto.upper()}", ln=True)
             
-            pdf.ln(5); pdf.set_font('Arial', '', 10); pdf.set_text_color(0, 0, 0)
-            pdf.multi_cell(0, 5, txt="NOS PERMITIMOS PONER A SU AMABLE CONSIDERACION LA SIGUIENTE COTIZACION:")
+            pdf.ln(5); pdf.set_font('Arial', 'I', 10); pdf.set_text_color(80, 80, 80) # Letra Itálica gris
+            pdf.multi_cell(0, 5, txt="Nos permitimos poner a su amable consideración la siguiente propuesta comercial:")
             pdf.ln(5)
 
             # --- BUCLE DE ZONAS ---
             for z in zonas_data:
-                pdf.set_font('Arial', 'B', 10); pdf.set_text_color(41, 128, 185)
-                pdf.multi_cell(0, 6, txt=f"SUMINISTRO Y APLICACION EN {z['area'].upper()}:")
-                pdf.set_font('Arial', 'B', 11); pdf.set_text_color(0, 0, 0); pdf.cell(0, 6, z["sistema"], ln=True)
-                pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, txt=TEXTO_DESCRIPCION)
+                # Titulo de zona en Cian moderno
+                pdf.set_font('Arial', 'B', 11); pdf.set_text_color(0, 150, 255)
+                pdf.multi_cell(0, 6, txt=f"SUMINISTRO Y APLICACIÓN EN {z['area'].upper()}:")
+                
+                # Sistema en Azul Marino
+                pdf.set_font('Arial', 'B', 11); pdf.set_text_color(15, 60, 140); pdf.cell(0, 6, z["sistema"], ln=True)
+                
+                # Descripción en letra Cursiva Gris
+                pdf.set_font('Arial', 'I', 9); pdf.set_text_color(80, 80, 80)
+                pdf.multi_cell(0, 4, txt=TEXTO_DESCRIPCION)
                 
                 pdf.ln(3)
-                pdf.set_font('Arial', 'B', 9); pdf.set_text_color(15, 60, 140)
-                pdf.cell(0, 5, "ESPECIFICACIONES", ln=True)
-                pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 9)
+                pdf.set_font('Arial', 'B', 9); pdf.set_text_color(0, 150, 255) # Cian para el subtitulo
+                pdf.cell(0, 5, "Especificaciones Técnicas:", ln=True)
+                pdf.set_text_color(50, 50, 50); pdf.set_font('Arial', '', 9)
                 pdf.multi_cell(0, 4, txt=TEXTO_ESPECIFICACIONES)
                 pdf.ln(4)
                 
-                pdf.set_fill_color(235, 245, 255); pdf.set_text_color(15, 60, 140); pdf.set_font('Arial', 'B', 9)
-                pdf.cell(60, 6, "AREA (M2)", 1, 0, 'C', True); pdf.cell(60, 6, "PRECIO UNIT.", 1, 0, 'C', True); pdf.cell(70, 6, "SUBTOTAL", 1, 1, 'C', True)
+                # Tabla sin rayas gruesas, más limpia
+                pdf.set_fill_color(240, 248, 255); pdf.set_text_color(15, 60, 140); pdf.set_font('Arial', 'B', 9)
+                pdf.set_draw_color(200, 200, 200) # Bordes gris muy claro
+                pdf.cell(60, 6, "AREA (M2)", 'B', 0, 'C', True); pdf.cell(60, 6, "PRECIO UNIT.", 'B', 0, 'C', True); pdf.cell(70, 6, "SUBTOTAL", 'B', 1, 'C', True)
                 pdf.set_text_color(0,0,0); pdf.set_font('Arial', '', 9)
-                pdf.cell(60, 6, f"{z['m2']:,.2f}", 1, 0, 'C'); pdf.cell(60, 6, f"${z['precio']:,.2f}", 1, 0, 'C'); pdf.cell(70, 6, f"${z['m2']*z['precio']:,.2f}", 1, 1, 'C')
+                pdf.cell(60, 6, f"{z['m2']:,.2f}", 'B', 0, 'C'); pdf.cell(60, 6, f"${z['precio']:,.2f}", 'B', 0, 'C'); pdf.cell(70, 6, f"${z['m2']*z['precio']:,.2f}", 'B', 1, 'C')
                 pdf.ln(8)
 
-            # --- TOTALES Y COSTOS EXTRA ---
+            # --- TOTALES Y EFECTO 3D ---
             subtotal_final = subtotal_obras + costo_extra
             iva = subtotal_final * 0.16
             total_final = round(subtotal_final + iva)
 
-            if pdf.get_y() > 220: pdf.add_page()
+            if pdf.get_y() > 210: pdf.add_page()
             
             if costo_extra > 0:
                 pdf.set_font('Arial', 'B', 10); pdf.set_text_color(15, 60, 140)
-                pdf.cell(120, 6, f"COSTO ADICIONAL: {desc_extra.upper() if desc_extra else 'OTROS'}", border=1, align='R')
-                pdf.cell(70, 6, f"${costo_extra:,.2f}", border=1, align='R', ln=True)
+                pdf.cell(120, 6, f"COSTO ADICIONAL: {desc_extra.upper() if desc_extra else 'OTROS'}", border=0, align='R')
+                pdf.cell(70, 6, f"${costo_extra:,.2f}", border=0, align='R', ln=True)
 
-            pdf.set_font('Arial', 'B', 10); pdf.set_text_color(0,0,0)
-            pdf.cell(120, 6, "SUBTOTAL DE PRESUPUESTO", border=1, align='R')
-            pdf.cell(70, 6, f"${subtotal_final:,.2f}", border=1, align='R', ln=True)
-            pdf.cell(120, 6, "IVA", border=1, align='R')
-            pdf.cell(70, 6, f"${iva:,.2f}", border=1, align='R', ln=True)
+            pdf.set_font('Arial', 'B', 10); pdf.set_text_color(50, 50, 50)
+            pdf.cell(120, 6, "SUBTOTAL:", border=0, align='R')
+            pdf.cell(70, 6, f"${subtotal_final:,.2f}", border=0, align='R', ln=True)
+            pdf.cell(120, 6, "IVA (16%):", border=0, align='R')
+            pdf.cell(70, 6, f"${iva:,.2f}", border=0, align='R', ln=True)
+            pdf.ln(2)
+
+            # 🪄 TRUCO 3D (SOMBRA PROYECTADA) PARA EL GRAN TOTAL
+            # Guardamos la posición original
+            x_inicial = pdf.get_x()
+            y_inicial = pdf.get_y()
             
-            pdf.set_fill_color(15, 60, 140); pdf.set_text_color(255, 255, 255)
-            pdf.cell(120, 8, "TOTAL", border=1, fill=True, align='R')
-            pdf.cell(70, 8, f"${total_final:,.2f}", border=1, fill=True, align='R', ln=True)
+            # 1. Dibujamos la sombra (Gris claro) desfasada 1.5 milímetros
+            pdf.set_fill_color(200, 200, 200)
+            pdf.rect(x_inicial + 60 + 1.5, y_inicial + 1.5, 130, 9, 'F')
+            
+            # 2. Dibujamos el cuadro principal azul vibrante en su posición normal
+            pdf.set_fill_color(15, 60, 140); pdf.set_text_color(255, 255, 255); pdf.set_font('Arial', 'B', 11)
+            pdf.set_xy(x_inicial + 60, y_inicial) # Movemos el cursor para hacer la caja del total de tamaño ideal
+            pdf.cell(60, 9, "INVERSIÓN TOTAL", border=0, fill=True, align='R')
+            pdf.set_fill_color(0, 150, 255) # Cian para el número
+            pdf.cell(70, 9, f"${total_final:,.2f} MXN", border=0, fill=True, align='C', ln=True)
             
             # --- NOTAS ESTÁNDAR ---
-            pdf.ln(5)
+            pdf.ln(8)
             pdf.set_text_color(15, 60, 140); pdf.set_font('Arial', 'B', 9)
-            pdf.cell(0, 5, "NOTAS:", ln=True)
-            pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 8)
-            pdf.multi_cell(0, 4, txt="- SE DEBERA HACER UN LEVANTAMIENTO FISICO PARA PODER DETERMINAR LOS ALCANCES POR TRABAJO SOLICITADO.\n- NO INCLUYE TRABAJOS NO COTIZADOS")
+            pdf.cell(0, 5, "Consideraciones Importantes:", ln=True)
+            pdf.set_text_color(80, 80, 80); pdf.set_font('Arial', 'I', 8)
+            pdf.multi_cell(0, 4, txt="- Se deberá hacer un levantamiento físico para determinar los alcances exactos.\n- Esta propuesta no incluye trabajos no cotizados previamente.")
             pdf.ln(3)
             
-            pdf.set_font('Arial', 'B', 9)
-            pdf.cell(60, 5, "GARANTIA DEL SISTEMA EN AÑOS:")
-            pdf.set_font('Arial', '', 9)
-            pdf.cell(0, 5, "8 AÑOS", ln=True)
+            pdf.set_font('Arial', 'B', 9); pdf.set_text_color(50, 50, 50)
+            pdf.cell(60, 5, "Garantía del Sistema:")
+            pdf.set_font('Arial', '', 9); pdf.set_text_color(15, 60, 140)
+            pdf.cell(0, 5, "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", ln=True)
             
-            pdf.set_font('Arial', 'B', 9)
-            pdf.cell(60, 5, "CONDICIONES DE PAGO:")
-            pdf.set_font('Arial', '', 9)
+            pdf.set_font('Arial', 'B', 9); pdf.set_text_color(50, 50, 50)
+            pdf.cell(60, 5, "Condiciones de Pago:")
+            pdf.set_font('Arial', '', 9); pdf.set_text_color(15, 60, 140)
             pdf.cell(0, 5, "70% DE ANTICIPO, 30% CONTRA ENTREGA", ln=True)
             
-            pdf.set_font('Arial', 'B', 9)
-            pdf.cell(60, 5, "COTIZACION VALIDA AL:")
-            pdf.set_font('Arial', '', 9)
+            pdf.set_font('Arial', 'B', 9); pdf.set_text_color(50, 50, 50)
+            pdf.cell(60, 5, "Propuesta válida hasta:")
+            pdf.set_font('Arial', '', 9); pdf.set_text_color(15, 60, 140)
             pdf.cell(0, 5, fecha_validez.strftime("%d/%m/%Y"), ln=True)
             pdf.ln(5)
 
             # --- ANOTACIONES DEL ASESOR ---
             if anotaciones_asesor:
-                pdf.set_text_color(15, 60, 140); pdf.set_font('Arial', 'B', 10)
-                pdf.cell(0, 6, "ANOTACIONES ESPECIALES:", ln=True)
-                pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 9)
+                pdf.set_text_color(0, 150, 255); pdf.set_font('Arial', 'B', 10)
+                pdf.cell(0, 6, "Anotaciones Especiales:", ln=True)
+                pdf.set_text_color(80, 80, 80); pdf.set_font('Arial', 'I', 9)
                 pdf.multi_cell(0, 5, txt=anotaciones_asesor)
                 pdf.ln(5)
 
@@ -237,11 +264,12 @@ if boton:
                 pdf.image("logo_bbva.jpg", x=145, y=y_base, w=55)
             
             pdf.set_y(y_base) 
-            pdf.set_font('Arial', 'B', 9); pdf.set_text_color(15, 60, 140)
-            pdf.cell(0, 5, 'CORDIALMENTE', ln=True)
+            pdf.set_font('Arial', 'B', 10); pdf.set_text_color(15, 60, 140)
+            pdf.cell(0, 5, 'Atentamente,', ln=True)
+            pdf.set_font('Arial', 'B', 12); pdf.set_text_color(0, 150, 255)
             pdf.cell(0, 5, 'TARC S.A. DE C.V.', ln=True)
             
-            pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 8)
+            pdf.set_text_color(100, 100, 100); pdf.set_font('Arial', '', 8)
             pdf.cell(0, 4, 'BOULEVARD MIGUEL ALEMAN 759, COL. CENTRO. VERACRUZ, VER. C.P. 91700', ln=True)
             pdf.cell(0, 4, 'TEL. (229) 935 39 40 | ventas1@grupo-imac.com | www.grupo-imac.com', ln=True)
             
@@ -252,7 +280,7 @@ if boton:
                 pdf.image("footer_marcas.jpg", x=10, y=pdf.get_y(), w=190)
 
             pdf_output = pdf.output(dest='S').encode('latin-1')
-            nombre_file = f"Presupuesto_{cliente.replace(' ', '_')}.pdf"
+            nombre_file = f"Propuesta_{cliente.replace(' ', '_')}.pdf"
 
             hoja = conectar_sheets()
             if hoja:
@@ -261,6 +289,5 @@ if boton:
             
             enviar_respaldo_correo(pdf_output, nombre_file, cliente, asesor)
             
-            st.success(f"✅ Presupuesto generado con éxito.")
-            st.download_button("📥 DESCARGAR PDF", data=pdf_output, file_name=nombre_file)
-     
+            st.success(f"✅ Propuesta comercial generada con éxito.")
+            st.download_button("📥 DESCARGAR PROPUESTA (PDF)", data=pdf_output, file_name=nombre_file)

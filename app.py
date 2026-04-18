@@ -33,24 +33,26 @@ SISTEMAS_CATALOGO = [
 
 class PDF(FPDF):
     def header(self):
-        # 1. MARCA DE AGUA EN TODA LA HOJA (A4 mide 210x297mm)
+        # 1. MARCA DE AGUA ENCAPSULADA (x=5, y=5, w=200, h=287 igual que el marco)
         if os.path.exists("marca_agua.jpg"):
-            self.image("marca_agua.jpg", x=0, y=0, w=210, h=297)
+            self.image("marca_agua.jpg", x=5, y=5, w=200, h=287)
 
         # 2. MARCO / BORDE DE LA HOJA
         self.set_draw_color(15, 60, 140) # Azul Marino Corporativo
         self.set_line_width(0.7) # Grosor elegante del marco
-        self.rect(5, 5, 200, 287) # Dibuja un rectángulo con 5mm de separación del borde
-        self.set_line_width(0.2) # Regresamos el grosor a la normalidad para que las tablas no se vean gruesas
+        self.rect(5, 5, 200, 287) # Dibuja un rectángulo exacto en esas coordenadas
+        self.set_line_width(0.2) # Regresamos el grosor a la normalidad para las tablas
 
-        # 3. LOGO PRINCIPAL
+        # 3. LOGO PRINCIPAL (TAMAÑO AUMENTADO A 85)
         if os.path.exists("logo_tarc.jpg"):
-            self.image("logo_tarc.jpg", x=10, y=8, w=65) 
+            self.image("logo_tarc.jpg", x=10, y=8, w=85) 
         else:
             self.set_font('Arial', 'B', 14)
             self.set_text_color(15, 60, 140)
             self.cell(0, 6, 'TARC S.A. DE C.V.', ln=True, align='L')
-        self.set_y(28)
+            
+        # Bajamos el inicio del texto (de 28 a 38) para que el logo más grande no estorbe
+        self.set_y(38)
 
 @st.cache_resource
 def conectar_sheets():
@@ -288,4 +290,3 @@ if boton:
             
             st.success(f"✅ Propuesta con marcos 3D generada con éxito.")
             st.download_button("📥 DESCARGAR PROPUESTA (PDF)", data=pdf_output, file_name=nombre_file)
-            

@@ -80,7 +80,6 @@ num_areas = st.number_input("¿Cuántas áreas distintas vas a cotizar?", min_va
 
 with st.form("form_presupuesto"):
     st.write("### 1. Datos de Contacto y Asignación")
-    # NUEVO ORDEN SOLICITADO
     cliente = st.text_input("Nombre del Cliente")
     compania = st.text_input("Compañía / Empresa")
     telefono = st.text_input("Teléfono de Contacto")
@@ -117,20 +116,18 @@ if boton:
     if not cliente or not asesor:
         st.error("⚠️ El nombre del Cliente y el Asesor son obligatorios.")
     else:
-        with st.spinner("Generando presupuesto premium..."):
+        with st.spinner("Alineando firmas y generando PDF..."):
             subtotal_obras = sum(z["m2"] * z["precio"] for z in zonas_data)
             
             pdf = PDF()
             pdf.set_auto_page_break(auto=True, margin=20)
             pdf.add_page()
             
-            # BLOQUE DE DATOS GENERALES EN EL PDF (ORQUESTADO POR EL NUEVO ORDEN)
             fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
             pdf.set_font('Arial', '', 10)
             pdf.cell(0, 5, f'VERACRUZ, VER. A {fecha_hoy}', ln=True, align='R')
             pdf.ln(5)
 
-            # Información del Cliente y Asesor resaltada
             pdf.set_font('Arial', 'B', 11); pdf.set_text_color(15, 60, 140)
             pdf.cell(0, 5, f"CLIENTE: {cliente.upper()}", ln=True)
             if compania: pdf.cell(0, 5, f"COMPAÑÍA: {compania.upper()}", ln=True)
@@ -152,7 +149,6 @@ if boton:
             pdf.multi_cell(0, 5, txt="NOS PERMITIMOS PONER A SU AMABLE CONSIDERACION LA SIGUIENTE COTIZACION:")
             pdf.ln(5)
 
-            # Bucle de Zonas
             for z in zonas_data:
                 pdf.set_font('Arial', 'B', 10); pdf.set_text_color(41, 128, 185)
                 pdf.multi_cell(0, 6, txt=f"SUMINISTRO Y APLICACION EN {z['area'].upper()}:")
@@ -165,7 +161,6 @@ if boton:
                 pdf.cell(60, 6, f"{z['m2']:,.2f}", 1, 0, 'C'); pdf.cell(60, 6, f"${z['precio']:,.2f}", 1, 0, 'C'); pdf.cell(70, 6, f"${z['m2']*z['precio']:,.2f}", 1, 1, 'C')
                 pdf.ln(8)
 
-            # Totales con Costo Extra
             subtotal_final = subtotal_obras + costo_extra
             iva = subtotal_final * 0.16
             total_final = round(subtotal_final + iva)
@@ -193,14 +188,30 @@ if boton:
                 pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 9)
                 pdf.multi_cell(0, 5, txt=anotaciones_asesor)
 
-            # Cierre con logos
+            # --- CIERRE CON FIRMA Y LOGO ALINEADOS ---
             if pdf.get_y() > 230: pdf.add_page()
-            y_final = pdf.get_y()
-            if os.path.exists("logo_bbva.jpg"):
-                pdf.image("logo_bbva.jpg", x=145, y=y_final, w=55); pdf.set_y(y_final + 35)
             
+            # Guardamos la altura base para que ambos empiecen en la misma línea
+            y_base = pdf.get_y() + 10 
+            
+            # 1. Colocamos la imagen de BBVA a la derecha (Si existe)
+            if os.path.exists("logo_bbva.jpg"):
+                pdf.image("logo_bbva.jpg", x=145, y=y_base, w=55)
+            
+            # 2. Nos aseguramos de estar en la misma altura para la firma izquierda
+            pdf.set_y(y_base) 
             pdf.set_font('Arial', 'B', 9); pdf.set_text_color(15, 60, 140)
-            pdf.cell(0, 5, 'CORDIALMENTE', ln=True); pdf.cell(0, 5, 'TARC S.A. DE C.V.', ln=True)
+            pdf.cell(0, 5, 'CORDIALMENTE', ln=True)
+            pdf.cell(0, 5, 'TARC S.A. DE C.V.', ln=True)
+            
+            pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 8)
+            pdf.cell(0, 4, 'BOULEVARD MIGUEL ALEMAN 759, COL. CENTRO. VERACRUZ, VER. C.P. 91700', ln=True)
+            pdf.cell(0, 4, 'TEL. (229) 935 39 40 | ventas1@grupo-imac.com | www.grupo-imac.com', ln=True)
+            
+            # 3. Empujamos el cursor hacia abajo para que el footer de marcas no estorbe
+            # Aseguramos bajar al menos 40 espacios desde la y_base para librar el logo de BBVA
+            pdf.set_y(y_base + 40)
+            
             if os.path.exists("footer_marcas.jpg"):
                 if pdf.get_y() > 250: pdf.add_page()
                 pdf.image("footer_marcas.jpg", x=10, y=pdf.get_y(), w=190)
@@ -208,14 +219,13 @@ if boton:
             pdf_output = pdf.output(dest='S').encode('latin-1')
             nombre_file = f"Presupuesto_{cliente.replace(' ', '_')}.pdf"
 
-            # Registro en Excel (CRM Completo)
             hoja = conectar_sheets()
             if hoja:
                 resumen = " / ".join([f"{z['area']} ({z['m2']}m2)" for z in zonas_data])
-                # Guardamos TODOS los datos en el Excel para trazabilidad
                 hoja.append_row([fecha_hoy, asesor, cliente, compania, telefono, correo_cliente, proyecto, resumen, total_final])
             
             enviar_respaldo_correo(pdf_output, nombre_file, cliente, asesor)
             
             st.success(f"✅ Presupuesto de {asesor} generado con éxito.")
             st.download_button("📥 DESCARGAR PDF", data=pdf_output, file_name=nombre_file)
+ 

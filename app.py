@@ -58,17 +58,20 @@ def conectar_sheets():
         ID_DEL_EXCEL = "1-grdT2H5dBlGVPvJbZ5wVYDdtVjQEEmUPGpvEm6C0Gc" 
         sheet = cliente.open_by_key(ID_DEL_EXCEL).worksheet("Presupuestos")
         return sheet
-    except Exception as e:
-        st.warning(f"🚨 Error exacto del correo: {e}")
-        return False
+    except Exception:
+        return None
 
 def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor):
     try:
-        remitente = st.secrets["comercial@grupo-imac.com"]
-        password = st.secrets["2288402222884022"]
+        # Verificamos si los secretos están bien escritos
+        if "CORREO_BOT" not in st.secrets or "PASS_BOT" not in st.secrets:
+            return False, "Faltan las variables CORREO_BOT o PASS_BOT en los Secrets."
+            
+        remitente = st.secrets["CORREO_BOT"]
+        password = st.secrets["PASS_BOT"]
         
         # ⚠️ 2. PON AQUÍ EL CORREO DONDE QUIERES RECIBIR LAS COPIAS DE RESPALDO
-        correo_central = "tu_correo_gerencia@grupo-imac.com" 
+        correo_central = "comercial@grupo-imac.com" 
         
         msg = EmailMessage()
         msg['Subject'] = f'NUEVA COTIZACIÓN TARC: {cliente} (Asesor: {asesor})'
@@ -83,9 +86,9 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor):
             smtp.starttls()
             smtp.login(remitente, password)
             smtp.send_message(msg)
-        return True
+        return True, "OK"
     except Exception as e:
-        return False
+        return False, str(e)
 
 # --- INTERFAZ WEB DINÁMICA ---
 st.title("🍊 Presupuestos Multizona")
@@ -284,12 +287,12 @@ if boton:
                 hoja.append_row([fecha_hoy, asesor, cliente, proyecto, resumen_zonas, subtotal_general, gran_total_redondeado])
             
             # 2. Enviar copia por correo a la gerencia
-            envio_exitoso = enviar_respaldo_correo(pdf_output, nombre_archivo_pdf, cliente, asesor)
+            envio_exitoso, mensaje_error = enviar_respaldo_correo(pdf_output, nombre_archivo_pdf, cliente, asesor)
 
             st.success("✅ Presupuesto generado correctamente.")
             if envio_exitoso:
                 st.info("📧 Se ha enviado una copia automática a la bandeja central de la empresa.")
             else:
-                st.warning("⚠️ El PDF se generó, pero recuerda configurar tus credenciales de correo en los Secrets.")
+                st.error(f"🚨 Error de correo: {mensaje_error}") # AQUÍ ESTÁ EL DETECTOR NUEVO
 
             st.download_button("📥 DESCARGAR PRESUPUESTO TARC / IMAC", data=pdf_output, file_name=nombre_archivo_pdf)

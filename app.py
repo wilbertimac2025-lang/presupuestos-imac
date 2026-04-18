@@ -63,26 +63,26 @@ def conectar_sheets():
 
 def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor):
     try:
-        # Verificamos si los secretos están bien escritos
         if "CORREO_BOT" not in st.secrets or "PASS_BOT" not in st.secrets:
-            return False, "Faltan las variables CORREO_BOT o PASS_BOT en los Secrets."
+            return False, "Faltan las variables en los Secrets."
             
         remitente = st.secrets["CORREO_BOT"]
         password = st.secrets["PASS_BOT"]
         
-        # ⚠️ 2. PON AQUÍ EL CORREO DONDE QUIERES RECIBIR LAS COPIAS DE RESPALDO
-        correo_central = "comercial@grupo-imac.com" 
+        # ⚠️ 2. PON AQUÍ EL CORREO GERENCIAL DONDE LLEGARÁN LOS PDFS
+        correo_central = "sistematarc@gmail.com" 
         
         msg = EmailMessage()
         msg['Subject'] = f'NUEVA COTIZACIÓN TARC: {cliente} (Asesor: {asesor})'
         msg['From'] = remitente
         msg['To'] = correo_central
         
-        cuerpo = f"Se ha generado un nuevo presupuesto en el sistema.\n\n- Cliente: {cliente}\n- Asesor: {asesor}\n- Fecha: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M')}\n\nEl documento PDF oficial se encuentra adjunto a este correo para su respaldo y seguimiento."
+        cuerpo = f"Se ha generado un nuevo presupuesto en el sistema.\n\n- Cliente: {cliente}\n- Asesor: {asesor}\n- Fecha: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M')}\n\nEl documento PDF oficial se encuentra adjunto a este correo."
         msg.set_content(cuerpo)
         msg.add_attachment(pdf_bytes, maintype='application', subtype='pdf', filename=nombre_archivo)
         
-        with smtplib.SMTP('smtp.office365.com', 587) as smtp:
+        # EL CAMBIO ESTÁ AQUÍ: Ahora usamos los servidores de GMAIL
+        with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
             smtp.starttls()
             smtp.login(remitente, password)
             smtp.send_message(msg)
@@ -280,19 +280,17 @@ if boton:
             pdf_output = pdf.output(dest='S').encode('latin-1')
             nombre_archivo_pdf = f"Presupuesto_{cliente.replace(' ', '_')}.pdf"
 
-            # 1. Guardar en Excel
             hoja = conectar_sheets()
             if hoja:
                 resumen_zonas = " / ".join([f"{z['area']} ({z['m2']}m2)" for z in zonas_data])
                 hoja.append_row([fecha_hoy, asesor, cliente, proyecto, resumen_zonas, subtotal_general, gran_total_redondeado])
             
-            # 2. Enviar copia por correo a la gerencia
             envio_exitoso, mensaje_error = enviar_respaldo_correo(pdf_output, nombre_archivo_pdf, cliente, asesor)
 
             st.success("✅ Presupuesto generado correctamente.")
             if envio_exitoso:
                 st.info("📧 Se ha enviado una copia automática a la bandeja central de la empresa.")
             else:
-                st.error(f"🚨 Error de correo: {mensaje_error}") # AQUÍ ESTÁ EL DETECTOR NUEVO
+                st.error(f"🚨 Error de correo: {mensaje_error}")
 
             st.download_button("📥 DESCARGAR PRESUPUESTO TARC / IMAC", data=pdf_output, file_name=nombre_archivo_pdf)

@@ -79,13 +79,20 @@ st.title("🍊 Presupuestos Multizona")
 num_areas = st.number_input("¿Cuántas áreas distintas vas a cotizar?", min_value=1, max_value=10, value=1)
 
 with st.form("form_presupuesto"):
-    st.write("### Datos Generales")
-    cliente = st.text_input("Nombre del Cliente / Empresa")
-    proyecto = st.text_input("Nombre del Proyecto")
-    asesor = st.text_input("Tu Nombre (Asesor)")
+    st.write("### 1. Datos de Contacto y Asignación")
+    # NUEVO ORDEN SOLICITADO
+    cliente = st.text_input("Nombre del Cliente")
+    compania = st.text_input("Compañía / Empresa")
+    telefono = st.text_input("Teléfono de Contacto")
+    correo_cliente = st.text_input("Correo Electrónico del Cliente")
+    asesor = st.text_input("Nombre del Asesor")
     
     st.write("---")
-    st.write("### Desglose de Áreas")
+    st.write("### 2. Información del Proyecto")
+    proyecto = st.text_input("Nombre del Proyecto / Obra")
+    
+    st.write("---")
+    st.write("### 3. Desglose de Áreas")
     zonas_data = []
     for i in range(int(num_areas)):
         st.markdown(f"**Área {i+1}**")
@@ -99,31 +106,49 @@ with st.form("form_presupuesto"):
         zonas_data.append({"area": n, "sistema": s, "m2": m, "precio": p})
 
     st.write("---")
-    st.write("### 🆕 Ajustes Finales")
-    # LOS NUEVOS CAMPOS QUE PEDISTE:
-    costo_extra = st.number_input("Costo Extra Adicional (Pesos $)", min_value=0.0, help="Suma este monto directamente al subtotal")
-    desc_extra = st.text_input("Concepto del Costo Extra (Ej. Maniobras de acarreo)")
-    anotaciones_asesor = st.text_area("Anotaciones Especiales para el Cliente", help="Aparecerán antes de los datos bancarios")
+    st.write("### 4. Ajustes Finales")
+    costo_extra = st.number_input("Costo Extra Adicional (Pesos $)", min_value=0.0)
+    desc_extra = st.text_input("Concepto del Costo Extra")
+    anotaciones_asesor = st.text_area("Anotaciones Especiales para el Cliente")
     
     boton = st.form_submit_button("GENERAR DOCUMENTO FINAL")
 
 if boton:
     if not cliente or not asesor:
-        st.error("⚠️ Falta el nombre del cliente o asesor.")
+        st.error("⚠️ El nombre del Cliente y el Asesor son obligatorios.")
     else:
-        with st.spinner("Calculando y guardando..."):
+        with st.spinner("Generando presupuesto premium..."):
             subtotal_obras = sum(z["m2"] * z["precio"] for z in zonas_data)
             
-            # --- CREACIÓN DEL PDF ---
             pdf = PDF()
             pdf.set_auto_page_break(auto=True, margin=20)
             pdf.add_page()
             
-            # Encabezado estándar
+            # BLOQUE DE DATOS GENERALES EN EL PDF (ORQUESTADO POR EL NUEVO ORDEN)
+            fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
+            pdf.set_font('Arial', '', 10)
+            pdf.cell(0, 5, f'VERACRUZ, VER. A {fecha_hoy}', ln=True, align='R')
+            pdf.ln(5)
+
+            # Información del Cliente y Asesor resaltada
             pdf.set_font('Arial', 'B', 11); pdf.set_text_color(15, 60, 140)
-            pdf.cell(0, 5, cliente.upper(), ln=True)
-            if proyecto: pdf.cell(0, 5, proyecto.upper(), ln=True)
-            pdf.ln(5); pdf.set_text_color(0,0,0); pdf.set_font('Arial', '', 10)
+            pdf.cell(0, 5, f"CLIENTE: {cliente.upper()}", ln=True)
+            if compania: pdf.cell(0, 5, f"COMPAÑÍA: {compania.upper()}", ln=True)
+            
+            pdf.set_font('Arial', '', 10); pdf.set_text_color(0, 0, 0)
+            if telefono: pdf.cell(0, 5, f"TELÉFONO: {telefono}", ln=True)
+            if correo_cliente: pdf.cell(0, 5, f"CORREO: {correo_cliente}", ln=True)
+            
+            pdf.ln(2)
+            pdf.set_font('Arial', 'B', 10); pdf.set_text_color(15, 60, 140)
+            pdf.cell(0, 5, f"ASESOR COMERCIAL: {asesor.upper()}", ln=True)
+            
+            pdf.ln(3)
+            if proyecto:
+                pdf.set_font('Arial', 'B', 11); pdf.set_text_color(0, 0, 0)
+                pdf.cell(0, 5, f"PROYECTO: {proyecto.upper()}", ln=True)
+            
+            pdf.ln(5); pdf.set_font('Arial', '', 10); pdf.set_text_color(0, 0, 0)
             pdf.multi_cell(0, 5, txt="NOS PERMITIMOS PONER A SU AMABLE CONSIDERACION LA SIGUIENTE COTIZACION:")
             pdf.ln(5)
 
@@ -140,18 +165,17 @@ if boton:
                 pdf.cell(60, 6, f"{z['m2']:,.2f}", 1, 0, 'C'); pdf.cell(60, 6, f"${z['precio']:,.2f}", 1, 0, 'C'); pdf.cell(70, 6, f"${z['m2']*z['precio']:,.2f}", 1, 1, 'C')
                 pdf.ln(8)
 
-            # --- SECCIÓN DE TOTALES (Aquí entra tu cambio) ---
+            # Totales con Costo Extra
+            subtotal_final = subtotal_obras + costo_extra
+            iva = subtotal_final * 0.16
+            total_final = round(subtotal_final + iva)
+
             if pdf.get_y() > 220: pdf.add_page()
             
-            # Mostrar costo extra si existe antes del gran subtotal
             if costo_extra > 0:
                 pdf.set_font('Arial', 'B', 10); pdf.set_text_color(15, 60, 140)
                 pdf.cell(120, 6, f"COSTO ADICIONAL: {desc_extra.upper() if desc_extra else 'OTROS'}", border=1, align='R')
                 pdf.cell(70, 6, f"${costo_extra:,.2f}", border=1, align='R', ln=True)
-
-            subtotal_final = subtotal_obras + costo_extra
-            iva = subtotal_final * 0.16
-            total_final = round(subtotal_final + iva)
 
             pdf.set_font('Arial', 'B', 10); pdf.set_text_color(0,0,0)
             pdf.cell(120, 6, "SUBTOTAL DE PRESUPUESTO", border=1, align='R')
@@ -163,18 +187,17 @@ if boton:
             pdf.cell(120, 8, "TOTAL", border=1, fill=True, align='R')
             pdf.cell(70, 8, f"${total_final:,.2f}", border=1, fill=True, align='R', ln=True)
             
-            # --- ANOTACIONES DEL ASESOR ---
             if anotaciones_asesor:
                 pdf.ln(5); pdf.set_text_color(15, 60, 140); pdf.set_font('Arial', 'B', 10)
                 pdf.cell(0, 6, "ANOTACIONES ESPECIALES:", ln=True)
                 pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 9)
                 pdf.multi_cell(0, 5, txt=anotaciones_asesor)
 
-            # Logos finales (BBVA y Footer)
+            # Cierre con logos
             if pdf.get_y() > 230: pdf.add_page()
-            y_bancos = pdf.get_y()
+            y_final = pdf.get_y()
             if os.path.exists("logo_bbva.jpg"):
-                pdf.image("logo_bbva.jpg", x=145, y=y_bancos, w=55); pdf.set_y(y_bancos + 35)
+                pdf.image("logo_bbva.jpg", x=145, y=y_final, w=55); pdf.set_y(y_final + 35)
             
             pdf.set_font('Arial', 'B', 9); pdf.set_text_color(15, 60, 140)
             pdf.cell(0, 5, 'CORDIALMENTE', ln=True); pdf.cell(0, 5, 'TARC S.A. DE C.V.', ln=True)
@@ -185,15 +208,14 @@ if boton:
             pdf_output = pdf.output(dest='S').encode('latin-1')
             nombre_file = f"Presupuesto_{cliente.replace(' ', '_')}.pdf"
 
-            # 1. Guardar en Excel con las nuevas columnas
+            # Registro en Excel (CRM Completo)
             hoja = conectar_sheets()
             if hoja:
                 resumen = " / ".join([f"{z['area']} ({z['m2']}m2)" for z in zonas_data])
-                # Agregamos costo extra y notas al Excel para que no se pierdan
-                hoja.append_row([datetime.datetime.now().strftime("%d/%m/%Y"), asesor, cliente, resumen, subtotal_final, total_final, costo_extra, anotaciones_asesor])
+                # Guardamos TODOS los datos en el Excel para trazabilidad
+                hoja.append_row([fecha_hoy, asesor, cliente, compania, telefono, correo_cliente, proyecto, resumen, total_final])
             
-            # 2. Respaldo Correo
             enviar_respaldo_correo(pdf_output, nombre_file, cliente, asesor)
             
-            st.success("✅ Presupuesto con cargos extra generado y respaldado.")
+            st.success(f"✅ Presupuesto de {asesor} generado con éxito.")
             st.download_button("📥 DESCARGAR PDF", data=pdf_output, file_name=nombre_file)

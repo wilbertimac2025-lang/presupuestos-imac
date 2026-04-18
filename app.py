@@ -80,6 +80,10 @@ num_areas = st.number_input("¿Cuántas áreas distintas vas a cotizar?", min_va
 
 with st.form("form_presupuesto"):
     st.write("### 1. Datos de Contacto y Asignación")
+    
+    # ¡AQUÍ ESTÁ DE VUELTA EL CALENDARIO DE VIGENCIA!
+    fecha_validez = st.date_input("Cotización válida hasta:") 
+    
     cliente = st.text_input("Nombre del Cliente")
     compania = st.text_input("Compañía / Empresa")
     telefono = st.text_input("Teléfono de Contacto")
@@ -192,12 +196,11 @@ if boton:
             pdf.cell(120, 8, "TOTAL", border=1, fill=True, align='R')
             pdf.cell(70, 8, f"${total_final:,.2f}", border=1, fill=True, align='R', ln=True)
             
-            # --- NOTAS ESTÁNDAR (MODIFICADAS SEGÚN SOLICITUD) ---
+            # --- NOTAS ESTÁNDAR ---
             pdf.ln(5)
             pdf.set_text_color(15, 60, 140); pdf.set_font('Arial', 'B', 9)
             pdf.cell(0, 5, "NOTAS:", ln=True)
             pdf.set_text_color(0, 0, 0); pdf.set_font('Arial', '', 8)
-            # Aquí está el nuevo texto ajustado:
             pdf.multi_cell(0, 4, txt="- SE DEBERA HACER UN LEVANTAMIENTO FISICO PARA PODER DETERMINAR LOS ALCANCES POR TRABAJO SOLICITADO.\n- NO INCLUYE TRABAJOS NO COTIZADOS")
             pdf.ln(3)
             

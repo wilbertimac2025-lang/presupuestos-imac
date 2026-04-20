@@ -33,25 +33,26 @@ SISTEMAS_CATALOGO = [
 
 class PDF(FPDF):
     def header(self):
-        # 1. MARCA DE AGUA ENCAPSULADA (x=5, y=5, w=200, h=287 igual que el marco)
+        # 1. MARCA DE AGUA ENCAPSULADA (Fondo JPG)
         if os.path.exists("marca_agua.jpg"):
             self.image("marca_agua.jpg", x=5, y=5, w=200, h=287)
 
         # 2. MARCO / BORDE DE LA HOJA
-        self.set_draw_color(15, 60, 140) # Azul Marino Corporativo
-        self.set_line_width(0.7) # Grosor elegante del marco
-        self.rect(5, 5, 200, 287) # Dibuja un rectángulo exacto en esas coordenadas
-        self.set_line_width(0.2) # Regresamos el grosor a la normalidad para las tablas
+        self.set_draw_color(15, 60, 140) 
+        self.set_line_width(0.7) 
+        self.rect(5, 5, 200, 287) 
+        self.set_line_width(0.2) 
 
-        # 3. LOGO PRINCIPAL (TAMAÑO AUMENTADO A 85)
-        if os.path.exists("logo_tarc.jpg"):
-            self.image("logo_tarc.jpg", x=10, y=8, w=85) 
+        # 3. LOGO PRINCIPAL (Ahora busca formato PNG transparente)
+        if os.path.exists("logo_tarc.png"):
+            self.image("logo_tarc.png", x=10, y=8, w=85) 
+        elif os.path.exists("logo_tarc.jpg"): # Respaldo por si acaso
+            self.image("logo_tarc.jpg", x=10, y=8, w=85)
         else:
             self.set_font('Arial', 'B', 14)
             self.set_text_color(15, 60, 140)
             self.cell(0, 6, 'TARC S.A. DE C.V.', ln=True, align='L')
             
-        # Bajamos el inicio del texto (de 28 a 38) para que el logo más grande no estorbe
         self.set_y(38)
 
 @st.cache_resource
@@ -61,6 +62,7 @@ def conectar_sheets():
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(credenciales_dic, scopes=scopes)
         cliente = gspread.authorize(creds)
+        
         # ⚠️ 1. REEMPLAZA CON TU ID DE EXCEL
         ID_DEL_EXCEL = "1-grdT2H5dBlGVPvJbZ5wVYDdtVjQEEmUPGpvEm6C0Gc" 
         sheet = cliente.open_by_key(ID_DEL_EXCEL).worksheet("Presupuestos")
@@ -72,7 +74,7 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor):
         remitente = st.secrets["CORREO_BOT"]
         password = st.secrets["PASS_BOT"]
         # ⚠️ 2. REEMPLAZA CON EL CORREO CENTRAL DE IMAC
-        correo_central = "sistematarc@gamil.com" 
+        correo_central = "sistematarc@gmail.com" 
         
         msg = EmailMessage()
         msg['Subject'] = f'COTIZACIÓN: {cliente} (Asesor: {asesor})'
@@ -259,7 +261,10 @@ if boton:
             
             y_base = pdf.get_y() + 10 
             
-            if os.path.exists("logo_bbva.jpg"):
+            # Ahora busca el de BBVA en formato PNG transparente
+            if os.path.exists("logo_bbva.png"):
+                pdf.image("logo_bbva.png", x=145, y=y_base, w=55)
+            elif os.path.exists("logo_bbva.jpg"):
                 pdf.image("logo_bbva.jpg", x=145, y=y_base, w=55)
             
             pdf.set_y(y_base) 
@@ -274,7 +279,11 @@ if boton:
             
             pdf.set_y(y_base + 40)
             
-            if os.path.exists("footer_marcas.jpg"):
+            # Footer también en PNG
+            if os.path.exists("footer_marcas.png"):
+                if pdf.get_y() > 250: pdf.add_page()
+                pdf.image("footer_marcas.png", x=10, y=pdf.get_y(), w=190)
+            elif os.path.exists("footer_marcas.jpg"):
                 if pdf.get_y() > 250: pdf.add_page()
                 pdf.image("footer_marcas.jpg", x=10, y=pdf.get_y(), w=190)
 
@@ -288,6 +297,5 @@ if boton:
             
             enviar_respaldo_correo(pdf_output, nombre_file, cliente, asesor)
             
-            st.success(f"✅ Propuesta con marcos 3D generada con éxito.")
+            st.success(f"✅ Propuesta con logos transparentes generada con éxito.")
             st.download_button("📥 DESCARGAR PROPUESTA (PDF)", data=pdf_output, file_name=nombre_file)
-        

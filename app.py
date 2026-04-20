@@ -72,15 +72,13 @@ def conectar_sheets():
 def obtener_nuevo_folio(hoja):
     """Genera el folio dinámico estilo OBRA01-26, OBRA150-26"""
     try:
-        anio_corto = datetime.datetime.now().strftime("%y") # Obtiene los últimos 2 dígitos del año (ej. 26)
+        anio_corto = datetime.datetime.now().strftime("%y") 
         if hoja:
             filas = hoja.get_all_values()
             numero_obra = len(filas) if len(filas) > 0 else 1
-            # :02d asegura que si es 1 se vea como 01, si es 15 se ve como 15, si es 310 se ve como 310.
             return f"OBRA{numero_obra:02d}-{anio_corto}"
     except Exception:
         pass
-    # Folio temporal en caso de no poder conectar al excel
     anio_corto = datetime.datetime.now().strftime("%y")
     return f"OBRA-TEMP-{datetime.datetime.now().strftime('%H%M')}-{anio_corto}"
 
@@ -92,10 +90,10 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio):
         correo_central = "sistematarc@gmail.com" 
         
         msg = EmailMessage()
-        msg['Subject'] = f'NUEVO FOLIO {folio}: Cotización {cliente} (Asesor: {asesor})'
+        msg['Subject'] = f'NUEVO FOLIO {folio}: Presupuesto {cliente} (Asesor: {asesor})'
         msg['From'] = remitente
         msg['To'] = correo_central
-        msg.set_content(f"Se ha registrado una nueva cotización en el sistema.\n\nFolio Asignado: {folio}\nCliente: {cliente}\nAsesor: {asesor}\n\nSe adjunta el PDF oficial.")
+        msg.set_content(f"Se ha registrado un nuevo presupuesto en el sistema.\n\nFolio Asignado: {folio}\nCliente: {cliente}\nAsesor: {asesor}\n\nSe adjunta el PDF oficial.")
         msg.add_attachment(pdf_bytes, maintype='application', subtype='pdf', filename=nombre_archivo)
         
         with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
@@ -110,7 +108,7 @@ num_areas = st.number_input("¿Cuántas áreas distintas vas a cotizar?", min_va
 
 with st.form("form_presupuesto"):
     st.write("### 1. Datos de Contacto y Asignación")
-    fecha_validez = st.date_input("Cotización válida hasta:") 
+    fecha_validez = st.date_input("Presupuesto válido hasta:") 
     cliente = st.text_input("Nombre del Cliente")
     compania = st.text_input("Compañía / Empresa")
     telefono = st.text_input("Teléfono de Contacto")
@@ -149,20 +147,17 @@ if boton:
     else:
         with st.spinner("Conectando base de datos y asignando Folio Oficial..."):
             
-            # --- 1. CONEXIÓN Y GENERACIÓN DE FOLIO ---
             hoja = conectar_sheets()
             folio_actual = obtener_nuevo_folio(hoja)
 
             subtotal_obras = sum(z["m2"] * z["precio"] for z in zonas_data)
             
-            # --- 2. CREACIÓN DEL PDF ---
             pdf = PDF()
             pdf.set_auto_page_break(auto=True, margin=20)
             pdf.add_page()
             
-            # --- ENCABEZADO CON FOLIO ROJO ---
             pdf.set_font('Arial', 'B', 12)
-            pdf.set_text_color(200, 30, 30) # Color Rojo Factura
+            pdf.set_text_color(200, 30, 30) 
             pdf.cell(0, 5, f"FOLIO: {folio_actual}", ln=True, align='R')
 
             fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
@@ -191,10 +186,9 @@ if boton:
                 pdf.cell(0, 5, f"PROYECTO: {proyecto.upper()}", ln=True)
             
             pdf.ln(5); pdf.set_font('Arial', 'I', 10); pdf.set_text_color(80, 80, 80) 
-            pdf.multi_cell(0, 5, txt="Nos permitimos poner a su amable consideración la siguiente propuesta comercial:")
+            pdf.multi_cell(0, 5, txt="Nos permitimos poner a su amable consideración el siguiente presupuesto:")
             pdf.ln(5)
 
-            # --- BUCLE DE ZONAS ---
             for z in zonas_data:
                 pdf.set_font('Arial', 'B', 11); pdf.set_text_color(0, 150, 255)
                 pdf.multi_cell(0, 6, txt=f"SUMINISTRO Y APLICACIÓN EN {z['area'].upper()}:")
@@ -218,7 +212,6 @@ if boton:
                 pdf.cell(60, 6, f"{z['m2']:,.2f}", 'B', 0, 'C'); pdf.cell(60, 6, f"${z['precio']:,.2f}", 'B', 0, 'C'); pdf.cell(70, 6, f"${z['m2']*z['precio']:,.2f}", 'B', 1, 'C')
                 pdf.ln(8)
 
-            # --- TOTALES Y EFECTO 3D ---
             subtotal_final = subtotal_obras + costo_extra
             iva = subtotal_final * 0.16
             total_final = round(subtotal_final + iva)
@@ -249,7 +242,6 @@ if boton:
             pdf.set_fill_color(0, 150, 255) 
             pdf.cell(70, 9, f"${total_final:,.2f} MXN", border=0, fill=True, align='C', ln=True)
             
-            # --- NOTAS ESTÁNDAR ---
             pdf.ln(8)
             pdf.set_text_color(15, 60, 140); pdf.set_font('Arial', 'B', 9)
             pdf.cell(0, 5, "Consideraciones Importantes:", ln=True)
@@ -268,12 +260,11 @@ if boton:
             pdf.cell(0, 5, "70% DE ANTICIPO, 30% CONTRA ENTREGA", ln=True)
             
             pdf.set_font('Arial', 'B', 9); pdf.set_text_color(50, 50, 50)
-            pdf.cell(60, 5, "Propuesta válida hasta:")
+            pdf.cell(60, 5, "Presupuesto válido hasta:")
             pdf.set_font('Arial', '', 9); pdf.set_text_color(15, 60, 140)
             pdf.cell(0, 5, fecha_validez.strftime("%d/%m/%Y"), ln=True)
             pdf.ln(5)
 
-            # --- ANOTACIONES DEL ASESOR ---
             if anotaciones_asesor:
                 pdf.set_text_color(0, 150, 255); pdf.set_font('Arial', 'B', 10)
                 pdf.cell(0, 6, "Anotaciones Especiales:", ln=True)
@@ -281,7 +272,6 @@ if boton:
                 pdf.multi_cell(0, 5, txt=anotaciones_asesor)
                 pdf.ln(5)
 
-            # --- CIERRE CON FIRMA Y LOGO ALINEADOS ---
             if pdf.get_y() > 230: pdf.add_page()
             
             y_base = pdf.get_y() + 10 
@@ -299,7 +289,7 @@ if boton:
             
             pdf.set_text_color(100, 100, 100); pdf.set_font('Arial', '', 8)
             pdf.cell(0, 4, 'BOULEVARD MIGUEL ALEMAN 759, COL. CENTRO. VERACRUZ, VER. C.P. 91700', ln=True)
-            pdf.cell(0, 4, 'TEL. (229) 935 39 40 | obras@grupo-imac.com | www.grupo-imac.com', ln=True)
+            pdf.cell(0, 4, 'TEL. (229) 935 39 40 | ventas1@grupo-imac.com | www.grupo-imac.com', ln=True)
             
             pdf.set_y(y_base + 40)
             
@@ -311,14 +301,13 @@ if boton:
                 pdf.image("footer_marcas.jpg", x=10, y=pdf.get_y(), w=190)
 
             pdf_output = pdf.output(dest='S').encode('latin-1')
-            nombre_file = f"Propuesta_{folio_actual}_{cliente.replace(' ', '_')}.pdf"
+            nombre_file = f"Presupuesto_{folio_actual}_{cliente.replace(' ', '_')}.pdf"
 
-            # --- REGISTRO EN EXCEL CON EL NUEVO FOLIO ---
             if hoja:
                 resumen = " / ".join([f"{z['area']} ({z['m2']}m2)" for z in zonas_data])
                 hoja.append_row([folio_actual, fecha_hoy, asesor, cliente, compania, telefono, correo_cliente, proyecto, resumen, total_final])
             
             enviar_respaldo_correo(pdf_output, nombre_file, cliente, asesor, folio_actual)
             
-            st.success(f"✅ Propuesta {folio_actual} generada con éxito.")
-            st.download_button(f"📥 DESCARGAR {folio_actual}", data=pdf_output, file_name=nombre_file)
+            st.success(f"✅ Presupuesto {folio_actual} generado con éxito.")
+            st.download_button(f"📥 DESCARGAR PRESUPUESTO", data=pdf_output, file_name=nombre_file)

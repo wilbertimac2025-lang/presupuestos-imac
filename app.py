@@ -103,7 +103,7 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio):
         return True, "OK"
     except Exception as e: return False, str(e)
 
-st.title("🍊 Presupuestos Multizona")
+st.title("🏗️​ Presupuesto Obra")
 num_areas = st.number_input("¿Cuántas áreas distintas vas a cotizar?", min_value=1, max_value=10, value=1)
 
 with st.form("form_presupuesto"):

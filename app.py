@@ -72,7 +72,7 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor):
         remitente = st.secrets["CORREO_BOT"]
         password = st.secrets["PASS_BOT"]
         # ⚠️ 2. REEMPLAZA CON EL CORREO CENTRAL DE IMAC
-        correo_central = "sistematarc@gmail.com" 
+        correo_central = "sistematarc@gamil.com" 
         
         msg = EmailMessage()
         msg['Subject'] = f'COTIZACIÓN: {cliente} (Asesor: {asesor})'
@@ -290,3 +290,4 @@ if boton:
             
             st.success(f"✅ Propuesta con marcos 3D generada con éxito.")
             st.download_button("📥 DESCARGAR PROPUESTA (PDF)", data=pdf_output, file_name=nombre_file)
+        

@@ -18,9 +18,10 @@ TEXTO_DESCRIPCION = ("Es un sistema de impermeabilizacion prefabricado, consiste
                     "flexible por lo que se puede colocar en cualquier superficie lograndose total seguridad a lo largo de "
                     "todas sus uniones y remates pues quedan practicamente soldadas, obteniendose asi una total impermeabilidad.")
 
+# 👇 AQUÍ ESTÁ LA CORRECCIÓN: Se quitó el doble salto de línea para juntar el texto
 TEXTO_ESPECIFICACIONES = ("PREPARACION DE LA SUPERFICIE A IMPERMEABILIZAR.\n"
                          "- Limpieza del area hasta quedar libre de polvo.\n"
-                         "- Aplicacion de hidroflex como primario sellador.\n\n"
+                         "- Aplicacion de hidroflex como primario sellador.\n"
                          "COLOCACION DEL IMPERMEABILIZANTE PREFABRICADO\n"
                          "- Sellado de orillas y traslapes por medio de fusion.")
 
@@ -43,10 +44,10 @@ class PDF(FPDF):
         self.rect(5, 5, 200, 287) 
         self.set_line_width(0.2) 
 
-        # 3. LOGO PRINCIPAL (Ahora busca formato PNG transparente)
+        # 3. LOGO PRINCIPAL (Busca formato PNG transparente)
         if os.path.exists("logo_tarc.png"):
             self.image("logo_tarc.png", x=10, y=8, w=85) 
-        elif os.path.exists("logo_tarc.jpg"): # Respaldo por si acaso
+        elif os.path.exists("logo_tarc.jpg"): 
             self.image("logo_tarc.jpg", x=10, y=8, w=85)
         else:
             self.set_font('Arial', 'B', 14)
@@ -261,7 +262,6 @@ if boton:
             
             y_base = pdf.get_y() + 10 
             
-            # Ahora busca el de BBVA en formato PNG transparente
             if os.path.exists("logo_bbva.png"):
                 pdf.image("logo_bbva.png", x=145, y=y_base, w=55)
             elif os.path.exists("logo_bbva.jpg"):
@@ -279,7 +279,6 @@ if boton:
             
             pdf.set_y(y_base + 40)
             
-            # Footer también en PNG
             if os.path.exists("footer_marcas.png"):
                 if pdf.get_y() > 250: pdf.add_page()
                 pdf.image("footer_marcas.png", x=10, y=pdf.get_y(), w=190)
@@ -297,5 +296,5 @@ if boton:
             
             enviar_respaldo_correo(pdf_output, nombre_file, cliente, asesor)
             
-            st.success(f"✅ Propuesta con logos transparentes generada con éxito.")
+            st.success(f"✅ Propuesta generada con éxito.")
             st.download_button("📥 DESCARGAR PROPUESTA (PDF)", data=pdf_output, file_name=nombre_file)

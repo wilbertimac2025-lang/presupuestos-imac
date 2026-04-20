@@ -18,7 +18,6 @@ TEXTO_DESCRIPCION = ("Es un sistema de impermeabilizacion prefabricado, consiste
                     "flexible por lo que se puede colocar en cualquier superficie lograndose total seguridad a lo largo de "
                     "todas sus uniones y remates pues quedan practicamente soldadas, obteniendose asi una total impermeabilidad.")
 
-# 👇 AQUÍ ESTÁ LA CORRECCIÓN: Se quitó el doble salto de línea para juntar el texto
 TEXTO_ESPECIFICACIONES = ("PREPARACION DE LA SUPERFICIE A IMPERMEABILIZAR.\n"
                          "- Limpieza del area hasta quedar libre de polvo.\n"
                          "- Aplicacion de hidroflex como primario sellador.\n"
@@ -34,7 +33,7 @@ SISTEMAS_CATALOGO = [
 
 class PDF(FPDF):
     def header(self):
-        # 1. MARCA DE AGUA ENCAPSULADA (Fondo JPG)
+        # 1. MARCA DE AGUA ENCAPSULADA
         if os.path.exists("marca_agua.jpg"):
             self.image("marca_agua.jpg", x=5, y=5, w=200, h=287)
 
@@ -44,7 +43,7 @@ class PDF(FPDF):
         self.rect(5, 5, 200, 287) 
         self.set_line_width(0.2) 
 
-        # 3. LOGO PRINCIPAL (Busca formato PNG transparente)
+        # 3. LOGO PRINCIPAL (Transparente)
         if os.path.exists("logo_tarc.png"):
             self.image("logo_tarc.png", x=10, y=8, w=85) 
         elif os.path.exists("logo_tarc.jpg"): 
@@ -70,7 +69,22 @@ def conectar_sheets():
         return sheet
     except Exception: return None
 
-def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor):
+def obtener_nuevo_folio(hoja):
+    """Genera el folio dinámico estilo OBRA01-26, OBRA150-26"""
+    try:
+        anio_corto = datetime.datetime.now().strftime("%y") # Obtiene los últimos 2 dígitos del año (ej. 26)
+        if hoja:
+            filas = hoja.get_all_values()
+            numero_obra = len(filas) if len(filas) > 0 else 1
+            # :02d asegura que si es 1 se vea como 01, si es 15 se ve como 15, si es 310 se ve como 310.
+            return f"OBRA{numero_obra:02d}-{anio_corto}"
+    except Exception:
+        pass
+    # Folio temporal en caso de no poder conectar al excel
+    anio_corto = datetime.datetime.now().strftime("%y")
+    return f"OBRA-TEMP-{datetime.datetime.now().strftime('%H%M')}-{anio_corto}"
+
+def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio):
     try:
         remitente = st.secrets["CORREO_BOT"]
         password = st.secrets["PASS_BOT"]
@@ -78,10 +92,10 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor):
         correo_central = "sistematarc@gmail.com" 
         
         msg = EmailMessage()
-        msg['Subject'] = f'COTIZACIÓN: {cliente} (Asesor: {asesor})'
+        msg['Subject'] = f'NUEVO FOLIO {folio}: Cotización {cliente} (Asesor: {asesor})'
         msg['From'] = remitente
         msg['To'] = correo_central
-        msg.set_content(f"Nueva cotización generada.\nCliente: {cliente}\nAsesor: {asesor}")
+        msg.set_content(f"Se ha registrado una nueva cotización en el sistema.\n\nFolio Asignado: {folio}\nCliente: {cliente}\nAsesor: {asesor}\n\nSe adjunta el PDF oficial.")
         msg.add_attachment(pdf_bytes, maintype='application', subtype='pdf', filename=nombre_archivo)
         
         with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
@@ -127,20 +141,30 @@ with st.form("form_presupuesto"):
     desc_extra = st.text_input("Concepto del Costo Extra")
     anotaciones_asesor = st.text_area("Anotaciones Especiales para el Cliente")
     
-    boton = st.form_submit_button("GENERAR DOCUMENTO FINAL")
+    boton = st.form_submit_button("GENERAR DOCUMENTO Y FOLIO")
 
 if boton:
     if not cliente or not asesor:
         st.error("⚠️ El nombre del Cliente y el Asesor son obligatorios.")
     else:
-        with st.spinner("Aplicando diseño 3D con marcos premium..."):
+        with st.spinner("Conectando base de datos y asignando Folio Oficial..."):
+            
+            # --- 1. CONEXIÓN Y GENERACIÓN DE FOLIO ---
+            hoja = conectar_sheets()
+            folio_actual = obtener_nuevo_folio(hoja)
+
             subtotal_obras = sum(z["m2"] * z["precio"] for z in zonas_data)
             
+            # --- 2. CREACIÓN DEL PDF ---
             pdf = PDF()
             pdf.set_auto_page_break(auto=True, margin=20)
             pdf.add_page()
             
-            # --- ENCABEZADO MODERNO ---
+            # --- ENCABEZADO CON FOLIO ROJO ---
+            pdf.set_font('Arial', 'B', 12)
+            pdf.set_text_color(200, 30, 30) # Color Rojo Factura
+            pdf.cell(0, 5, f"FOLIO: {folio_actual}", ln=True, align='R')
+
             fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
             pdf.set_font('Arial', 'I', 10) 
             pdf.set_text_color(100, 100, 100) 
@@ -275,7 +299,7 @@ if boton:
             
             pdf.set_text_color(100, 100, 100); pdf.set_font('Arial', '', 8)
             pdf.cell(0, 4, 'BOULEVARD MIGUEL ALEMAN 759, COL. CENTRO. VERACRUZ, VER. C.P. 91700', ln=True)
-            pdf.cell(0, 4, 'TEL. (229) 935 39 40 | ventas1@grupo-imac.com | www.grupo-imac.com', ln=True)
+            pdf.cell(0, 4, 'TEL. (229) 935 39 40 | obras@grupo-imac.com | www.grupo-imac.com', ln=True)
             
             pdf.set_y(y_base + 40)
             
@@ -287,14 +311,14 @@ if boton:
                 pdf.image("footer_marcas.jpg", x=10, y=pdf.get_y(), w=190)
 
             pdf_output = pdf.output(dest='S').encode('latin-1')
-            nombre_file = f"Propuesta_{cliente.replace(' ', '_')}.pdf"
+            nombre_file = f"Propuesta_{folio_actual}_{cliente.replace(' ', '_')}.pdf"
 
-            hoja = conectar_sheets()
+            # --- REGISTRO EN EXCEL CON EL NUEVO FOLIO ---
             if hoja:
                 resumen = " / ".join([f"{z['area']} ({z['m2']}m2)" for z in zonas_data])
-                hoja.append_row([fecha_hoy, asesor, cliente, compania, telefono, correo_cliente, proyecto, resumen, total_final])
+                hoja.append_row([folio_actual, fecha_hoy, asesor, cliente, compania, telefono, correo_cliente, proyecto, resumen, total_final])
             
-            enviar_respaldo_correo(pdf_output, nombre_file, cliente, asesor)
+            enviar_respaldo_correo(pdf_output, nombre_file, cliente, asesor, folio_actual)
             
-            st.success(f"✅ Propuesta generada con éxito.")
-            st.download_button("📥 DESCARGAR PROPUESTA (PDF)", data=pdf_output, file_name=nombre_file)
+            st.success(f"✅ Propuesta {folio_actual} generada con éxito.")
+            st.download_button(f"📥 DESCARGAR {folio_actual}", data=pdf_output, file_name=nombre_file)

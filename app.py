@@ -7,6 +7,7 @@ import json
 import os
 import smtplib
 from email.message import EmailMessage
+from PIL import Image  # <-- NUEVA LIBRERÍA PARA CUADRAR LAS FOTOS
 
 # --- CONFIGURACIÓN ---
 st.set_page_config(page_title="Cotizador Multizona IMAC", page_icon="📝", layout="centered")
@@ -139,7 +140,6 @@ with st.form("form_presupuesto"):
     desc_extra = st.text_input("Concepto del Costo Extra")
     anotaciones_asesor = st.text_area("Anotaciones Especiales para el Cliente")
     
-    # 📸 NUEVO MÓDULO FOTOGRÁFICO
     fotos_subidas = st.file_uploader("📸 Subir Evidencia Fotográfica del Área (Opcional)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
     
     boton = st.form_submit_button("GENERAR DOCUMENTO Y FOLIO")
@@ -150,7 +150,6 @@ if boton:
     else:
         with st.spinner("Procesando imágenes, conectando a la base de datos y asignando Folio Oficial..."):
             
-            # 1. GUARDAR TEMPORALMENTE LAS FOTOS
             temp_paths = []
             if fotos_subidas:
                 for idx, foto in enumerate(fotos_subidas):
@@ -313,23 +312,42 @@ if boton:
                 if pdf.get_y() > 250: pdf.add_page()
                 pdf.image("footer_marcas.jpg", x=10, y=pdf.get_y(), w=190)
 
-            # 📸 --- CONSTRUCCIÓN DEL ANEXO FOTOGRÁFICO ---
+            # 📸 --- CONSTRUCCIÓN DEL ANEXO FOTOGRÁFICO INTELIGENTE ---
             if temp_paths:
-                pdf.add_page()
-                pdf.set_font('Arial', 'B', 16)
-                pdf.set_text_color(15, 60, 140)
-                pdf.cell(0, 10, "ANEXO FOTOGRAFICO", ln=True, align='C')
-                
-                y_pos = 40
                 for i, temp_img in enumerate(temp_paths):
-                    # Pone 2 imágenes por página para que luzcan grandes y nítidas
-                    if i > 0 and i % 2 == 0:
+                    # Controlar las páginas y los títulos (2 fotos por hoja)
+                    if i % 2 == 0:
                         pdf.add_page()
-                        y_pos = 30
+                        pdf.set_font('Arial', 'B', 14)
+                        pdf.set_text_color(15, 60, 140)
+                        pdf.set_xy(0, 35)
+                        pdf.cell(210, 10, "ANEXO FOTOGRÁFICO", ln=True, align='C')
+                        y_pos = 55
+                    else:
+                        y_pos = 170
                         
-                    pdf.image(temp_img, x=25, y=y_pos, w=160)
-                    y_pos += 120 # Espacio hacia abajo para la siguiente foto
-                    
+                    try:
+                        # Leer el tamaño original de la foto para no deformarla
+                        img = Image.open(temp_img)
+                        w_px, h_px = img.size
+                        
+                        # Caja máxima permitida para que no rompa el marco (160x105 mm)
+                        MAX_W = 160
+                        MAX_H = 105
+                        
+                        # Calcular la reducción proporcional exacta
+                        ratio = min(MAX_W / w_px, MAX_H / h_px)
+                        w_mm = w_px * ratio
+                        h_mm = h_px * ratio
+                        
+                        # Centrar la imagen perfectamente en medio de la hoja (210mm es el ancho total)
+                        x_mm = (210 - w_mm) / 2 
+                        
+                        pdf.image(temp_img, x=x_mm, y=y_pos, w=w_mm, h=h_mm)
+                    except Exception as e:
+                        # Respaldo de seguridad por si falla la lectura
+                        pdf.image(temp_img, x=25, y=y_pos, w=160)
+                        
             # LIMPIEZA DE ARCHIVOS TEMPORALES
             for temp_img in temp_paths:
                 if os.path.exists(temp_img):

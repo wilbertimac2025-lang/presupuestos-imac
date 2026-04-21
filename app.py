@@ -103,7 +103,7 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio):
         return True, "OK"
     except Exception as e: return False, str(e)
 
-st.title("🏗️​ Presupuesto Obra Grupo IMAC")
+st.title("🍊 Presupuestos Multizona")
 num_areas = st.number_input("¿Cuántas áreas distintas vas a cotizar?", min_value=1, max_value=10, value=1)
 
 with st.form("form_presupuesto"):
@@ -124,20 +124,23 @@ with st.form("form_presupuesto"):
     zonas_data = []
     for i in range(int(num_areas)):
         st.markdown(f"**Área {i+1}**")
-        c1, c2 = st.columns(2)
-        with c1:
+        col1, col2 = st.columns(2)
+        with col1:
             n = st.text_input(f"Nombre de la zona", key=f"n_{i}")
             s = st.selectbox(f"Sistema", SISTEMAS_CATALOGO, key=f"s_{i}")
-        with c2:
+        with col2:
             m = st.number_input(f"Metros (m²)", min_value=0.0, key=f"m_{i}")
             p = st.number_input(f"Precio x m²", min_value=0.0, key=f"p_{i}")
         zonas_data.append({"area": n, "sistema": s, "m2": m, "precio": p})
 
     st.write("---")
-    st.write("### 4. Ajustes Finales")
+    st.write("### 4. Ajustes Finales y Anexos")
     costo_extra = st.number_input("Costo Extra Adicional (Pesos $)", min_value=0.0)
     desc_extra = st.text_input("Concepto del Costo Extra")
     anotaciones_asesor = st.text_area("Anotaciones Especiales para el Cliente")
+    
+    # 📸 NUEVO MÓDULO FOTOGRÁFICO
+    fotos_subidas = st.file_uploader("📸 Subir Evidencia Fotográfica del Área (Opcional)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
     
     boton = st.form_submit_button("GENERAR DOCUMENTO Y FOLIO")
 
@@ -145,8 +148,18 @@ if boton:
     if not cliente or not asesor:
         st.error("⚠️ El nombre del Cliente y el Asesor son obligatorios.")
     else:
-        with st.spinner("Conectando base de datos y asignando Folio Oficial..."):
+        with st.spinner("Procesando imágenes, conectando a la base de datos y asignando Folio Oficial..."):
             
+            # 1. GUARDAR TEMPORALMENTE LAS FOTOS
+            temp_paths = []
+            if fotos_subidas:
+                for idx, foto in enumerate(fotos_subidas):
+                    ext = foto.name.split('.')[-1]
+                    temp_path = f"temp_img_{idx}.{ext}"
+                    with open(temp_path, "wb") as f:
+                        f.write(foto.getbuffer())
+                    temp_paths.append(temp_path)
+
             hoja = conectar_sheets()
             folio_actual = obtener_nuevo_folio(hoja)
 
@@ -299,6 +312,28 @@ if boton:
             elif os.path.exists("footer_marcas.jpg"):
                 if pdf.get_y() > 250: pdf.add_page()
                 pdf.image("footer_marcas.jpg", x=10, y=pdf.get_y(), w=190)
+
+            # 📸 --- CONSTRUCCIÓN DEL ANEXO FOTOGRÁFICO ---
+            if temp_paths:
+                pdf.add_page()
+                pdf.set_font('Arial', 'B', 16)
+                pdf.set_text_color(15, 60, 140)
+                pdf.cell(0, 10, "ANEXO FOTOGRAFICO", ln=True, align='C')
+                
+                y_pos = 40
+                for i, temp_img in enumerate(temp_paths):
+                    # Pone 2 imágenes por página para que luzcan grandes y nítidas
+                    if i > 0 and i % 2 == 0:
+                        pdf.add_page()
+                        y_pos = 30
+                        
+                    pdf.image(temp_img, x=25, y=y_pos, w=160)
+                    y_pos += 120 # Espacio hacia abajo para la siguiente foto
+                    
+            # LIMPIEZA DE ARCHIVOS TEMPORALES
+            for temp_img in temp_paths:
+                if os.path.exists(temp_img):
+                    os.remove(temp_img)
 
             pdf_output = pdf.output(dest='S').encode('latin-1')
             nombre_file = f"Presupuesto_{folio_actual}_{cliente.replace(' ', '_')}.pdf"

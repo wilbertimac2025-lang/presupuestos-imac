@@ -7,7 +7,9 @@ import json
 import os
 import smtplib
 from email.message import EmailMessage
-from PIL import Image  # <-- NUEVA LIBRERÍA PARA CUADRAR LAS FOTOS
+from PIL import Image
+import io
+from PyPDF2 import PdfMerger # HERRAMIENTA PARA UNIR PDFs
 
 # --- CONFIGURACIÓN ---
 st.set_page_config(page_title="Cotizador Multizona IMAC", page_icon="📝", layout="centered")
@@ -34,17 +36,14 @@ SISTEMAS_CATALOGO = [
 
 class PDF(FPDF):
     def header(self):
-        # 1. MARCA DE AGUA ENCAPSULADA
         if os.path.exists("marca_agua.jpg"):
             self.image("marca_agua.jpg", x=5, y=5, w=200, h=287)
 
-        # 2. MARCO / BORDE DE LA HOJA
         self.set_draw_color(15, 60, 140) 
         self.set_line_width(0.7) 
         self.rect(5, 5, 200, 287) 
         self.set_line_width(0.2) 
 
-        # 3. LOGO PRINCIPAL (Transparente)
         if os.path.exists("logo_tarc.png"):
             self.image("logo_tarc.png", x=10, y=8, w=85) 
         elif os.path.exists("logo_tarc.jpg"): 
@@ -71,7 +70,6 @@ def conectar_sheets():
     except Exception: return None
 
 def obtener_nuevo_folio(hoja):
-    """Genera el folio dinámico estilo OBRA01-26, OBRA150-26"""
     try:
         anio_corto = datetime.datetime.now().strftime("%y") 
         if hoja:
@@ -94,7 +92,7 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio):
         msg['Subject'] = f'NUEVO FOLIO {folio}: Presupuesto {cliente} (Asesor: {asesor})'
         msg['From'] = remitente
         msg['To'] = correo_central
-        msg.set_content(f"Se ha registrado un nuevo presupuesto en el sistema.\n\nFolio Asignado: {folio}\nCliente: {cliente}\nAsesor: {asesor}\n\nSe adjunta el PDF oficial.")
+        msg.set_content(f"Se ha registrado un nuevo presupuesto en el sistema.\n\nFolio Asignado: {folio}\nCliente: {cliente}\nAsesor: {asesor}\n\nSe adjunta el documento oficial.")
         msg.add_attachment(pdf_bytes, maintype='application', subtype='pdf', filename=nombre_archivo)
         
         with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
@@ -104,7 +102,7 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio):
         return True, "OK"
     except Exception as e: return False, str(e)
 
-st.title("🏗️​ Presupuestos Obra Grupo IMAC")
+st.title("🍊 Presupuestos Multizona")
 num_areas = st.number_input("¿Cuántas áreas distintas vas a cotizar?", min_value=1, max_value=10, value=1)
 
 with st.form("form_presupuesto"):
@@ -135,20 +133,22 @@ with st.form("form_presupuesto"):
         zonas_data.append({"area": n, "sistema": s, "m2": m, "precio": p})
 
     st.write("---")
-    st.write("### 4. Ajustes Finales y Anexos")
+    st.write("### 4. Ajustes y Anexos")
     costo_extra = st.number_input("Costo Extra Adicional (Pesos $)", min_value=0.0)
     desc_extra = st.text_input("Concepto del Costo Extra")
     anotaciones_asesor = st.text_area("Anotaciones Especiales para el Cliente")
     
-    fotos_subidas = st.file_uploader("📸 Subir Evidencia Fotográfica del Área (Opcional)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+    # 📸 El subidor de fotos se queda porque las fotos cambian en cada obra
+    st.write("**Evidencia Fotográfica de la Obra:**")
+    fotos_subidas = st.file_uploader("📸 Subir Evidencia (Opcional)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
     
-    boton = st.form_submit_button("GENERAR DOCUMENTO Y FOLIO")
+    boton = st.form_submit_button("GENERAR PRESUPUESTO OFICIAL")
 
 if boton:
     if not cliente or not asesor:
         st.error("⚠️ El nombre del Cliente y el Asesor son obligatorios.")
     else:
-        with st.spinner("Procesando imágenes, conectando a la base de datos y asignando Folio Oficial..."):
+        with st.spinner("Ensamblando Presupuesto, Fotos y Ficha Técnica Fija..."):
             
             temp_paths = []
             if fotos_subidas:
@@ -168,15 +168,12 @@ if boton:
             pdf.set_auto_page_break(auto=True, margin=20)
             pdf.add_page()
             
-            pdf.set_font('Arial', 'B', 12)
-            pdf.set_text_color(200, 30, 30) 
+            pdf.set_font('Arial', 'B', 12); pdf.set_text_color(200, 30, 30) 
             pdf.cell(0, 5, f"FOLIO: {folio_actual}", ln=True, align='R')
 
             fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
-            pdf.set_font('Arial', 'I', 10) 
-            pdf.set_text_color(100, 100, 100) 
-            pdf.cell(0, 5, f'Veracruz, Ver. a {fecha_hoy}', ln=True, align='R')
-            pdf.ln(5)
+            pdf.set_font('Arial', 'I', 10); pdf.set_text_color(100, 100, 100) 
+            pdf.cell(0, 5, f'Veracruz, Ver. a {fecha_hoy}', ln=True, align='R'); pdf.ln(5)
 
             pdf.set_font('Arial', 'B', 12); pdf.set_text_color(15, 60, 140) 
             pdf.cell(0, 5, f"CLIENTE: {cliente.upper()}", ln=True)
@@ -188,8 +185,7 @@ if boton:
             if telefono: pdf.cell(0, 5, f"Tel: {telefono}", ln=True)
             if correo_cliente: pdf.cell(0, 5, f"Email: {correo_cliente}", ln=True)
             
-            pdf.ln(2)
-            pdf.set_font('Arial', 'B', 10); pdf.set_text_color(15, 60, 140)
+            pdf.ln(2); pdf.set_font('Arial', 'B', 10); pdf.set_text_color(15, 60, 140)
             pdf.cell(0, 5, f"ASESOR COMERCIAL: {asesor.upper()}", ln=True)
             
             pdf.ln(3)
@@ -210,8 +206,7 @@ if boton:
                 pdf.set_font('Arial', 'I', 9); pdf.set_text_color(80, 80, 80)
                 pdf.multi_cell(0, 4, txt=TEXTO_DESCRIPCION)
                 
-                pdf.ln(3)
-                pdf.set_font('Arial', 'B', 9); pdf.set_text_color(0, 150, 255)
+                pdf.ln(3); pdf.set_font('Arial', 'B', 9); pdf.set_text_color(0, 150, 255)
                 pdf.cell(0, 5, "Especificaciones Técnicas:", ln=True)
                 pdf.set_text_color(50, 50, 50); pdf.set_font('Arial', '', 9)
                 pdf.multi_cell(0, 4, txt=TEXTO_ESPECIFICACIONES)
@@ -242,61 +237,40 @@ if boton:
             pdf.cell(70, 6, f"${iva:,.2f}", border=0, align='R', ln=True)
             pdf.ln(2)
 
-            x_inicial = pdf.get_x()
-            y_inicial = pdf.get_y()
-            
-            pdf.set_fill_color(200, 200, 200)
-            pdf.rect(x_inicial + 60 + 1.5, y_inicial + 1.5, 130, 9, 'F')
-            
+            x_i = pdf.get_x(); y_i = pdf.get_y()
+            pdf.set_fill_color(200, 200, 200); pdf.rect(x_i + 60 + 1.5, y_i + 1.5, 130, 9, 'F')
             pdf.set_fill_color(15, 60, 140); pdf.set_text_color(255, 255, 255); pdf.set_font('Arial', 'B', 11)
-            pdf.set_xy(x_inicial + 60, y_inicial) 
-            pdf.cell(60, 9, "INVERSIÓN TOTAL", border=0, fill=True, align='R')
-            pdf.set_fill_color(0, 150, 255) 
-            pdf.cell(70, 9, f"${total_final:,.2f} MXN", border=0, fill=True, align='C', ln=True)
+            pdf.set_xy(x_i + 60, y_i); pdf.cell(60, 9, "INVERSIÓN TOTAL", border=0, fill=True, align='R')
+            pdf.set_fill_color(0, 150, 255); pdf.cell(70, 9, f"${total_final:,.2f} MXN", border=0, fill=True, align='C', ln=True)
             
-            pdf.ln(8)
-            pdf.set_text_color(15, 60, 140); pdf.set_font('Arial', 'B', 9)
+            pdf.ln(8); pdf.set_text_color(15, 60, 140); pdf.set_font('Arial', 'B', 9)
             pdf.cell(0, 5, "Consideraciones Importantes:", ln=True)
             pdf.set_text_color(80, 80, 80); pdf.set_font('Arial', 'I', 8)
             pdf.multi_cell(0, 4, txt="- Se deberá hacer un levantamiento físico para determinar los alcances exactos.\n- No incluye trabajos no cotizados.")
             pdf.ln(3)
             
-            pdf.set_font('Arial', 'B', 9); pdf.set_text_color(50, 50, 50)
-            pdf.cell(60, 5, "Garantía del Sistema:")
-            pdf.set_font('Arial', '', 9); pdf.set_text_color(15, 60, 140)
-            pdf.cell(0, 5, "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", ln=True)
+            pdf.set_font('Arial', 'B', 9); pdf.set_text_color(50, 50, 50); pdf.cell(60, 5, "Garantía del Sistema:")
+            pdf.set_font('Arial', '', 9); pdf.set_text_color(15, 60, 140); pdf.cell(0, 5, "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", ln=True)
             
-            pdf.set_font('Arial', 'B', 9); pdf.set_text_color(50, 50, 50)
-            pdf.cell(60, 5, "Condiciones de Pago:")
-            pdf.set_font('Arial', '', 9); pdf.set_text_color(15, 60, 140)
-            pdf.cell(0, 5, "70% DE ANTICIPO, 30% CONTRA ENTREGA", ln=True)
+            pdf.set_font('Arial', 'B', 9); pdf.set_text_color(50, 50, 50); pdf.cell(60, 5, "Condiciones de Pago:")
+            pdf.set_font('Arial', '', 9); pdf.set_text_color(15, 60, 140); pdf.cell(0, 5, "70% DE ANTICIPO, 30% CONTRA ENTREGA", ln=True)
             
-            pdf.set_font('Arial', 'B', 9); pdf.set_text_color(50, 50, 50)
-            pdf.cell(60, 5, "Presupuesto válido hasta:")
-            pdf.set_font('Arial', '', 9); pdf.set_text_color(15, 60, 140)
-            pdf.cell(0, 5, fecha_validez.strftime("%d/%m/%Y"), ln=True)
+            pdf.set_font('Arial', 'B', 9); pdf.set_text_color(50, 50, 50); pdf.cell(60, 5, "Presupuesto válido hasta:")
+            pdf.set_font('Arial', '', 9); pdf.set_text_color(15, 60, 140); pdf.cell(0, 5, fecha_validez.strftime("%d/%m/%Y"), ln=True)
             pdf.ln(5)
 
             if anotaciones_asesor:
-                pdf.set_text_color(0, 150, 255); pdf.set_font('Arial', 'B', 10)
-                pdf.cell(0, 6, "Anotaciones Especiales:", ln=True)
-                pdf.set_text_color(80, 80, 80); pdf.set_font('Arial', 'I', 9)
-                pdf.multi_cell(0, 5, txt=anotaciones_asesor)
-                pdf.ln(5)
+                pdf.set_text_color(0, 150, 255); pdf.set_font('Arial', 'B', 10); pdf.cell(0, 6, "Anotaciones Especiales:", ln=True)
+                pdf.set_text_color(80, 80, 80); pdf.set_font('Arial', 'I', 9); pdf.multi_cell(0, 5, txt=anotaciones_asesor); pdf.ln(5)
 
             if pdf.get_y() > 230: pdf.add_page()
             
             y_base = pdf.get_y() + 10 
+            if os.path.exists("logo_bbva.png"): pdf.image("logo_bbva.png", x=145, y=y_base, w=55)
+            elif os.path.exists("logo_bbva.jpg"): pdf.image("logo_bbva.jpg", x=145, y=y_base, w=55)
             
-            if os.path.exists("logo_bbva.png"):
-                pdf.image("logo_bbva.png", x=145, y=y_base, w=55)
-            elif os.path.exists("logo_bbva.jpg"):
-                pdf.image("logo_bbva.jpg", x=145, y=y_base, w=55)
-            
-            pdf.set_y(y_base) 
-            pdf.set_font('Arial', 'B', 10); pdf.set_text_color(15, 60, 140)
-            pdf.cell(0, 5, 'Atentamente,', ln=True)
-            pdf.set_font('Arial', 'B', 12); pdf.set_text_color(0, 150, 255)
+            pdf.set_y(y_base); pdf.set_font('Arial', 'B', 10); pdf.set_text_color(15, 60, 140)
+            pdf.cell(0, 5, 'Atentamente,', ln=True); pdf.set_font('Arial', 'B', 12); pdf.set_text_color(0, 150, 255)
             pdf.cell(0, 5, 'TARC S.A. DE C.V.', ln=True)
             
             pdf.set_text_color(100, 100, 100); pdf.set_font('Arial', '', 8)
@@ -304,7 +278,6 @@ if boton:
             pdf.cell(0, 4, 'TEL. (229) 935 39 40 | ventas1@grupo-imac.com | www.grupo-imac.com', ln=True)
             
             pdf.set_y(y_base + 40)
-            
             if os.path.exists("footer_marcas.png"):
                 if pdf.get_y() > 250: pdf.add_page()
                 pdf.image("footer_marcas.png", x=10, y=pdf.get_y(), w=190)
@@ -312,55 +285,49 @@ if boton:
                 if pdf.get_y() > 250: pdf.add_page()
                 pdf.image("footer_marcas.jpg", x=10, y=pdf.get_y(), w=190)
 
-            # 📸 --- CONSTRUCCIÓN DEL ANEXO FOTOGRÁFICO INTELIGENTE ---
+            # --- ANEXO FOTOGRÁFICO INTELIGENTE ---
             if temp_paths:
                 for i, temp_img in enumerate(temp_paths):
-                    # Controlar las páginas y los títulos (2 fotos por hoja)
                     if i % 2 == 0:
-                        pdf.add_page()
-                        pdf.set_font('Arial', 'B', 14)
-                        pdf.set_text_color(15, 60, 140)
-                        pdf.set_xy(0, 35)
-                        pdf.cell(210, 10, "ANEXO FOTOGRÁFICO", ln=True, align='C')
-                        y_pos = 55
+                        pdf.add_page(); pdf.set_font('Arial', 'B', 14); pdf.set_text_color(15, 60, 140)
+                        pdf.set_xy(0, 35); pdf.cell(210, 10, "ANEXO FOTOGRÁFICO", ln=True, align='C'); y_pos = 55
                     else:
                         y_pos = 170
-                        
                     try:
-                        # Leer el tamaño original de la foto para no deformarla
-                        img = Image.open(temp_img)
-                        w_px, h_px = img.size
-                        
-                        # Caja máxima permitida para que no rompa el marco (160x105 mm)
-                        MAX_W = 160
-                        MAX_H = 105
-                        
-                        # Calcular la reducción proporcional exacta
-                        ratio = min(MAX_W / w_px, MAX_H / h_px)
-                        w_mm = w_px * ratio
-                        h_mm = h_px * ratio
-                        
-                        # Centrar la imagen perfectamente en medio de la hoja (210mm es el ancho total)
+                        img = Image.open(temp_img); w_px, h_px = img.size
+                        ratio = min(160 / w_px, 105 / h_px); w_mm = w_px * ratio; h_mm = h_px * ratio
                         x_mm = (210 - w_mm) / 2 
-                        
                         pdf.image(temp_img, x=x_mm, y=y_pos, w=w_mm, h=h_mm)
-                    except Exception as e:
-                        # Respaldo de seguridad por si falla la lectura
-                        pdf.image(temp_img, x=25, y=y_pos, w=160)
+                    except: pass
                         
-            # LIMPIEZA DE ARCHIVOS TEMPORALES
             for temp_img in temp_paths:
-                if os.path.exists(temp_img):
-                    os.remove(temp_img)
+                if os.path.exists(temp_img): os.remove(temp_img)
 
-            pdf_output = pdf.output(dest='S').encode('latin-1')
+            # --- GENERACIÓN DEL PDF BASE ---
+            pdf_base_bytes = pdf.output(dest='S').encode('latin-1')
+            
+            # 🪄 --- MAGIA: UNIR CON LA FICHA TÉCNICA PDF FIJA ---
+            pdf_final_para_descargar = pdf_base_bytes 
+            
+            # Busca automáticamente el PDF de GitHub si existe
+            if os.path.exists("ficha_tecnica.pdf"):
+                fusionador = PdfMerger()
+                fusionador.append(io.BytesIO(pdf_base_bytes))
+                fusionador.append("ficha_tecnica.pdf") # Anexa la ficha técnica pre-cargada
+                
+                archivo_salida = io.BytesIO()
+                fusionador.write(archivo_salida)
+                fusionador.close()
+                
+                pdf_final_para_descargar = archivo_salida.getvalue()
+
             nombre_file = f"Presupuesto_{folio_actual}_{cliente.replace(' ', '_')}.pdf"
 
             if hoja:
                 resumen = " / ".join([f"{z['area']} ({z['m2']}m2)" for z in zonas_data])
                 hoja.append_row([folio_actual, fecha_hoy, asesor, cliente, compania, telefono, correo_cliente, proyecto, resumen, total_final])
             
-            enviar_respaldo_correo(pdf_output, nombre_file, cliente, asesor, folio_actual)
+            enviar_respaldo_correo(pdf_final_para_descargar, nombre_file, cliente, asesor, folio_actual)
             
             st.success(f"✅ Presupuesto {folio_actual} generado con éxito.")
-            st.download_button(f"📥 DESCARGAR PRESUPUESTO", data=pdf_output, file_name=nombre_file)
+            st.download_button(f"📥 DESCARGAR PRESUPUESTO", data=pdf_final_para_descargar, file_name=nombre_file)

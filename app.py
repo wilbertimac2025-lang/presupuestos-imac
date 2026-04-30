@@ -138,9 +138,16 @@ with st.form("form_presupuesto"):
     desc_extra = st.text_input("Concepto del Costo Extra")
     anotaciones_asesor = st.text_area("Anotaciones Especiales para el Cliente")
     
-    # 📸 El subidor de fotos se queda porque las fotos cambian en cada obra
     st.write("**Evidencia Fotográfica de la Obra:**")
     fotos_subidas = st.file_uploader("📸 Subir Evidencia (Opcional)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+    
+    # 📝 NUEVO: Generador dinámico de comentarios para las fotos
+    comentarios_fotos = []
+    if fotos_subidas:
+        st.info("💡 Agrega un comentario descriptivo para cada foto (Opcional):")
+        for i, foto in enumerate(fotos_subidas):
+            comentario = st.text_input(f"Nota para: {foto.name}", key=f"coment_{i}")
+            comentarios_fotos.append(comentario)
     
     boton = st.form_submit_button("GENERAR PRESUPUESTO OFICIAL")
 
@@ -148,7 +155,7 @@ if boton:
     if not cliente or not asesor:
         st.error("⚠️ El nombre del Cliente y el Asesor son obligatorios.")
     else:
-        with st.spinner("Ensamblando Presupuesto, Fotos y Ficha Técnica Fija..."):
+        with st.spinner("Ensamblando Presupuesto, Fotos, Comentarios y Ficha Técnica..."):
             
             temp_paths = []
             if fotos_subidas:
@@ -285,19 +292,30 @@ if boton:
                 if pdf.get_y() > 250: pdf.add_page()
                 pdf.image("footer_marcas.jpg", x=10, y=pdf.get_y(), w=190)
 
-            # --- ANEXO FOTOGRÁFICO INTELIGENTE ---
+            # 📸 --- ANEXO FOTOGRÁFICO CON COMENTARIOS ---
             if temp_paths:
                 for i, temp_img in enumerate(temp_paths):
                     if i % 2 == 0:
-                        pdf.add_page(); pdf.set_font('Arial', 'B', 14); pdf.set_text_color(15, 60, 140)
-                        pdf.set_xy(0, 35); pdf.cell(210, 10, "ANEXO FOTOGRÁFICO", ln=True, align='C'); y_pos = 55
+                        pdf.add_page()
+                        pdf.set_font('Arial', 'B', 14); pdf.set_text_color(15, 60, 140)
+                        pdf.set_xy(0, 35); pdf.cell(210, 10, "ANEXO FOTOGRÁFICO", ln=True, align='C')
+                        y_pos = 50
                     else:
-                        y_pos = 170
+                        y_pos = 165
                     try:
                         img = Image.open(temp_img); w_px, h_px = img.size
-                        ratio = min(160 / w_px, 105 / h_px); w_mm = w_px * ratio; h_mm = h_px * ratio
+                        # Se ajustó la altura (95) para dar espacio al comentario abajo
+                        ratio = min(160 / w_px, 95 / h_px); w_mm = w_px * ratio; h_mm = h_px * ratio
                         x_mm = (210 - w_mm) / 2 
                         pdf.image(temp_img, x=x_mm, y=y_pos, w=w_mm, h=h_mm)
+                        
+                        # 📝 Imprimir el comentario si el usuario escribió algo
+                        if i < len(comentarios_fotos) and comentarios_fotos[i].strip():
+                            pdf.set_xy(25, y_pos + h_mm + 2) # Justo debajo de la foto
+                            pdf.set_font('Arial', 'I', 10)
+                            pdf.set_text_color(80, 80, 80)
+                            pdf.multi_cell(160, 5, txt=f"Nota: {comentarios_fotos[i]}", align='C')
+                            
                     except: pass
                         
             for temp_img in temp_paths:
@@ -309,11 +327,10 @@ if boton:
             # 🪄 --- MAGIA: UNIR CON LA FICHA TÉCNICA PDF FIJA ---
             pdf_final_para_descargar = pdf_base_bytes 
             
-            # Busca automáticamente el PDF de GitHub si existe
             if os.path.exists("ficha_tecnica.pdf"):
                 fusionador = PdfMerger()
                 fusionador.append(io.BytesIO(pdf_base_bytes))
-                fusionador.append("ficha_tecnica.pdf") # Anexa la ficha técnica pre-cargada
+                fusionador.append("ficha_tecnica.pdf") 
                 
                 archivo_salida = io.BytesIO()
                 fusionador.write(archivo_salida)

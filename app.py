@@ -141,13 +141,19 @@ with st.form("form_presupuesto"):
     st.write("**Evidencia Fotográfica de la Obra:**")
     fotos_subidas = st.file_uploader("📸 Subir Evidencia (Opcional)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
     
-    # 📝 NUEVO: Generador dinámico de comentarios para las fotos
-    comentarios_fotos = []
-    if fotos_subidas:
-        st.info("💡 Agrega un comentario descriptivo para cada foto (Opcional):")
-        for i, foto in enumerate(fotos_subidas):
-            comentario = st.text_input(f"Nota para: {foto.name}", key=f"coment_{i}")
-            comentarios_fotos.append(comentario)
+    # 📝 CAJAS DE TEXTO FIJAS (Evita el doble click de generación)
+    st.info("💡 Si subiste fotos, puedes agregarles un comentario a cada una en el orden que las seleccionaste:")
+    colA, colB = st.columns(2)
+    with colA:
+        c0 = st.text_input("Nota para Foto 1")
+        c2 = st.text_input("Nota para Foto 3")
+        c4 = st.text_input("Nota para Foto 5")
+    with colB:
+        c1 = st.text_input("Nota para Foto 2")
+        c3 = st.text_input("Nota para Foto 4")
+        c5 = st.text_input("Nota para Foto 6")
+        
+    comentarios_fotos = [c0, c1, c2, c3, c4, c5]
     
     boton = st.form_submit_button("GENERAR PRESUPUESTO OFICIAL")
 
@@ -292,7 +298,7 @@ if boton:
                 if pdf.get_y() > 250: pdf.add_page()
                 pdf.image("footer_marcas.jpg", x=10, y=pdf.get_y(), w=190)
 
-            # 📸 --- ANEXO FOTOGRÁFICO CON COMENTARIOS ---
+            # 📸 --- ANEXO FOTOGRÁFICO CON COMENTARIOS FIJOS ---
             if temp_paths:
                 for i, temp_img in enumerate(temp_paths):
                     if i % 2 == 0:
@@ -304,14 +310,12 @@ if boton:
                         y_pos = 165
                     try:
                         img = Image.open(temp_img); w_px, h_px = img.size
-                        # Se ajustó la altura (95) para dar espacio al comentario abajo
                         ratio = min(160 / w_px, 95 / h_px); w_mm = w_px * ratio; h_mm = h_px * ratio
                         x_mm = (210 - w_mm) / 2 
                         pdf.image(temp_img, x=x_mm, y=y_pos, w=w_mm, h=h_mm)
                         
-                        # 📝 Imprimir el comentario si el usuario escribió algo
                         if i < len(comentarios_fotos) and comentarios_fotos[i].strip():
-                            pdf.set_xy(25, y_pos + h_mm + 2) # Justo debajo de la foto
+                            pdf.set_xy(25, y_pos + h_mm + 2) 
                             pdf.set_font('Arial', 'I', 10)
                             pdf.set_text_color(80, 80, 80)
                             pdf.multi_cell(160, 5, txt=f"Nota: {comentarios_fotos[i]}", align='C')

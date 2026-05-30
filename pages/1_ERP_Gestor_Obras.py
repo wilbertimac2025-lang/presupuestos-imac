@@ -65,7 +65,8 @@ if doc:
                     boton_arranque = st.form_submit_button("🚀 INICIAR PROYECTO")
                     
                     if boton_arranque:
-                        if no residente:
+                        # AQUÍ ESTABA EL ERROR, YA ESTÁ CORREGIDO A "not"
+                        if not residente: 
                             st.warning("⚠️ Debes asignar un residente para la obra.")
                         else:
                             # Inyectamos los datos a la pestaña "Obras_Activas"

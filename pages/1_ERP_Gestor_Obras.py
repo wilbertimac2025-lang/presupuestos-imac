@@ -27,26 +27,28 @@ st.markdown("---")
 doc = conectar_sheets()
 
 if doc:
-    # Conectamos con ambas pestañas del Excel
     hoja_presupuestos = doc.worksheet("Presupuestos")
     hoja_obras = doc.worksheet("Obras_Activas")
 
-    # Obtenemos todos los datos de las cotizaciones
     datos_presupuestos = hoja_presupuestos.get_all_records()
     
-    # Filtramos para tener solo los números de Folio
-    folios_disponibles = [fila["Folio"] for fila in datos_presupuestos if fila.get("Folio") != ""]
+    # 🛠️ CORRECCIÓN: Código blindado. Solo lee la columna si existe realmente.
+    folios_disponibles = [str(fila["Folio"]) for fila in datos_presupuestos if "Folio" in fila and str(fila.get("Folio", "")) != ""]
 
     col1, col2 = st.columns([1, 2])
     
     with col1:
         st.subheader("1. Apertura de Obra")
-        st.write("Selecciona una cotización aprobada para darla de alta en el sistema operativo.")
+        st.write("Selecciona una cotización aprobada para darla de alta.")
+        
+        # Si la lista está vacía, te avisa amigablemente en lugar de tronar
+        if not folios_disponibles:
+            st.warning("⚠️ No se detectaron Folios. Por favor, verifica en tu Excel que la celda A1 de la pestaña 'Presupuestos' diga exactamente 'Folio' (sin espacios).")
+        
         folio_seleccionado = st.selectbox("Folio Aprobado:", ["Selecciona un folio..."] + folios_disponibles)
 
     if folio_seleccionado != "Selecciona un folio...":
-        # Buscamos toda la información de ese folio en específico
-        datos_obra = next((item for item in datos_presupuestos if item["Folio"] == folio_seleccionado), None)
+        datos_obra = next((item for item in datos_presupuestos if str(item.get("Folio", "")) == folio_seleccionado), None)
 
         if datos_obra:
             with col2:
@@ -65,11 +67,9 @@ if doc:
                     boton_arranque = st.form_submit_button("🚀 INICIAR PROYECTO")
                     
                     if boton_arranque:
-                        # AQUÍ ESTABA EL ERROR, YA ESTÁ CORREGIDO A "not"
                         if not residente: 
                             st.warning("⚠️ Debes asignar un residente para la obra.")
                         else:
-                            # Inyectamos los datos a la pestaña "Obras_Activas"
                             hoja_obras.append_row([
                                 folio_seleccionado,
                                 datos_obra.get('Cliente', ''),
@@ -80,4 +80,4 @@ if doc:
                                 residente.upper()
                             ])
                             st.balloons()
-                            st.success(f"¡Obra {folio_seleccionado} dada de alta! Ya puedes comenzar a gestionar salidas de almacén e incidencias de la cuadrilla.")
+                            st.success(f"¡Obra {folio_seleccionado} dada de alta! Ya puedes comenzar a gestionar salidas.")

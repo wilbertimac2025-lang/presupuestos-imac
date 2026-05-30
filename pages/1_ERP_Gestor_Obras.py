@@ -14,7 +14,7 @@ def conectar_sheets():
         cliente = gspread.authorize(creds)
         
         # ⚠️ REEMPLAZA CON TU ID DE EXCEL
-        ID_DEL_EXCEL = "1IFiS4gvh8q1vGtIU936uRS7fADiX_qeqlWtUexUxUwA" 
+        ID_DEL_EXCEL = "1-grdT2H5dBlGVPvJbZ5wVYDdtVjQEEmUPGpvEm6C0Gc" 
         doc = cliente.open_by_key(ID_DEL_EXCEL)
         return doc
     except Exception as e:

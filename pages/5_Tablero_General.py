@@ -6,6 +6,9 @@ import pandas as pd
 
 st.set_page_config(page_title="Tablero General", page_icon="📈", layout="wide")
 
+# 🔐 CONTRASEÑA MAESTRA PARA VER EL TABLERO GLOBAL
+CLAVE_ADMIN = "2289"
+
 def limpiar_monto(valor):
     """Limpia los textos de Excel para poder hacer operaciones matemáticas"""
     if str(valor).strip() == "" or valor is None: return 0.0
@@ -28,94 +31,99 @@ def conectar_sheets():
 st.title("📈 Tablero de Control Global")
 st.markdown("---")
 
-doc = conectar_sheets()
+# --- CANDADO DE SEGURIDAD ---
+clave_ingresada = st.text_input("🔑 Ingresa la clave de Administrador para acceder al resumen financiero:", type="password")
 
-if doc:
-    try:
-        hoja_obras = doc.worksheet("Obras_Activas")
-        hoja_gastos = doc.worksheet("Gastos_Financieros")
-    except Exception as e:
-        st.error("⚠️ Faltan pestañas en tu Excel (Obras_Activas o Gastos_Financieros).")
-        st.stop()
+if clave_ingresada == CLAVE_ADMIN:
+    st.success("🔓 Acceso de Administrador Concedido")
+    
+    doc = conectar_sheets()
 
-    datos_obras = hoja_obras.get_all_records()
-    datos_gastos = hoja_gastos.get_all_records()
+    if doc:
+        try:
+            hoja_obras = doc.worksheet("Obras_Activas")
+            hoja_gastos = doc.worksheet("Gastos_Financieros")
+        except Exception as e:
+            st.error("⚠️ Faltan pestañas en tu Excel (Obras_Activas o Gastos_Financieros).")
+            st.stop()
 
-    if not datos_obras:
-        st.info("No hay obras registradas en el sistema para generar un reporte.")
-    else:
-        # --- MOTOR DE PROCESAMIENTO GLOBAL ---
-        resumen_obras = []
-        for obra in datos_obras:
-            # Identificar el folio sin importar cómo se llame exactamente la columna
-            llave_folio = next((k for k in obra.keys() if "FOLIO" in str(k).upper()), None)
-            folio = str(obra.get(llave_folio, "")) if llave_folio else ""
+        datos_obras = hoja_obras.get_all_records()
+        datos_gastos = hoja_gastos.get_all_records()
+
+        if not datos_obras:
+            st.info("No hay obras registradas en el sistema para generar un reporte.")
+        else:
+            # --- MOTOR DE PROCESAMIENTO GLOBAL ---
+            resumen_obras = []
+            for obra in datos_obras:
+                llave_folio = next((k for k in obra.keys() if "FOLIO" in str(k).upper()), None)
+                folio = str(obra.get(llave_folio, "")) if llave_folio else ""
+                
+                if not folio: continue 
+                
+                estatus = str(obra.get("Estatus", "N/A"))
+                cliente = obra.get("Cliente", "N/A")
+                proyecto = obra.get("Proyecto", "N/A")
+                
+                llave_monto = next((k for k in obra.keys() if "PRESUPUESTO" in str(k).upper() or "AUTORIZADO" in str(k).upper() or "MONTO" in str(k).upper()), None)
+                presupuesto = limpiar_monto(obra.get(llave_monto, 0)) if llave_monto else 0.0
+
+                gastos_obra = [limpiar_monto(g.get("Monto ($)", 0)) for g in datos_gastos if str(g.get("Folio Obra", "")) == folio]
+                total_gastado = sum(gastos_obra)
+                utilidad = presupuesto - total_gastado
+                
+                avance_financiero = (total_gastado / presupuesto * 100) if presupuesto > 0 else 0
+
+                resumen_obras.append({
+                    "Folio": folio,
+                    "Cliente": cliente,
+                    "Proyecto": proyecto,
+                    "Estatus": estatus,
+                    "Presupuesto Cobrado": presupuesto, 
+                    "Gasto Operativo": total_gastado,
+                    "Saldo Disponible": utilidad,
+                    "Avance Gasto": avance_financiero
+                })
+
+            df = pd.DataFrame(resumen_obras)
             
-            if not folio: continue # Saltar filas vacías
+            col1, col2 = st.columns([1, 2])
+            with col1:
+                st.subheader("Filtros de Búsqueda")
+                filtro_estatus = st.radio("Filtrar la vista de obras:", ["Todas las Obras", "Solo Obras EN EJECUCIÓN"])
+                
+                if filtro_estatus == "Solo Obras EN EJECUCIÓN":
+                    df = df[df["Estatus"] == "EN EJECUCIÓN"]
+
+            # ==========================================
+            # TARJETAS DE INDICADORES GLOBALES
+            # ==========================================
+            st.markdown("---")
+            st.subheader("📊 Indicadores Globales TARC S.A. DE C.V. (Obras Filtradas)")
             
-            estatus = str(obra.get("Estatus", "N/A"))
-            cliente = obra.get("Cliente", "N/A")
-            proyecto = obra.get("Proyecto", "N/A")
+            c1, c2, c3 = st.columns(3)
             
-            llave_monto = next((k for k in obra.keys() if "PRESUPUESTO" in str(k).upper() or "AUTORIZADO" in str(k).upper() or "MONTO" in str(k).upper()), None)
-            presupuesto = limpiar_monto(obra.get(llave_monto, 0)) if llave_monto else 0.0
-
-            # Sumar todos los gastos específicos de este folio
-            gastos_obra = [limpiar_monto(g.get("Monto ($)", 0)) for g in datos_gastos if str(g.get("Folio Obra", "")) == folio]
-            total_gastado = sum(gastos_obra)
-            utilidad = presupuesto - total_gastado
+            total_presupuestos = df["Presupuesto Cobrado"].sum()
+            total_gastos = df["Gasto Operativo"].sum()
+            total_utilidad = df["Saldo Disponible"].sum()
             
-            avance_financiero = (total_gastado / presupuesto * 100) if presupuesto > 0 else 0
+            c1.metric("Obras en Pantalla", len(df))
+            c2.metric("Suma Total de Presupuestos", f"${total_presupuestos:,.2f} MXN")
+            c3.metric("Fondo / Utilidad Global Libre", f"${total_utilidad:,.2f} MXN")
 
-            resumen_obras.append({
-                "Folio": folio,
-                "Cliente": cliente,
-                "Proyecto": proyecto,
-                "Estatus": estatus,
-                "Presupuesto Cobrado": presupuesto, # Guardamos el número limpio para las sumas
-                "Gasto Operativo": total_gastado,
-                "Saldo Disponible": utilidad,
-                "Avance Gasto": avance_financiero
-            })
-
-        # Convertir a una tabla inteligente de Pandas
-        df = pd.DataFrame(resumen_obras)
-        
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            st.subheader("Filtros de Búsqueda")
-            filtro_estatus = st.radio("Filtrar la vista de obras:", ["Todas las Obras", "Solo Obras EN EJECUCIÓN"])
+            # ==========================================
+            # TABLA MAESTRA VISUAL
+            # ==========================================
+            st.markdown("---")
+            st.subheader("📋 Resumen Desglosado")
             
-            if filtro_estatus == "Solo Obras EN EJECUCIÓN":
-                df = df[df["Estatus"] == "EN EJECUCIÓN"]
+            df_mostrar = df.copy()
+            df_mostrar["Presupuesto Cobrado"] = df_mostrar["Presupuesto Cobrado"].apply(lambda x: f"${x:,.2f}")
+            df_mostrar["Gasto Operativo"] = df_mostrar["Gasto Operativo"].apply(lambda x: f"${x:,.2f}")
+            df_mostrar["Saldo Disponible"] = df_mostrar["Saldo Disponible"].apply(lambda x: f"${x:,.2f}")
+            df_mostrar["Avance Gasto"] = df_mostrar["Avance Gasto"].apply(lambda x: f"{x:.1f}%")
+            
+            st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
 
-        # ==========================================
-        # TARJETAS DE INDICADORES GLOBALES
-        # ==========================================
-        st.markdown("---")
-        st.subheader("📊 Indicadores Globales TARC S.A. DE C.V. (Obras Filtradas)")
-        
-        c1, c2, c3 = st.columns(3)
-        
-        total_presupuestos = df["Presupuesto Cobrado"].sum()
-        total_gastos = df["Gasto Operativo"].sum()
-        total_utilidad = df["Saldo Disponible"].sum()
-        
-        c1.metric("Obras en Pantalla", len(df))
-        c2.metric("Suma Total de Presupuestos", f"${total_presupuestos:,.2f} MXN")
-        c3.metric("Fondo / Utilidad Global Libre", f"${total_utilidad:,.2f} MXN")
-
-        # ==========================================
-        # TABLA MAESTRA VISUAL
-        # ==========================================
-        st.markdown("---")
-        st.subheader("📋 Resumen Desglosado")
-        
-        # Le damos un formato bonito de moneda y porcentaje solo para la visualización en pantalla
-        df_mostrar = df.copy()
-        df_mostrar["Presupuesto Cobrado"] = df_mostrar["Presupuesto Cobrado"].apply(lambda x: f"${x:,.2f}")
-        df_mostrar["Gasto Operativo"] = df_mostrar["Gasto Operativo"].apply(lambda x: f"${x:,.2f}")
-        df_mostrar["Saldo Disponible"] = df_mostrar["Saldo Disponible"].apply(lambda x: f"${x:,.2f}")
-        df_mostrar["Avance Gasto"] = df_mostrar["Avance Gasto"].apply(lambda x: f"{x:.1f}%")
-        
-        st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
+elif clave_ingresada != "":
+    st.error("❌ Contraseña incorrecta. Acceso denegado a la información financiera global.")

@@ -32,8 +32,17 @@ if doc:
 
     datos_presupuestos = hoja_presupuestos.get_all_records()
     
-    # 🛠️ CORRECCIÓN: Código blindado. Solo lee la columna si existe realmente.
-    folios_disponibles = [str(fila["Folio"]) for fila in datos_presupuestos if "Folio" in fila and str(fila.get("Folio", "")) != ""]
+    # 🛠️ CÓDIGO BLINDADO: Busca la columna Folio sin importar mayúsculas o minúsculas
+    llave_folio = None
+    if datos_presupuestos:
+        for llave in datos_presupuestos[0].keys():
+            if str(llave).strip().upper() == "FOLIO":
+                llave_folio = llave
+                break
+                
+    folios_disponibles = []
+    if llave_folio:
+        folios_disponibles = [str(fila[llave_folio]) for fila in datos_presupuestos if str(fila.get(llave_folio, "")) != ""]
 
     col1, col2 = st.columns([1, 2])
     
@@ -41,23 +50,36 @@ if doc:
         st.subheader("1. Apertura de Obra")
         st.write("Selecciona una cotización aprobada para darla de alta.")
         
-        # Si la lista está vacía, te avisa amigablemente en lugar de tronar
         if not folios_disponibles:
-            st.warning("⚠️ No se detectaron Folios. Por favor, verifica en tu Excel que la celda A1 de la pestaña 'Presupuestos' diga exactamente 'Folio' (sin espacios).")
+            st.warning("⚠️ No se detectaron Folios. Verifica que tengas cotizaciones guardadas en tu Excel.")
         
         folio_seleccionado = st.selectbox("Folio Aprobado:", ["Selecciona un folio..."] + folios_disponibles)
 
     if folio_seleccionado != "Selecciona un folio...":
-        datos_obra = next((item for item in datos_presupuestos if str(item.get("Folio", "")) == folio_seleccionado), None)
+        datos_obra = next((item for item in datos_presupuestos if str(item.get(llave_folio, "")) == folio_seleccionado), None)
 
         if datos_obra:
             with col2:
                 st.success("✅ Cotización encontrada en la base de datos.")
                 
                 with st.form("form_apertura_obra"):
-                    st.write(f"**Cliente:** {datos_obra.get('Cliente', 'N/A')}")
-                    st.write(f"**Proyecto:** {datos_obra.get('Proyecto / Obra', 'N/A')}")
-                    st.write(f"**Monto Autorizado:** {datos_obra.get('Total del Presupuesto', 'N/A')}")
+                    # Extraer datos de forma inteligente buscando palabras clave
+                    cliente_obtenido = "N/A"
+                    proyecto_obtenido = "N/A"
+                    monto_obtenido = "N/A"
+                    
+                    for llave, valor in datos_obra.items():
+                        llave_upper = str(llave).strip().upper()
+                        if "CLIENTE" in llave_upper: 
+                            cliente_obtenido = valor
+                        elif "PROYECTO" in llave_upper or "UBICACIÓN" in llave_upper or "UBICACION" in llave_upper: 
+                            proyecto_obtenido = valor
+                        elif "TOTAL" in llave_upper or "PRESUPUESTO" in llave_upper: 
+                            monto_obtenido = valor
+
+                    st.write(f"**Cliente:** {cliente_obtenido}")
+                    st.write(f"**Proyecto/Ubicación:** {proyecto_obtenido}")
+                    st.write(f"**Monto Autorizado:** {monto_obtenido}")
                     
                     st.markdown("---")
                     st.write("**Datos de Operación**")
@@ -72,12 +94,12 @@ if doc:
                         else:
                             hoja_obras.append_row([
                                 folio_seleccionado,
-                                datos_obra.get('Cliente', ''),
-                                datos_obra.get('Proyecto / Obra', ''),
+                                cliente_obtenido,
+                                proyecto_obtenido,
                                 "EN EJECUCIÓN",
-                                datos_obra.get('Total del Presupuesto', ''),
+                                monto_obtenido,
                                 fecha_inicio.strftime("%d/%m/%Y"),
                                 residente.upper()
                             ])
                             st.balloons()
-                            st.success(f"¡Obra {folio_seleccionado} dada de alta! Ya puedes comenzar a gestionar salidas.")
+                            st.success(f"¡Obra {folio_seleccionado} dada de alta! Ya puedes comenzar a gestionar salidas de almacén.")

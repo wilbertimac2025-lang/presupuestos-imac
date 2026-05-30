@@ -6,6 +6,10 @@ import datetime
 
 st.set_page_config(page_title="Control de Materiales", page_icon="📦", layout="wide")
 
+# 🔐 CONTRASEÑA MAESTRA PARA AUTORIZAR LÍMITES
+# Puedes cambiar "IMAC2026" por la clave que tú quieras
+CLAVE_ADMIN = "2289"
+
 @st.cache_resource
 def conectar_sheets():
     try:
@@ -29,7 +33,7 @@ if doc:
     try:
         hoja_obras = doc.worksheet("Obras_Activas")
         hoja_consumos = doc.worksheet("Consumo_Materiales")
-        hoja_limites = doc.worksheet("Limites_Materiales") # Nueva pestaña conectada
+        hoja_limites = doc.worksheet("Limites_Materiales") 
     except Exception as e:
         st.error("⚠️ Falta crear la pestaña 'Consumo_Materiales' o 'Limites_Materiales' en tu Excel.")
         st.stop()
@@ -46,45 +50,51 @@ if doc:
     if not obras_ejecucion:
         st.info("No hay obras en ejecución en este momento. Da de alta una en el módulo '1. ERP Gestor Obras'.")
     else:
-        # Creamos las dos pestañas superiores
         tab1, tab2 = st.tabs(["📦 Registro de Salidas", "⚙️ Definir Límites Autorizados"])
         
         # ==========================================
-        # PESTAÑA 2: DEFINIR LÍMITES (Para el Admin)
+        # PESTAÑA 2: DEFINIR LÍMITES (PROTEGIDA CON CONTRASEÑA)
         # ==========================================
         with tab2:
             st.subheader("Asignación de Presupuesto de Material")
             st.write("Establece el tope máximo de material que la cuadrilla puede retirar para una obra.")
             
-            with st.form("form_limites"):
-                colA, colB = st.columns(2)
-                with colA:
-                    folio_limite = st.selectbox("Selecciona la Obra:", ["..."] + obras_ejecucion, key="folio_lim")
-                    categoria_lim = st.selectbox("Categoría", ["Impermeabilización", "Sistemas Ligeros", "Otros / Consumibles"], key="cat_lim")
-                
-                with colB:
-                    if categoria_lim == "Impermeabilización":
-                        mat_lim = st.selectbox("Insumo", ["Rollo Master Lasser 3.0mm", "Rollo Master Lasser 3.5mm", "Rollo Master Lasser 4.0mm", "Rollo Master Lasser 4.5mm", "Primario Hidroflex", "Gas L.P.", "Cemento Plástico"], key="mat_lim_imp")
-                    elif categoria_lim == "Sistemas Ligeros":
-                        mat_lim = st.selectbox("Insumo", ["Hoja de Tablaroca (Gypsum Board)", "Poste Metálico", "Canal de Amarre", "Reborde J", "Tornillos Bartolos", "Cinta Acústica / Accesorios"], key="mat_lim_sl")
-                    else:
-                        mat_lim = st.text_input("Especificar Insumo:", key="mat_lim_ot")
-                        
-                    cant_maxima = st.number_input("Cantidad Máxima a Autorizar:", min_value=0.0, step=1.0)
-                
-                btn_limite = st.form_submit_button("🔒 FIJAR LÍMITE EN SISTEMA")
-                
-                if btn_limite:
-                    if folio_limite == "...":
-                        st.warning("Selecciona una obra primero.")
-                    elif cant_maxima <= 0:
-                        st.warning("La cantidad debe ser mayor a cero.")
-                    else:
-                        hoja_limites.append_row([folio_limite, mat_lim, cant_maxima])
-                        st.success(f"✅ Límite fijado: {cant_maxima} de {mat_lim} para la obra {folio_limite}.")
+            # --- CANDADO DE SEGURIDAD ---
+            clave_ingresada = st.text_input("🔑 Ingresa la clave de Administrador para habilitar esta sección:", type="password")
+            
+            if clave_ingresada == CLAVE_ADMIN:
+                st.success("🔓 Acceso de Administrador Concedido")
+                with st.form("form_limites"):
+                    colA, colB = st.columns(2)
+                    with colA:
+                        folio_limite = st.selectbox("Selecciona la Obra:", ["..."] + obras_ejecucion, key="folio_lim")
+                        categoria_lim = st.selectbox("Categoría", ["Impermeabilización", "Sistemas Ligeros", "Otros / Consumibles"], key="cat_lim")
+                    
+                    with colB:
+                        if categoria_lim == "Impermeabilización":
+                            mat_lim = st.selectbox("Insumo", ["Rollo Master Lasser 3.0mm", "Rollo Master Lasser 3.5mm", "Rollo Master Lasser 4.0mm", "Rollo Master Lasser 4.5mm", "Primario Hidroflex", "Gas L.P.", "Cemento Plástico"], key="mat_lim_imp")
+                        elif categoria_lim == "Sistemas Ligeros":
+                            mat_lim = st.selectbox("Insumo", ["Hoja de Tablaroca (Gypsum Board)", "Poste Metálico", "Canal de Amarre", "Reborde J", "Tornillos Bartolos", "Cinta Acústica / Accesorios"], key="mat_lim_sl")
+                        else:
+                            mat_lim = st.text_input("Especificar Insumo:", key="mat_lim_ot")
+                            
+                        cant_maxima = st.number_input("Cantidad Máxima a Autorizar:", min_value=0.0, step=1.0)
+                    
+                    btn_limite = st.form_submit_button("🔒 FIJAR LÍMITE EN SISTEMA")
+                    
+                    if btn_limite:
+                        if folio_limite == "...":
+                            st.warning("Selecciona una obra primero.")
+                        elif cant_maxima <= 0:
+                            st.warning("La cantidad debe ser mayor a cero.")
+                        else:
+                            hoja_limites.append_row([folio_limite, mat_lim, cant_maxima])
+                            st.success(f"✅ Límite fijado: {cant_maxima} de {mat_lim} para la obra {folio_limite}.")
+            elif clave_ingresada != "":
+                st.error("❌ Contraseña incorrecta. Acceso denegado.")
 
         # ==========================================
-        # PESTAÑA 1: SALIDAS DE ALMACÉN (Con Candado)
+        # PESTAÑA 1: SALIDAS DE ALMACÉN (LIBRE PARA BODEGA)
         # ==========================================
         with tab1:
             col1, col2 = st.columns([1, 2])
@@ -109,11 +119,9 @@ if doc:
                         material = st.text_input("Especificar Insumo:")
                         unidad = "Unidades"
 
-                    # --- EL CEREBRO MATEMÁTICO: CÁLCULO DE LÍMITES ---
                     limites_data = hoja_limites.get_all_records()
                     consumos_data = hoja_consumos.get_all_records()
                     
-                    # 1. Buscar cuánto se le autorizó en total
                     limite_actual = 0
                     for fila in limites_data:
                         if str(fila.get("Folio Obra", "")) == folio_seleccionado and str(fila.get("Material", "")) == material:
@@ -121,7 +129,6 @@ if doc:
                                 limite_actual = float(fila.get("Cantidad Maxima", 0))
                             except: pass
                             
-                    # 2. Buscar cuánto se ha llevado hasta hoy
                     consumido_actual = 0
                     for fila in consumos_data:
                         if str(fila.get("Folio Obra", "")) == folio_seleccionado and str(fila.get("Material / Insumo", "")) == material:
@@ -129,13 +136,11 @@ if doc:
                                 consumido_actual += float(fila.get("Cantidad Usada", 0))
                             except: pass
                             
-                    # 3. Resta final
                     disponible = limite_actual - consumido_actual
                     
                     st.markdown("---")
-                    # Mostrar el semáforo al usuario
                     if limite_actual == 0:
-                        st.warning("⚠️ **ATENCIÓN:** No se ha definido un límite autorizado para este material. Ve a la pestaña 'Definir Límites' primero.")
+                        st.warning("⚠️ **ATENCIÓN:** No se ha definido un límite autorizado para este material. Pide autorización al administrador.")
                         bloquear_salida = True
                     else:
                         if disponible > 0:
@@ -145,7 +150,6 @@ if doc:
                             st.error(f"🛑 **LÍMITE EXCEDIDO:** \nSe autorizaron {limite_actual} y ya se entregaron {consumido_actual}. **No hay material disponible para retirar.**")
                             bloquear_salida = True
 
-                    # Formulario de extracción
                     with st.form("form_materiales"):
                         cantidad = st.number_input(f"Cantidad a retirar ({unidad})", min_value=0.0, step=1.0)
                         btn_guardar = st.form_submit_button("💾 REGISTRAR SALIDA A OBRA")
@@ -168,3 +172,4 @@ if doc:
                                     unidad
                                 ])
                                 st.success(f"✅ SALIDA APROBADA: Se han entregado {cantidad} de {material}. Restan {disponible - cantidad} en el presupuesto.")
+      

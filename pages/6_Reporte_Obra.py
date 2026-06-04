@@ -7,7 +7,7 @@ import pandas as pd
 st.set_page_config(page_title="Reporte de Obra", page_icon="📑", layout="wide")
 
 # 🔐 CONTRASEÑA MAESTRA
-CLAVE_ADMIN = "2289"
+CLAVE_ADMIN = "IMACADMIN"
 
 def limpiar_monto(valor):
     if str(valor).strip() == "" or valor is None: return 0.0
@@ -61,7 +61,7 @@ if clave_ingresada == CLAVE_ADMIN:
         if folio_seleccionado != "Selecciona un folio...":
             obra_info = next((f for f in datos_obras if str(f.get(llave_folio, "")) == folio_seleccionado), None)
             
-            # 🔍 BUSCADOR INTELIGENTE DE COLUMNAS (Para arreglar el "N/A")
+            # 🔍 BUSCADOR INTELIGENTE DE COLUMNAS
             llave_cliente = next((k for k in (obra_info.keys() if obra_info else []) if "CLIENTE" in str(k).upper()), None)
             cliente = obra_info.get(llave_cliente, "No Especificado") if llave_cliente else "No Especificado"
 
@@ -96,10 +96,10 @@ if clave_ingresada == CLAVE_ADMIN:
             total_gastos = sum(limpiar_monto(g.get("Monto ($)", 0)) for g in gastos_obra)
             
             st.write("### 📊 Balance General")
-            c1, c2, c3 = st.columns(3)
+            # Dejamos solo las dos columnas esenciales
+            c1, c2 = st.columns(2)
             c1.metric("Presupuesto Actual Autorizado", f"${presupuesto_total:,.2f}")
             c2.metric("Egresos Totales Ejecutados", f"${total_gastos:,.2f}")
-            c3.metric("Saldo Disponible / Utilidad", f"${(presupuesto_total - total_gastos):,.2f}")
 
             st.markdown("---")
             

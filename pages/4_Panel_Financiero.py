@@ -62,18 +62,18 @@ if doc:
             datos_gastos = hoja_gastos.get_all_records()
             gastos_filtrados = [g for g in datos_gastos if str(g.get("Folio Obra", "")) == folio_seleccionado]
             
-            # 🔍 EL NUEVO FILTRO FINANCIERO: Separar Materiales de otros gastos
             costo_materiales = sum(limpiar_monto(g.get("Monto ($)", 0)) for g in gastos_filtrados if str(g.get("Categoría", "")).upper() == "COSTO DE MATERIAL")
             gastos_operativos = sum(limpiar_monto(g.get("Monto ($)", 0)) for g in gastos_filtrados if str(g.get("Categoría", "")).upper() != "COSTO DE MATERIAL")
             
             total_gastado = costo_materiales + gastos_operativos
-            utilidad_disponible = presupuesto_total - total_gastado
 
             # ==========================================
-            # NUEVAS TARJETAS DE INDICADORES (CON COSTO DE MATERIAL)
+            # TARJETAS DE INDICADORES (CON GANANCIA OCULTA)
             # ==========================================
             st.subheader("📊 Estado de Cuenta del Proyecto")
-            m1, m2, m3, m4 = st.columns(4)
+            
+            # Cambiamos a 3 columnas para que se repartan bonito en la pantalla
+            m1, m2, m3 = st.columns(3)
             
             with m1:
                 st.metric("Presupuesto Cobrado", f"${presupuesto_total:,.2f}")
@@ -81,12 +81,8 @@ if doc:
                 st.metric("Costo de Material", f"${costo_materiales:,.2f}", delta="- Salidas de Almacén", delta_color="normal")
             with m3:
                 st.metric("Gasto Operativo", f"${gastos_operativos:,.2f}", delta="- Nóminas/Viáticos", delta_color="normal")
-            with m4:
-                if utilidad_disponible >= 0:
-                    st.metric("Utilidad / Ganancia Libre", f"${utilidad_disponible:,.2f}")
-                else:
-                    st.metric("⚠️ DÉFICIT / PÉRDIDA", f"${utilidad_disponible:,.2f}")
 
+            # Dejamos la barra de progreso para que vean cuánto han gastado del total autorizado
             if presupuesto_total > 0:
                 porcentaje_gastado = min(total_gastado / presupuesto_total, 1.0)
                 st.progress(porcentaje_gastado)
@@ -98,8 +94,7 @@ if doc:
                 st.subheader("📥 Registrar Nuevo Gasto")
                 with st.form("form_gastos_fin"):
                     concepto = st.text_input("Concepto", placeholder="Ej. Pago de raya Semana 22")
-                    # Quitamos costo de material de aquí porque se hace automático desde el almacén
-                    categoria_gasto = st.selectbox("Categoría de Cuenta", ["Mano de Obra / Destajos", "Viáticos y Comidas", "Gasolina y Fletes", "Herramientas y Equipos", "Gastos Indirectos"])
+                    categoria_gasto = st.selectbox("Categoría de Cuenta", ["Mano de Obra / Destajos", "Viáticos y Comidas", "Gasolina y Fletes", "Herramientas y Equipos", "Otros Gastos Extras"])
                     monto_gasto = st.number_input("Monto en Pesos ($ MXN)", min_value=0.0, step=50.0)
                     
                     btn_gasto = st.form_submit_button("💰 INYECTAR GASTO")

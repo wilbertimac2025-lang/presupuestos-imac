@@ -7,10 +7,9 @@ import pandas as pd
 st.set_page_config(page_title="Tablero General", page_icon="📈", layout="wide")
 
 # 🔐 CONTRASEÑA MAESTRA PARA VER EL TABLERO GLOBAL
-CLAVE_ADMIN = "2289"
+CLAVE_ADMIN = "IMACADMIN"
 
 def limpiar_monto(valor):
-    """Limpia los textos de Excel para poder hacer operaciones matemáticas"""
     if str(valor).strip() == "" or valor is None: return 0.0
     try: return float(str(valor).replace("$", "").replace(",", "").replace(" ", "").strip())
     except: return 0.0
@@ -31,7 +30,6 @@ def conectar_sheets():
 st.title("📈 Tablero de Control Global")
 st.markdown("---")
 
-# --- CANDADO DE SEGURIDAD ---
 clave_ingresada = st.text_input("🔑 Ingresa la clave de Administrador para acceder al resumen financiero:", type="password")
 
 if clave_ingresada == CLAVE_ADMIN:
@@ -53,7 +51,6 @@ if clave_ingresada == CLAVE_ADMIN:
         if not datos_obras:
             st.info("No hay obras registradas en el sistema para generar un reporte.")
         else:
-            # --- MOTOR DE PROCESAMIENTO GLOBAL ---
             resumen_obras = []
             for obra in datos_obras:
                 llave_folio = next((k for k in obra.keys() if "FOLIO" in str(k).upper()), None)
@@ -68,6 +65,7 @@ if clave_ingresada == CLAVE_ADMIN:
                 llave_monto = next((k for k in obra.keys() if "PRESUPUESTO" in str(k).upper() or "AUTORIZADO" in str(k).upper() or "MONTO" in str(k).upper()), None)
                 presupuesto = limpiar_monto(obra.get(llave_monto, 0)) if llave_monto else 0.0
 
+                # AQUÍ SUMA ABSOLUTAMENTE TODO (Material + Nómina + FSR + Extras)
                 gastos_obra = [limpiar_monto(g.get("Monto ($)", 0)) for g in datos_gastos if str(g.get("Folio Obra", "")) == folio]
                 total_gastado = sum(gastos_obra)
                 utilidad = presupuesto - total_gastado
@@ -80,7 +78,7 @@ if clave_ingresada == CLAVE_ADMIN:
                     "Proyecto": proyecto,
                     "Estatus": estatus,
                     "Presupuesto Cobrado": presupuesto, 
-                    "Gasto Operativo": total_gastado,
+                    "Egresos Totales": total_gastado, # <--- CAMBIO DE NOMBRE AQUÍ
                     "Saldo Disponible": utilidad,
                     "Avance Gasto": avance_financiero
                 })
@@ -95,31 +93,25 @@ if clave_ingresada == CLAVE_ADMIN:
                 if filtro_estatus == "Solo Obras EN EJECUCIÓN":
                     df = df[df["Estatus"] == "EN EJECUCIÓN"]
 
-            # ==========================================
-            # TARJETAS DE INDICADORES GLOBALES
-            # ==========================================
             st.markdown("---")
             st.subheader("📊 Indicadores Globales TARC S.A. DE C.V. (Obras Filtradas)")
             
             c1, c2, c3 = st.columns(3)
             
             total_presupuestos = df["Presupuesto Cobrado"].sum()
-            total_gastos = df["Gasto Operativo"].sum()
+            total_gastos = df["Egresos Totales"].sum() # <--- SUMA CORRECTA PARA DIRECCIÓN
             total_utilidad = df["Saldo Disponible"].sum()
             
             c1.metric("Obras en Pantalla", len(df))
             c2.metric("Suma Total de Presupuestos", f"${total_presupuestos:,.2f} MXN")
             c3.metric("Fondo / Utilidad Global Libre", f"${total_utilidad:,.2f} MXN")
 
-            # ==========================================
-            # TABLA MAESTRA VISUAL
-            # ==========================================
             st.markdown("---")
             st.subheader("📋 Resumen Desglosado")
             
             df_mostrar = df.copy()
             df_mostrar["Presupuesto Cobrado"] = df_mostrar["Presupuesto Cobrado"].apply(lambda x: f"${x:,.2f}")
-            df_mostrar["Gasto Operativo"] = df_mostrar["Gasto Operativo"].apply(lambda x: f"${x:,.2f}")
+            df_mostrar["Egresos Totales"] = df_mostrar["Egresos Totales"].apply(lambda x: f"${x:,.2f}")
             df_mostrar["Saldo Disponible"] = df_mostrar["Saldo Disponible"].apply(lambda x: f"${x:,.2f}")
             df_mostrar["Avance Gasto"] = df_mostrar["Avance Gasto"].apply(lambda x: f"{x:.1f}%")
             

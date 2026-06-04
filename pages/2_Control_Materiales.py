@@ -6,9 +6,19 @@ import datetime
 
 st.set_page_config(page_title="Control de Materiales", page_icon="📦", layout="wide")
 
-# 🔐 CONTRASEÑA MAESTRA PARA AUTORIZAR LÍMITES
-# Puedes cambiar "IMAC2026" por la clave que tú quieras
-CLAVE_ADMIN = "2289"
+CLAVE_ADMIN = "IMACADMIN"
+
+# 💵 DICCIONARIO DE PRECIOS (Modificable para el futuro)
+PRECIO_BASE = 1200.00
+def obtener_precio(nombre_material):
+    precios = {
+        "Rollo Master Lasser 3.0mm": 1200.00,
+        "Hoja de Tablaroca (Gypsum Board)": 1200.00,
+        "Poste Metálico": 1200.00,
+        "Primario Hidroflex": 1200.00
+        # Puedes ir agregando más materiales aquí abajo después
+    }
+    return precios.get(nombre_material, PRECIO_BASE)
 
 @st.cache_resource
 def conectar_sheets():
@@ -34,8 +44,9 @@ if doc:
         hoja_obras = doc.worksheet("Obras_Activas")
         hoja_consumos = doc.worksheet("Consumo_Materiales")
         hoja_limites = doc.worksheet("Limites_Materiales") 
+        hoja_gastos = doc.worksheet("Gastos_Financieros") # Conectamos los gastos
     except Exception as e:
-        st.error("⚠️ Falta crear la pestaña 'Consumo_Materiales' o 'Limites_Materiales' en tu Excel.")
+        st.error("⚠️ Falta crear las pestañas necesarias en tu Excel.")
         st.stop()
 
     datos_obras = hoja_obras.get_all_records()
@@ -48,22 +59,16 @@ if doc:
         obras_ejecucion = [str(fila[llave_folio]) for fila in datos_obras if str(fila.get(llave_estatus, "")).upper() == "EN EJECUCIÓN"]
 
     if not obras_ejecucion:
-        st.info("No hay obras en ejecución en este momento. Da de alta una en el módulo '1. ERP Gestor Obras'.")
+        st.info("No hay obras en ejecución en este momento.")
     else:
         tab1, tab2 = st.tabs(["📦 Registro de Salidas", "⚙️ Definir Límites Autorizados"])
         
-        # ==========================================
-        # PESTAÑA 2: DEFINIR LÍMITES (PROTEGIDA CON CONTRASEÑA)
-        # ==========================================
+        # --- PESTAÑA DE LÍMITES ---
         with tab2:
             st.subheader("Asignación de Presupuesto de Material")
-            st.write("Establece el tope máximo de material que la cuadrilla puede retirar para una obra.")
-            
-            # --- CANDADO DE SEGURIDAD ---
-            clave_ingresada = st.text_input("🔑 Ingresa la clave de Administrador para habilitar esta sección:", type="password")
+            clave_ingresada = st.text_input("🔑 Ingresa la clave de Administrador:", type="password")
             
             if clave_ingresada == CLAVE_ADMIN:
-                st.success("🔓 Acceso de Administrador Concedido")
                 with st.form("form_limites"):
                     colA, colB = st.columns(2)
                     with colA:
@@ -83,30 +88,19 @@ if doc:
                     btn_limite = st.form_submit_button("🔒 FIJAR LÍMITE EN SISTEMA")
                     
                     if btn_limite:
-                        if folio_limite == "...":
-                            st.warning("Selecciona una obra primero.")
-                        elif cant_maxima <= 0:
-                            st.warning("La cantidad debe ser mayor a cero.")
-                        else:
+                        if folio_limite != "...":
                             hoja_limites.append_row([folio_limite, mat_lim, cant_maxima])
-                            st.success(f"✅ Límite fijado: {cant_maxima} de {mat_lim} para la obra {folio_limite}.")
-            elif clave_ingresada != "":
-                st.error("❌ Contraseña incorrecta. Acceso denegado.")
+                            st.success(f"✅ Límite fijado para {folio_limite}.")
 
-        # ==========================================
-        # PESTAÑA 1: SALIDAS DE ALMACÉN (LIBRE PARA BODEGA)
-        # ==========================================
+        # --- PESTAÑA DE SALIDAS ---
         with tab1:
             col1, col2 = st.columns([1, 2])
             
             with col1:
-                st.subheader("1. Selección")
                 folio_seleccionado = st.selectbox("Obra Activa:", ["Selecciona un folio..."] + obras_ejecucion)
 
             if folio_seleccionado != "Selecciona un folio...":
                 with col2:
-                    st.subheader("2. Petición de Almacén")
-                    
                     categoria = st.selectbox("Categoría del Material", ["Impermeabilización", "Sistemas Ligeros", "Otros / Consumibles"])
                     
                     if categoria == "Impermeabilización":
@@ -125,51 +119,55 @@ if doc:
                     limite_actual = 0
                     for fila in limites_data:
                         if str(fila.get("Folio Obra", "")) == folio_seleccionado and str(fila.get("Material", "")) == material:
-                            try:
-                                limite_actual = float(fila.get("Cantidad Maxima", 0))
+                            try: limite_actual = float(fila.get("Cantidad Maxima", 0))
                             except: pass
                             
                     consumido_actual = 0
                     for fila in consumos_data:
                         if str(fila.get("Folio Obra", "")) == folio_seleccionado and str(fila.get("Material / Insumo", "")) == material:
-                            try:
-                                consumido_actual += float(fila.get("Cantidad Usada", 0))
+                            try: consumido_actual += float(fila.get("Cantidad Usada", 0))
                             except: pass
                             
                     disponible = limite_actual - consumido_actual
                     
+                    # 💰 Mostramos el precio al usuario
+                    precio_unitario = obtener_precio(material)
                     st.markdown("---")
+                    
                     if limite_actual == 0:
-                        st.warning("⚠️ **ATENCIÓN:** No se ha definido un límite autorizado para este material. Pide autorización al administrador.")
+                        st.warning("⚠️ No se ha definido un límite autorizado para este material.")
                         bloquear_salida = True
                     else:
                         if disponible > 0:
-                            st.info(f"📊 **ESTADO DEL MATERIAL:** \n* Límite Autorizado: **{limite_actual}** \n* Ya entregado: **{consumido_actual}** \n* **DISPONIBLE: {disponible} {unidad}**")
+                            st.info(f"📊 **DISPONIBLE: {disponible} {unidad}** | 💵 Costo Unitario: **${precio_unitario:,.2f}**")
                             bloquear_salida = False
                         else:
-                            st.error(f"🛑 **LÍMITE EXCEDIDO:** \nSe autorizaron {limite_actual} y ya se entregaron {consumido_actual}. **No hay material disponible para retirar.**")
+                            st.error("🛑 **LÍMITE EXCEDIDO**")
                             bloquear_salida = True
 
                     with st.form("form_materiales"):
                         cantidad = st.number_input(f"Cantidad a retirar ({unidad})", min_value=0.0, step=1.0)
-                        btn_guardar = st.form_submit_button("💾 REGISTRAR SALIDA A OBRA")
+                        btn_guardar = st.form_submit_button("💾 REGISTRAR SALIDA Y CARGAR COSTO A OBRA")
                         
                         if btn_guardar:
-                            if bloquear_salida:
-                                st.error("❌ OPERACIÓN DENEGADA. Revisa los límites autorizados.")
-                            elif cantidad <= 0:
-                                st.warning("⚠️ La cantidad debe ser mayor a 0.")
-                            elif cantidad > disponible:
-                                st.error(f"❌ ¡ALTO! Estás intentando sacar {cantidad}, pero solo quedan {disponible} disponibles.")
+                            if bloquear_salida or cantidad <= 0 or cantidad > disponible:
+                                st.error("❌ OPERACIÓN DENEGADA.")
                             else:
                                 fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
+                                costo_total_movimiento = cantidad * precio_unitario
+                                
+                                # 1. Guarda la salida de almacén
                                 hoja_consumos.append_row([
-                                    fecha_hoy,
-                                    folio_seleccionado,
-                                    categoria,
-                                    material,
-                                    cantidad,
-                                    unidad
+                                    fecha_hoy, folio_seleccionado, categoria, material, cantidad, unidad
                                 ])
-                                st.success(f"✅ SALIDA APROBADA: Se han entregado {cantidad} de {material}. Restan {disponible - cantidad} en el presupuesto.")
-      
+                                
+                                # 2. INYECTA EL COSTO DIRECTO A GASTOS FINANCIEROS (¡LA MAGIA!)
+                                hoja_gastos.append_row([
+                                    fecha_hoy, 
+                                    folio_seleccionado, 
+                                    f"Salida de Almacén: {cantidad} {unidad} de {material}", 
+                                    "Costo de Material", 
+                                    costo_total_movimiento
+                                ])
+                                
+                                st.success(f"✅ Se entregaron {cantidad} de {material}. Se cargó un costo de ${costo_total_movimiento:,.2f} a la obra.")

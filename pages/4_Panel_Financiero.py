@@ -62,7 +62,6 @@ if doc:
             datos_gastos = hoja_gastos.get_all_records()
             gastos_filtrados = [g for g in datos_gastos if str(g.get("Folio Obra", "")) == folio_seleccionado]
             
-            # 🔍 MOTOR DE CLASIFICACIÓN FINANCIERA
             costo_materiales = 0.0
             costo_nomina = 0.0
             costo_fsr = 0.0
@@ -84,11 +83,12 @@ if doc:
             total_gastado = costo_materiales + costo_nomina + costo_fsr + gastos_operativos
 
             # ==========================================
-            # TARJETAS DE INDICADORES (CON NÓMINA Y FSR)
+            # TARJETAS DE INDICADORES (SOLO LAS ESENCIALES)
             # ==========================================
             st.subheader("📊 Estado de Cuenta del Proyecto")
             
-            m1, m2, m3, m4, m5 = st.columns(5)
+            # Cambiamos a 4 columnas
+            m1, m2, m3, m4 = st.columns(4)
             
             with m1:
                 st.metric("Presupuesto", f"${presupuesto_total:,.2f}")
@@ -98,8 +98,6 @@ if doc:
                 st.metric("Nómina", f"${costo_nomina:,.2f}")
             with m4:
                 st.metric("FSR (Seguro)", f"${costo_fsr:,.2f}")
-            with m5:
-                st.metric("Gasto Operativo", f"${gastos_operativos:,.2f}")
 
             if presupuesto_total > 0:
                 porcentaje_gastado = min(total_gastado / presupuesto_total, 1.0)
@@ -112,8 +110,7 @@ if doc:
                 st.subheader("📥 Registrar Nuevo Gasto")
                 with st.form("form_gastos_fin"):
                     concepto = st.text_input("Concepto", placeholder="Ej. Pago de raya Semana 22")
-                    # ACTUALIZACIÓN: Se cambia Mano de Obra por NÓMINA
-                    categoria_gasto = st.selectbox("Categoría de Cuenta", ["NÓMINA", "Viáticos y Comidas", "Gasolina y Fletes", "Herramientas y Equipos", "Gastos Indirectos"])
+                    categoria_gasto = st.selectbox("Categoría de Cuenta", ["NÓMINA", "Viáticos y Comidas", "Gasolina y Fletes", "Herramientas y Equipos", "Otros Gastos Extras"])
                     monto_gasto = st.number_input("Monto en Pesos ($ MXN)", min_value=0.0, step=50.0)
                     
                     btn_gasto = st.form_submit_button("💰 INYECTAR GASTO")
@@ -122,11 +119,9 @@ if doc:
                         if monto_gasto > 0:
                             fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
                             
-                            # 1. Guarda el gasto principal (ej. la Nómina)
                             hoja_gastos.append_row([fecha_actual, folio_seleccionado, concepto.upper(), categoria_gasto, monto_gasto])
                             st.success(f"✅ Gasto de ${monto_gasto:,.2f} registrado.")
                             
-                            # 2. LA MAGIA: Si es NÓMINA, inyecta el FSR automáticamente
                             if categoria_gasto == "NÓMINA":
                                 monto_fsr = monto_gasto * 0.0132
                                 concepto_fsr = f"FSR (1.32%) - {concepto.upper()}"

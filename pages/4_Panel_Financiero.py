@@ -110,7 +110,7 @@ if doc:
                 st.subheader("📥 Registrar Nuevo Gasto")
                 with st.form("form_gastos_fin"):
                     concepto = st.text_input("Concepto", placeholder="Ej. Pago de raya Semana 22")
-                    categoria_gasto = st.selectbox("Categoría de Cuenta", ["NÓMINA", "Viáticos y Comidas", "Gasolina y Fletes", "Herramientas y Equipos", "Otros Gastos Extras"])
+                    categoria_gasto = st.selectbox("Categoría de Cuenta", ["NÓMINA", "Viáticos y Comidas", "Gasolina y Fletes", "Herramientas y Equipos", "Gastos Indirectos"])
                     monto_gasto = st.number_input("Monto en Pesos ($ MXN)", min_value=0.0, step=50.0)
                     
                     btn_gasto = st.form_submit_button("💰 INYECTAR GASTO")

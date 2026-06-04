@@ -7,7 +7,7 @@ import pandas as pd
 st.set_page_config(page_title="Tablero General", page_icon="📈", layout="wide")
 
 # 🔐 CONTRASEÑA MAESTRA PARA VER EL TABLERO GLOBAL
-CLAVE_ADMIN = "IMACADMIN"
+CLAVE_ADMIN = "2289"
 
 def limpiar_monto(valor):
     if str(valor).strip() == "" or valor is None: return 0.0

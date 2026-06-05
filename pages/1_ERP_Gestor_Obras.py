@@ -9,7 +9,6 @@ import os
 st.set_page_config(page_title="ERP - Gestión de Obras", page_icon="🏗️", layout="wide")
 
 def limpiar_monto(valor):
-    """Limpia los textos de Excel para poder hacer operaciones matemáticas"""
     if str(valor).strip() == "" or valor is None: return 0.0
     try: return float(str(valor).replace("$", "").replace(",", "").replace(" ", "").strip())
     except: return 0.0
@@ -53,7 +52,7 @@ if doc:
     try:
         hoja_presupuestos = doc.worksheet("Presupuestos")
         hoja_obras = doc.worksheet("Obras_Activas")
-        hoja_convenios = doc.worksheet("Convenios_Adicionales") # Nueva pestaña conectada
+        hoja_convenios = doc.worksheet("Convenios_Adicionales") 
     except Exception as e:
         st.error("⚠️ Falta crear la pestaña 'Convenios_Adicionales' en tu Excel.")
         st.stop()
@@ -92,15 +91,16 @@ if doc:
             if datos_obra:
                 with col2:
                     with st.form("form_apertura_obra"):
-                        cliente_obtenido = "N/A"
-                        proyecto_obtenido = "N/A"
-                        monto_obtenido = "N/A"
                         
-                        for llave, valor in datos_obra.items():
-                            llave_upper = str(llave).strip().upper()
-                            if "CLIENTE" in llave_upper: cliente_obtenido = valor
-                            elif "PROYECTO" in llave_upper or "UBICACIÓN" in llave_upper or "UBICACION" in llave_upper: proyecto_obtenido = valor
-                            elif "TOTAL" in llave_upper or "PRESUPUESTO" in llave_upper: monto_obtenido = valor
+                        # 🔍 EL NUEVO BUSCADOR INTELIGENTE PARA LA PESTAÑA DE PRESUPUESTOS
+                        llave_cliente = next((k for k in datos_obra.keys() if "CLIENTE" in str(k).upper()), None)
+                        cliente_obtenido = datos_obra.get(llave_cliente, "N/A") if llave_cliente else "N/A"
+
+                        llave_proyecto = next((k for k in datos_obra.keys() if any(palabra in str(k).upper() for palabra in ["PROYECTO", "UBICACI", "OBRA", "CONCEPTO", "DESCRIPCI"])), None)
+                        proyecto_obtenido = datos_obra.get(llave_proyecto, "N/A") if llave_proyecto else "N/A"
+
+                        llave_monto = next((k for k in datos_obra.keys() if any(palabra in str(k).upper() for palabra in ["TOTAL", "PRESUPUESTO", "MONTO", "IMPORTE"])), None)
+                        monto_obtenido = datos_obra.get(llave_monto, 0.0) if llave_monto else 0.0
 
                         st.write(f"**Cliente:** {cliente_obtenido}")
                         st.write(f"**Proyecto/Ubicación:** {proyecto_obtenido}")
@@ -119,7 +119,7 @@ if doc:
                                 st.success(f"¡Obra {folio_seleccionado} dada de alta!")
 
     # =======================================================
-    # PESTAÑA 2: CONVENIOS Y TRABAJOS ADICIONALES (LA NUEVA MAGIA)
+    # PESTAÑA 2: CONVENIOS Y TRABAJOS ADICIONALES
     # =======================================================
     with tab2:
         colA, colB = st.columns([1, 2])
@@ -130,7 +130,6 @@ if doc:
         if folio_convenio != "...":
             obra_a_modificar = next((item for item in datos_obras if str(item.get(llave_folio_obra, "")) == folio_convenio), None)
             if obra_a_modificar:
-                # Buscar en qué columna está el presupuesto y cuánto es actualmente
                 llave_monto = next((k for k in obra_a_modificar.keys() if "PRESUPUESTO" in str(k).upper() or "AUTORIZADO" in str(k).upper() or "MONTO" in str(k).upper()), None)
                 presupuesto_actual = limpiar_monto(obra_a_modificar.get(llave_monto, 0)) if llave_monto else 0.0
                 
@@ -147,14 +146,11 @@ if doc:
                             if not concepto_conv or monto_conv <= 0:
                                 st.warning("⚠️ Escribe un concepto válido y un monto mayor a cero.")
                             else:
-                                # 1. Guardar en el historial de convenios
                                 fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
                                 hoja_convenios.append_row([fecha_hoy, folio_convenio, concepto_conv.upper(), monto_conv])
                                 
-                                # 2. Matemáticas: Sumar el nuevo dinero al presupuesto original
                                 nuevo_presupuesto = presupuesto_actual + monto_conv
                                 
-                                # 3. Buscar la fila y columna exactas en Excel para reescribir la celda
                                 fila_excel = 0
                                 for indice, fila in enumerate(datos_obras):
                                     if str(fila.get(llave_folio_obra, "")) == folio_convenio:
@@ -166,7 +162,7 @@ if doc:
                                 
                                 if fila_excel > 0 and col_excel > 0:
                                     hoja_obras.update_cell(fila_excel, col_excel, nuevo_presupuesto)
-                                    st.success(f"✅ ¡Éxito! El convenio se guardó y el presupuesto de la obra subió a ${nuevo_presupuesto:,.2f} MXN.")
+                                    st.success(f"✅ ¡Éxito! El convenio se guardó y el presupuesto subió a ${nuevo_presupuesto:,.2f} MXN.")
                                     st.rerun()
 
     # =======================================================

@@ -6,7 +6,7 @@ import datetime
 
 st.set_page_config(page_title="Control de Materiales", page_icon="📦", layout="wide")
 
-CLAVE_ADMIN = "IMACADMIN"
+CLAVE_ADMIN = "2289"
 
 # 💵 DICCIONARIO DE PRECIOS (Modificable para el futuro)
 PRECIO_BASE = 1200.00

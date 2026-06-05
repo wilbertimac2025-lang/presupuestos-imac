@@ -13,6 +13,7 @@ def limpiar_monto(valor):
     try: return float(str(valor).replace("$", "").replace(",", "").replace(" ", "").strip())
     except: return 0.0
 
+# --- CLASE PARA EL PDF DE LA CARTA ---
 class PDF_Carta(FPDF):
     def header(self):
         if os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=15, y=10, w=70)
@@ -64,7 +65,9 @@ if doc:
 
     tab1, tab2, tab3 = st.tabs(["🚀 Apertura de Obra", "📝 Convenios (Trabajos Extra)", "🏁 Cierre de Proyecto"])
 
-    # === PESTAÑA 1: APERTURA DE OBRA ===
+    # ==========================================
+    # PESTAÑA 1: APERTURA DE OBRA
+    # ==========================================
     with tab1:
         col1, col2 = st.columns([1, 2])
         with col1:
@@ -90,8 +93,6 @@ if doc:
                         
                         fecha_inicio = st.date_input("Fecha Oficial de Arranque")
                         residente = st.text_input("Nombre del Residente / Encargado")
-                        
-                        # 🔐 NUEVO CAMPO OBLIGATORIO
                         registro_patronal = st.text_input("Registro Patronal IMSS (Obligatorio para la obra)")
                         
                         boton_arranque = st.form_submit_button("🚀 INICIAR PROYECTO")
@@ -103,11 +104,13 @@ if doc:
                                 hoja_obras.append_row([
                                     folio_seleccionado, cliente_obtenido, proyecto_obtenido,
                                     "EN EJECUCIÓN", monto_obtenido, fecha_inicio.strftime("%d/%m/%Y"), 
-                                    residente.upper(), registro_patronal.upper() # <--- SE GUARDA AQUÍ
+                                    residente.upper(), registro_patronal.upper()
                                 ])
                                 st.success(f"¡Obra dada de alta con el RP: {registro_patronal.upper()}!")
 
-    # === PESTAÑA 2: CONVENIOS ===
+    # ==========================================
+    # PESTAÑA 2: CONVENIOS
+    # ==========================================
     with tab2:
         colA, colB = st.columns([1, 2])
         with colA:
@@ -142,7 +145,9 @@ if doc:
                                     st.success(f"✅ Presupuesto elevado a ${nuevo_presupuesto:,.2f}")
                                     st.rerun()
 
-    # === PESTAÑA 3: CIERRE ===
+    # ==========================================
+    # PESTAÑA 3: CIERRE DE OBRA Y GENERACIÓN PDF
+    # ==========================================
     with tab3:
         colX, colY = st.columns([1, 2])
         with colX:
@@ -152,10 +157,66 @@ if doc:
         if folio_cierre != "...":
             obra_a_cerrar = next((item for item in datos_obras if str(item.get(llave_folio_obra, "")) == folio_cierre), None)
             if obra_a_cerrar:
+                # Buscadores inteligentes para la carta de cierre
+                llave_cliente = next((k for k in obra_a_cerrar.keys() if "CLIENTE" in str(k).upper()), None)
+                cliente_cierre = obra_a_cerrar.get(llave_cliente, "Estimado Cliente") if llave_cliente else "Estimado Cliente"
+
+                llave_proyecto = next((k for k in obra_a_cerrar.keys() if any(p in str(k).upper() for p in ["PROYECTO", "UBICACI", "OBRA", "CONCEPTO"])), None)
+                proyecto_cierre = obra_a_cerrar.get(llave_proyecto, "Proyecto Especificado") if llave_proyecto else "Proyecto Especificado"
+                
                 with colY:
+                    st.info(f"Vas a cerrar definitivamente la obra de **{cliente_cierre}**.")
                     if st.button("🔒 CERRAR OBRA Y GENERAR CARTA"):
-                        fila_excel = next((i + 2 for i, f in enumerate(datos_obras) if str(f.get(llave_folio_obra, "")) == folio_cierre), 0)
-                        col_estatus = list(datos_obras[0].keys()).index(llave_estatus) + 1 if datos_obras and llave_estatus in datos_obras[0] else 4
-                        if fila_excel > 0:
-                            hoja_obras.update_cell(fila_excel, col_estatus, "CERRADA")
-                            st.success("✅ Obra CERRADA en base de datos.")
+                        with st.spinner("Actualizando base de datos y generando PDF..."):
+                            fila_excel = next((i + 2 for i, f in enumerate(datos_obras) if str(f.get(llave_folio_obra, "")) == folio_cierre), 0)
+                            col_estatus = list(datos_obras[0].keys()).index(llave_estatus) + 1 if datos_obras and llave_estatus in datos_obras[0] else 4
+                            
+                            if fila_excel > 0:
+                                hoja_obras.update_cell(fila_excel, col_estatus, "CERRADA")
+                                
+                                # GENERACIÓN DEL PDF RESTAURADA
+                                pdf = PDF_Carta()
+                                pdf.add_page()
+                                fecha_hoy = datetime.datetime.now().strftime("%d de %B del %Y")
+                                
+                                pdf.set_font('Arial', '', 11)
+                                pdf.cell(0, 5, f"Veracruz, Ver. a {fecha_hoy}", ln=True, align='R')
+                                pdf.ln(15)
+                                pdf.set_font('Arial', 'B', 12)
+                                pdf.set_text_color(15, 60, 140)
+                                pdf.cell(0, 6, f"ATENCIÓN: {str(cliente_cierre).upper()}", ln=True)
+                                pdf.set_font('Arial', 'B', 10)
+                                pdf.set_text_color(100, 100, 100)
+                                pdf.cell(0, 6, f"REF: Cierre de Proyecto - Folio {folio_cierre}", ln=True)
+                                pdf.ln(10)
+                                
+                                pdf.set_font('Arial', '', 11)
+                                pdf.set_text_color(50, 50, 50)
+                                texto_cuerpo = (
+                                    f"Por medio de la presente, el equipo directivo y operativo de TARC S.A. de C.V. (Grupo IMAC) "
+                                    f"le extiende nuestro más sincero agradecimiento por la confianza depositada en nosotros para la "
+                                    f"ejecución de la obra: '{proyecto_cierre}'.\n\n"
+                                    f"Hacemos de su conocimiento que los trabajos han sido concluidos satisfactoriamente. "
+                                    f"Nuestro compromiso es brindarle la más alta calidad en materiales y mano de obra, esperando que el resultado final cumpla y supere sus expectativas.\n\n"
+                                    f"Quedamos a su entera disposición para futuros proyectos y garantías correspondientes.\n\n"
+                                    f"Sin más por el momento, le enviamos un cordial saludo."
+                                )
+                                pdf.multi_cell(0, 6, txt=texto_cuerpo)
+                                pdf.ln(25)
+                                pdf.set_font('Arial', 'B', 11)
+                                pdf.set_text_color(15, 60, 140)
+                                pdf.cell(0, 5, "Atentamente,", ln=True, align='C')
+                                pdf.ln(10)
+                                pdf.cell(0, 5, "___________________________________", ln=True, align='C')
+                                pdf.cell(0, 5, "Departamento de Operaciones", ln=True, align='C')
+                                pdf.cell(0, 5, "TARC S.A. DE C.V.", ln=True, align='C')
+
+                                pdf_bytes = pdf.output(dest='S').encode('latin-1')
+                                
+                                st.success(f"✅ ¡La obra {folio_cierre} ha sido marcada como CERRADA exitosamente!")
+                                st.download_button(
+                                    label="📥 DESCARGAR CARTA DE AGRADECIMIENTO", 
+                                    data=pdf_bytes, 
+                                    file_name=f"Carta_Cierre_{folio_cierre}.pdf", 
+                                    mime="application/pdf"
+                                )

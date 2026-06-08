@@ -74,7 +74,6 @@ if clave_ingresada == CLAVE_ADMIN:
             fecha_inicio = next((v for k, v in obra_info.items() if "FECHA" in str(k).upper()), "N/A")
             residente = next((v for k, v in obra_info.items() if "RESIDENTE" in str(k).upper() or "ENCARGADO" in str(k).upper()), "N/A")
             
-            # 🏛️ LECTURA DEL REGISTRO PATRONAL
             llave_rp = next((k for k in (obra_info.keys() if obra_info else []) if "PATRONAL" in str(k).upper() or "REGISTRO" in str(k).upper()), None)
             registro_patronal = obra_info.get(llave_rp, "NO ASIGNADO") if llave_rp else "NO ASIGNADO"
             
@@ -88,9 +87,8 @@ if clave_ingresada == CLAVE_ADMIN:
             c_info1.write(f"**Folio Asignado:** {folio_seleccionado}")
             c_info2.write(f"**Residente:** {residente}")
             c_info2.write(f"**Fecha de Arranque:** {fecha_inicio}")
-            
-            # Agregamos el RP visible en el encabezado
             c_info3.write(f"🏛️ **Reg. Patronal:** {registro_patronal}")
+            
             if estatus.upper() == "CERRADA":
                 c_info3.error(f"**Estatus:** {estatus} 🔒")
             else:
@@ -101,11 +99,21 @@ if clave_ingresada == CLAVE_ADMIN:
             datos_gastos = hoja_gastos.get_all_records()
             gastos_obra = [g for g in datos_gastos if str(g.get("Folio Obra", "")) == folio_seleccionado]
             total_gastos = sum(limpiar_monto(g.get("Monto ($)", 0)) for g in gastos_obra)
+            utilidad_calculada = presupuesto_total - total_gastos
             
-            st.write("### 📊 Balance General")
-            c1, c2 = st.columns(2)
+            # ==========================================
+            # 📊 BALANCE GENERAL CON UTILIDAD ACTIVADA
+            # ==========================================
+            st.write("### 📊 Balance General del Proyecto")
+            c1, c2, c3 = st.columns(3)
             c1.metric("Presupuesto Actual Autorizado", f"${presupuesto_total:,.2f}")
             c2.metric("Egresos Totales Ejecutados", f"${total_gastos:,.2f}")
+            
+            # Muestra la utilidad con color dinámico (Verde si es ganancia, Rojo si hay pérdidas)
+            if utilidad_calculada >= 0:
+                c3.metric("Utilidad Financiera Libre", f"${utilidad_calculada:,.2f}")
+            else:
+                c3.metric("⚠️ Déficit / Pérdida en Obra", f"${utilidad_calculada:,.2f}")
 
             st.markdown("---")
             
@@ -134,7 +142,6 @@ if clave_ingresada == CLAVE_ADMIN:
                 trabajadores_obra = [t for t in datos_trabajadores if str(t.get("Folio Obra", "")) == folio_seleccionado]
                 if trabajadores_obra:
                     df_trabajadores = pd.DataFrame(trabajadores_obra)
-                    # Nos aseguramos de mostrar el Registro Patronal si existe en la base de datos
                     columnas_mostrar = ["Nombre del Trabajador", "Puesto / Rol", "NSS"]
                     if "Registro Patronal" in df_trabajadores.columns:
                         columnas_mostrar.append("Registro Patronal")

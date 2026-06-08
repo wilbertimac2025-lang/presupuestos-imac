@@ -20,7 +20,7 @@ def conectar_sheets():
         creds = Credentials.from_service_account_info(credenciales_dic, scopes=scopes)
         cliente = gspread.authorize(creds)
         
-        # ⚠️ REEMPLAZA CON TU ID DE EXCEL
+        # ⚠️ REEMPLAZA CON TU ID DE EXCEL AQUÍ
         ID_DEL_EXCEL = "1-grdT2H5dBlGVPvJbZ5wVYDdtVjQEEmUPGpvEm6C0Gc" 
         return cliente.open_by_key(ID_DEL_EXCEL)
     except Exception: return None
@@ -83,11 +83,10 @@ if doc:
             total_gastado = costo_materiales + costo_nomina + costo_fsr + gastos_operativos
 
             # ==========================================
-            # TARJETAS DE INDICADORES (SOLO LAS ESENCIALES)
+            # TARJETAS DE INDICADORES
             # ==========================================
             st.subheader("📊 Estado de Cuenta del Proyecto")
             
-            # Cambiamos a 4 columnas
             m1, m2, m3, m4 = st.columns(4)
             
             with m1:
@@ -95,9 +94,9 @@ if doc:
             with m2:
                 st.metric("Costo Material", f"${costo_materiales:,.2f}")
             with m3:
-                st.metric("Nómina", f"${costo_nomina:,.2f}")
+                st.metric("Nómina Base", f"${costo_nomina:,.2f}")
             with m4:
-                st.metric("FSR (Seguro)", f"${costo_fsr:,.2f}")
+                st.metric("FSR (Carga Social)", f"${costo_fsr:,.2f}")
 
             if presupuesto_total > 0:
                 porcentaje_gastado = min(total_gastado / presupuesto_total, 1.0)
@@ -110,8 +109,8 @@ if doc:
                 st.subheader("📥 Registrar Nuevo Gasto")
                 with st.form("form_gastos_fin"):
                     concepto = st.text_input("Concepto", placeholder="Ej. Pago de raya Semana 22")
-                    categoria_gasto = st.selectbox("Categoría de Cuenta", ["NÓMINA", "Viáticos y Comidas", "Gasolina y Fletes", "Herramientas y Equipos", "Gastos Indirectos"])
-                    monto_gasto = st.number_input("Monto en Pesos ($ MXN)", min_value=0.0, step=50.0)
+                    categoria_gasto = st.selectbox("Categoría de Cuenta", ["NÓMINA", "Viáticos y Comidas", "Gasolina y Fletes", "Herramientas y Equipos", "Otros Gastos Extras"])
+                    monto_gasto = st.number_input("Monto de Gasto / Nómina ($ MXN)", min_value=0.0, step=50.0)
                     
                     btn_gasto = st.form_submit_button("💰 INYECTAR GASTO")
                     
@@ -123,10 +122,11 @@ if doc:
                             st.success(f"✅ Gasto de ${monto_gasto:,.2f} registrado.")
                             
                             if categoria_gasto == "NÓMINA":
-                                monto_fsr = monto_gasto * 0.0132
-                                concepto_fsr = f"FSR (1.32%) - {concepto.upper()}"
+                                # CORRECCIÓN DEL FSR: Ahora calcula el 32% sobre la base
+                                monto_fsr = monto_gasto * 0.32
+                                concepto_fsr = f"FSR (Factor 1.32) - {concepto.upper()}"
                                 hoja_gastos.append_row([fecha_actual, folio_seleccionado, concepto_fsr, "FSR", monto_fsr])
-                                st.info(f"✅ FSR automático: Se cargaron ${monto_fsr:,.2f} al Seguro.")
+                                st.info(f"✅ FSR automático: Se cargaron ${monto_fsr:,.2f} (32% extra) a la obra.")
                                 
                             st.rerun()
 

@@ -6,6 +6,18 @@ import datetime
 import pandas as pd
 
 st.set_page_config(page_title="Panel Financiero", page_icon="💰", layout="wide")
+# -----------------------------------------
+# 🛡️ CANDADO DE SEGURIDAD POR ROLES
+# -----------------------------------------
+if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
+    st.warning("⚠️ Acceso denegado. Inicia sesión en la página principal.")
+    st.stop()
+
+ROLES_PERMITIDOS = ["Admin", "RRHH", "Auxiliar"]
+if st.session_state.get("role") not in ROLES_PERMITIDOS:
+    st.error(f"🚫 ACCESO RESTRINGIDO: Tu perfil de {st.session_state.get('role')} no tiene autorización para este módulo.")
+    st.stop()
+# -----------------------------------------
 
 def limpiar_monto(valor):
     if str(valor).strip() == "" or valor is None: return 0.0

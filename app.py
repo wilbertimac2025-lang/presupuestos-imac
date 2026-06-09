@@ -5,7 +5,7 @@ st.set_page_config(page_title="ERP IMAC - Acceso", page_icon="🔐", layout="cen
 # 🏛️ BASE DE DATOS DE USUARIOS Y ROLES GRUPO IMAC
 USUARIOS_VALIDOS = {
     # 1. Dirección General (Acceso Total)
-    "wromero": {"clave": "IMAC2026", "rol": "Admin"},
+    "wromero": {"clave": "2289", "rol": "Admin"},
     
     # 2. Directivos (Solo Reportes y Tablero)
     "act_dir": {"clave": "ACT2026", "rol": "Directivo"},

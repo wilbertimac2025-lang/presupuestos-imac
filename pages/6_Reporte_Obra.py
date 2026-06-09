@@ -102,21 +102,29 @@ if clave_ingresada == CLAVE_ADMIN:
             utilidad_calculada = presupuesto_total - total_gastos
             
             # ==========================================
-            # 📊 BALANCE GENERAL CON UTILIDAD ACTIVADA
+            # 📊 BALANCE GENERAL CON BARRA AZUL (PROGRESO)
             # ==========================================
             st.write("### 📊 Balance General del Proyecto")
             c1, c2, c3 = st.columns(3)
             c1.metric("Presupuesto Actual Autorizado", f"${presupuesto_total:,.2f}")
             c2.metric("Egresos Totales Ejecutados", f"${total_gastos:,.2f}")
             
-            # Muestra la utilidad con color dinámico (Verde si es ganancia, Rojo si hay pérdidas)
             if utilidad_calculada >= 0:
                 c3.metric("Utilidad Financiera Libre", f"${utilidad_calculada:,.2f}")
             else:
                 c3.metric("⚠️ Déficit / Pérdida en Obra", f"${utilidad_calculada:,.2f}")
 
+            # 🚀 AQUÍ ESTÁ LA LÍNEA AZUL DE PROGRESO
+            if presupuesto_total > 0:
+                # Calculamos el porcentaje consumido (ej. 0.70 si se ha gastado el 70%)
+                porcentaje_consumido = min(total_gastos / presupuesto_total, 1.0)
+                porcentaje_texto = porcentaje_consumido * 100
+                st.write(f"**Consumo del Presupuesto:** {porcentaje_texto:.1f}%")
+                st.progress(porcentaje_consumido) # Esta es la barra azul
+            
             st.markdown("---")
             
+            # --- TABS DE DESGLOSE ---
             st.write("### 🗂️ Desglose del Expediente")
             tab1, tab2, tab3, tab4 = st.tabs(["💰 Finanzas y Egresos", "📦 Almacén y Materiales", "👷 Cuadrilla e IMSS", "📝 Convenios Extra"])
             

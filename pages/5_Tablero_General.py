@@ -5,6 +5,19 @@ import json
 import pandas as pd
 
 st.set_page_config(page_title="Tablero General", page_icon="📈", layout="wide")
+# -----------------------------------------
+# 🛡️ CANDADO DE SEGURIDAD POR ROLES
+# -----------------------------------------
+if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
+    st.warning("⚠️ Acceso denegado. Inicia sesión en la página principal.")
+    st.stop()
+
+# Nota: Si el Tablero General no lo debe ver RRHH, quita "RRHH" de esta lista en ese archivo.
+ROLES_PERMITIDOS = ["Admin", "Directivo"]
+if st.session_state.get("role") not in ROLES_PERMITIDOS:
+    st.error(f"🚫 ACCESO RESTRINGIDO: Tu perfil de {st.session_state.get('role')} no tiene autorización para este módulo.")
+    st.stop()
+# -----------------------------------------
 
 # 🔐 CONTRASEÑA MAESTRA PARA VER EL TABLERO GLOBAL
 CLAVE_ADMIN = "2289"

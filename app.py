@@ -5,18 +5,17 @@ st.set_page_config(page_title="ERP IMAC - Acceso", page_icon="🔐", layout="cen
 # 🏛️ BASE DE DATOS DE USUARIOS Y ROLES GRUPO IMAC
 USUARIOS_VALIDOS = {
     # 1. Dirección General (Acceso Total)
-    "wromero": {"clave": "2289", "rol": "Admin"},
+    "wromero": {"clave": "IMAC2026", "rol": "Admin"},
     
     # 2. Directivos (Solo Reportes y Tablero)
-    "act_dir": {"clave": "2289", "rol": "Directivo"},
-    "aco_dir": {"clave": "2289", "rol": "Directivo"},
+    "act_dir": {"clave": "ACT2026", "rol": "Directivo"},
+    "aco_dir": {"clave": "ACO2026", "rol": "Directivo"},
     
     # 3. Recursos Humanos (Casi todo, excepto creación de obras)
-    "rrhh_imac": {"clave": "2289", "rol": "RRHH"},
+    "rrhh_imac": {"clave": "RRHH2026", "rol": "RRHH"},
     
     # 4. Auxiliares de Obra (Operación básica)
-    "aux_obra1": {"clave": "2289", "rol": "Auxiliar"}
-    "aux_obra2": {"clave": "2289", "rol": "Auxiliar"}
+    "aux_obra1": {"clave": "AUX2026", "rol": "Auxiliar"}
 }
 
 def login():

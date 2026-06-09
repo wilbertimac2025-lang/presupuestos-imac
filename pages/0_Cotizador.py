@@ -13,6 +13,18 @@ from PyPDF2 import PdfMerger # HERRAMIENTA PARA UNIR PDFs
 
 # --- CONFIGURACIÓN ---
 st.set_page_config(page_title="Cotizador Multizona IMAC", page_icon="📝", layout="centered")
+# -----------------------------------------
+# 🛡️ CANDADO DE SEGURIDAD POR ROLES
+# -----------------------------------------
+if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
+    st.warning("⚠️ Acceso denegado. Inicia sesión en la página principal.")
+    st.stop()
+
+ROLES_PERMITIDOS = ["Admin", "RRHH", "Auxiliar"]
+if st.session_state.get("role") not in ROLES_PERMITIDOS:
+    st.error(f"🚫 ACCESO RESTRINGIDO: Tu perfil de {st.session_state.get('role')} no tiene autorización para este módulo.")
+    st.stop()
+# -----------------------------------------
 
 # --- TEXTOS PREDEFINIDOS ---
 TEXTO_DESCRIPCION = ("Es un sistema de impermeabilizacion prefabricado, consiste en una membrana multicapa elaborada a base de "

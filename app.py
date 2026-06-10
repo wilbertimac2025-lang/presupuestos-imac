@@ -15,7 +15,8 @@ USUARIOS_VALIDOS = {
     "rrhh_imac": {"clave": "RRHH2026", "rol": "RRHH"},
     
     # 4. Auxiliares de Obra (Operación básica)
-    "aux_obra1": {"clave": "AUX2026", "rol": "Auxiliar"}
+    "aux_obra1": {"clave": "AUX2026", "rol": "Auxiliar"},
+    "aux_obra2": {"clave": "AUX2026", "rol": "Auxiliar"}
 }
 
 def login():

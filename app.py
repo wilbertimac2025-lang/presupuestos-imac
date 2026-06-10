@@ -16,6 +16,7 @@ USUARIOS_VALIDOS = {
     
     # 4. Auxiliares de Obra (Operación básica)
     "aux_obra1": {"clave": "AUX2026", "rol": "Auxiliar"}
+    "aux_obra2": {"clave": "AUX2026", "rol": "Auxiliar"}
 }
 
 def login():

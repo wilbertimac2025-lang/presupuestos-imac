@@ -3,16 +3,22 @@ import streamlit as st
 st.set_page_config(page_title="ERP IMAC - Acceso", page_icon="🔐", layout="centered")
 
 # 🏛️ BASE DE DATOS DE USUARIOS CON PERMISOS GEOGRÁFICOS
+# 🏛️ BASE DE DATOS DE USUARIOS CON PERMISOS GEOGRÁFICOS
 USUARIOS_VALIDOS = {
-    # Dirección y Directivos ven absolutamente TODO
+    # Dirección y Directivos (Acceso Global a todo el sistema)
     "wromero": {"clave": "IMAC2026", "rol": "Admin", "zona": "Todas"},
     "act_dir": {"clave": "ACT2026", "rol": "Directivo", "zona": "Todas"},
     "aco_dir": {"clave": "ACO2026", "rol": "Directivo", "zona": "Todas"},
-    "rrhh_imac": {"clave": "RRHH2026", "rol": "RRHH", "zona": "Todas"},
     
-    # Auxiliares segmentados por territorio
+    # Recursos Humanos (Restringido exclusivamente a zona Local)
+    "rrhh_imac": {"clave": "RRHH2026", "rol": "RRHH", "zona": "Local"},
+    
+    # Auxiliares y Operativos segmentados por territorio
     "aux_local": {"clave": "LOCAL2026", "rol": "Auxiliar", "zona": "Local"},
-    "aux_foraneo": {"clave": "FORANEO2026", "rol": "Auxiliar", "zona": "Foránea"}
+    "aux_foraneo": {"clave": "FORANEO2026", "rol": "Auxiliar", "zona": "Foránea"},
+    
+    # 🚀 NUEVO: Usuario Operativo (Exclusivo para zona Foránea)
+    "operativo": {"clave": "OPE2026", "rol": "Auxiliar", "zona": "Foránea"}
 }
 
 def login():

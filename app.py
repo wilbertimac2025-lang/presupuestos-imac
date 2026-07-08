@@ -6,7 +6,7 @@ st.set_page_config(page_title="ERP IMAC - Acceso", page_icon="🔐", layout="cen
 # 🏛️ BASE DE DATOS DE USUARIOS CON PERMISOS GEOGRÁFICOS
 USUARIOS_VALIDOS = {
     # Dirección y Directivos (Acceso Global a todo el sistema)
-    "wromero": {"clave": "IMAC2026", "rol": "Admin", "zona": "Todas"},
+    "wromero": {"clave": "2289", "rol": "Admin", "zona": "Todas"},
     "act_dir": {"clave": "ACT2026", "rol": "Directivo", "zona": "Todas"},
     "aco_dir": {"clave": "ACO2026", "rol": "Directivo", "zona": "Todas"},
     

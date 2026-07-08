@@ -323,12 +323,30 @@ if boton:
             pdf.multi_cell(0, 4, txt="- Se deberá hacer un levantamiento físico para determinar los alcances exactos.\n- No incluye trabajos no cotizados.")
             pdf.ln(3)
             
+            # 🧠 CÁLCULO DINÁMICO DE GARANTÍA (Basado en el sistema de la primera zona)
+            sistema_principal = zonas_data[0]["sistema"].upper()
+            
+            if "3.0" in sistema_principal and "POLIESTER" in sistema_principal:
+                texto_garantia = "6 AÑOS CONTRA DEFECTOS DE FABRICACIÓN"
+            elif "3.5" in sistema_principal and "VIDRIO" in sistema_principal:
+                texto_garantia = "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN"
+            elif "3.5" in sistema_principal and "POLIESTER" in sistema_principal:
+                texto_garantia = "7 AÑOS CONTRA DEFECTOS DE FABRICACIÓN"
+            elif "4.0" in sistema_principal and "POLIESTER" in sistema_principal:
+                texto_garantia = "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN"
+            elif "4.5" in sistema_principal and "POLIESTER" in sistema_principal:
+                texto_garantia = "10 AÑOS CONTRA DEFECTOS DE FABRICACIÓN"
+            elif "KRIPTOFLEX" in sistema_principal:
+                texto_garantia = "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN"
+            else:
+                texto_garantia = "SEGÚN FICHA TÉCNICA DEL PRODUCTO" # Para mallas, primarios u otros
+                
             pdf.set_font('Arial', 'B', 9)
             pdf.set_text_color(50, 50, 50)
             pdf.cell(60, 5, "Garantía del Sistema:")
             pdf.set_font('Arial', '', 9)
             pdf.set_text_color(15, 60, 140)
-            pdf.cell(0, 5, "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", ln=True)
+            pdf.cell(0, 5, texto_garantia, ln=True)
             
             pdf.set_font('Arial', 'B', 9)
             pdf.set_text_color(50, 50, 50)

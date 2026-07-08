@@ -275,16 +275,16 @@ if doc:
                 pdf.write(4.2, "mediante las opciones de pago habituales o transferencia a la siguiente cuenta:\n")
                 pdf.ln(1.5)
                 
-                # Datos Bancarios estilizados con viñetas azules
+                # Datos Bancarios estilizados de forma segura
                 pdf.set_font('Arial', '', 9.5)
                 pdf.cell(10)
-                pdf.write(4.5, f"  •  Banco: ")
+                pdf.write(4.5, "  -  Banco: ")
                 pdf.set_font('Arial', 'B', 9.5); pdf.write(4.5, "BBVA.\n"); pdf.set_font('Arial', '', 9.5); pdf.cell(10)
-                pdf.write(4.5, f"  •  A nombre de: ")
+                pdf.write(4.5, "  -  A nombre de: ")
                 pdf.set_font('Arial', 'B', 9.5); pdf.write(4.5, "TARC, S.A. DE C.V.\n"); pdf.set_font('Arial', '', 9.5); pdf.cell(10)
-                pdf.write(4.5, f"  •  Cuenta: ")
+                pdf.write(4.5, "  -  Cuenta: ")
                 pdf.set_font('Arial', 'B', 9.5); pdf.write(4.5, "450187690.\n"); pdf.set_font('Arial', '', 9.5); pdf.cell(10)
-                pdf.write(4.5, f"  •  Clabe interbancaria: ")
+                pdf.write(4.5, "  -  Clabe interbancaria: ")
                 pdf.set_font('Arial', 'B', 9.5); pdf.write(4.5, "012905004501876903.\n")
                 pdf.ln(2.5)
                 

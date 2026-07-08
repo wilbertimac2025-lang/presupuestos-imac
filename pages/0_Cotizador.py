@@ -9,7 +9,7 @@ import smtplib
 from email.message import EmailMessage
 from PIL import Image
 import io
-from PyPDF2 import PdfMerger # HERRAMIENTA PARA UNIR PDFs
+from PyPDF2 import PdfMerger
 
 # --- CONFIGURACIÓN ---
 st.set_page_config(page_title="Cotizador Multizona IMAC", page_icon="📝", layout="centered")
@@ -85,7 +85,6 @@ def conectar_sheets():
         creds = Credentials.from_service_account_info(credenciales_dic, scopes=scopes)
         cliente = gspread.authorize(creds)
         
-        # ⚠️ 1. REEMPLAZA CON TU ID DE EXCEL
         ID_DEL_EXCEL = "1-grdT2H5dBlGVPvJbZ5wVYDdtVjQEEmUPGpvEm6C0Gc" 
         sheet = cliente.open_by_key(ID_DEL_EXCEL).worksheet("Presupuestos")
         return sheet
@@ -103,18 +102,23 @@ def obtener_nuevo_folio(hoja):
     anio_corto = datetime.datetime.now().strftime("%y")
     return f"OBRA-TEMP-{datetime.datetime.now().strftime('%H%M')}-{anio_corto}"
 
-def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio):
+# 🧠 RUTEADOR DE CORREOS AUTOMÁTICO
+def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio, tipo_obra):
     try:
         remitente = st.secrets["CORREO_BOT"]
         password = st.secrets["PASS_BOT"]
-        # ⚠️ 2. REEMPLAZA CON EL CORREO CENTRAL DE IMAC
-        correo_central = "sistematarc@gmail.com" 
+        
+        # ⚠️ AQUÍ PONES LOS CORREOS REALES DE TU EMPRESA
+        if tipo_obra == "LOCAL":
+            correo_destino = "comercial@grupo-imac.com" # <--- CAMBIA ESTO
+        else:
+            correo_destino = "comercial@grupo-imac.com" # <--- CAMBIA ESTO
         
         msg = EmailMessage()
-        msg['Subject'] = f'NUEVO FOLIO {folio}: Presupuesto {cliente} (Asesor: {asesor})'
+        msg['Subject'] = f'NUEVO FOLIO {folio}: Presupuesto {cliente} (Asesor: {asesor}) - Zona: {tipo_obra}'
         msg['From'] = remitente
-        msg['To'] = correo_central
-        msg.set_content(f"Se ha registrado un nuevo presupuesto en el sistema.\n\nFolio Asignado: {folio}\nCliente: {cliente}\nAsesor: {asesor}\n\nSe adjunta el documento oficial.")
+        msg['To'] = correo_destino
+        msg.set_content(f"Se ha registrado un nuevo presupuesto en el sistema.\n\nFolio Asignado: {folio}\nCliente: {cliente}\nAsesor: {asesor}\nZona Logística: {tipo_obra}\n\nSe adjunta el documento oficial.")
         msg.add_attachment(pdf_bytes, maintype='application', subtype='pdf', filename=nombre_archivo)
         
         with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
@@ -136,7 +140,6 @@ with st.form("form_presupuesto"):
     correo_cliente = st.text_input("Correo Electrónico del Cliente")
     asesor = st.text_input("Nombre del Asesor")
     
-    # Selector de tipo de obra para la logística (Alineado correctamente)
     tipo_obra = st.selectbox("Tipo de Proyecto / Logística:", ["LOCAL", "FORÁNEA"])
     
     st.write("---")
@@ -166,7 +169,6 @@ with st.form("form_presupuesto"):
     st.write("**Evidencia Fotográfica de la Obra:**")
     fotos_subidas = st.file_uploader("📸 Subir Evidencia (Opcional)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
     
-    # 📝 CAJAS DE TEXTO FIJAS
     st.info("💡 Si subiste fotos, puedes agregarles un comentario a cada una en el orden que las seleccionaste:")
     colA, colB = st.columns(2)
     with colA:
@@ -323,7 +325,7 @@ if boton:
             pdf.multi_cell(0, 4, txt="- Se deberá hacer un levantamiento físico para determinar los alcances exactos.\n- No incluye trabajos no cotizados.")
             pdf.ln(3)
             
-            # 🧠 CÁLCULO DINÁMICO DE GARANTÍA (Basado en el sistema de la primera zona)
+            # 🧠 CÁLCULO DINÁMICO DE GARANTÍA
             sistema_principal = zonas_data[0]["sistema"].upper()
             
             if "3.0" in sistema_principal and "POLIESTER" in sistema_principal:
@@ -339,7 +341,7 @@ if boton:
             elif "KRIPTOFLEX" in sistema_principal:
                 texto_garantia = "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN"
             else:
-                texto_garantia = "SEGÚN FICHA TÉCNICA DEL PRODUCTO" # Para mallas, primarios u otros
+                texto_garantia = "SEGÚN FICHA TÉCNICA DEL PRODUCTO"
                 
             pdf.set_font('Arial', 'B', 9)
             pdf.set_text_color(50, 50, 50)
@@ -386,14 +388,13 @@ if boton:
             pdf.set_text_color(0, 150, 255)
             pdf.cell(0, 5, 'TARC S.A. DE C.V.', ln=True)
             
-            # 🧠 CAMBIO DINÁMICO DE DATOS SEGÚN LA ZONA
+            # 🧠 PIE DE PÁGINA DINÁMICO
             pdf.set_text_color(100, 100, 100)
             pdf.set_font('Arial', '', 8)
             if tipo_obra == "LOCAL":
                 pdf.cell(0, 4, 'BOULEVARD MIGUEL ALEMAN 759, COL. CENTRO. VERACRUZ, VER. C.P. 91700', ln=True)
                 pdf.cell(0, 4, 'TEL. (229) 449 00 55 | masterventas@grupo-imac.com | www.grupo-imac.com', ln=True)
             else:
-                # ⚠️ EDITA ESTOS TEXTOS CON TUS DATOS FORÁNEOS REALES
                 pdf.cell(0, 4, 'DIRECCIÓN DE SUCURSAL FORÁNEA O FISCAL, ESTADO. C.P. 00000', ln=True)
                 pdf.cell(0, 4, 'TEL. (000) 000 00 00 | correo_foraneo@grupo-imac.com | www.grupo-imac.com', ln=True)
             
@@ -405,7 +406,7 @@ if boton:
                 if pdf.get_y() > 250: pdf.add_page()
                 pdf.image("footer_marcas.jpg", x=10, y=pdf.get_y(), w=190)
 
-            # 📸 --- ANEXO FOTOGRÁFICO CON COMENTARIOS FIJOS ---
+            # 📸 --- ANEXO FOTOGRÁFICO ---
             if temp_paths:
                 for i, temp_img in enumerate(temp_paths):
                     if i % 2 == 0:
@@ -437,13 +438,10 @@ if boton:
             for temp_img in temp_paths:
                 if os.path.exists(temp_img): os.remove(temp_img)
 
-            # --- GENERACIÓN DEL PDF BASE ---
             pdf_base_bytes = pdf.output(dest='S').encode('latin-1')
             
-            # 🪄 --- MAGIA: UNIR CON LA FICHA TÉCNICA PDF FIJA ---
             pdf_final_para_descargar = pdf_base_bytes
 
-            # 🧠 LÓGICA DE DETECCIÓN DE FICHA TÉCNICA CORRESPONDIENTE
             if tipo_obra == "LOCAL":
                 archivo_ficha = "ficha_tecnica_local.pdf"
             else:
@@ -468,8 +466,8 @@ if boton:
                 resumen = " / ".join([f"{z['area']} ({z['m2']}m2)" for z in zonas_data])
                 hoja.append_row([folio_actual, fecha_hoy, asesor, cliente, compania, telefono, correo_cliente, proyecto, resumen, total_final, tipo_obra])
             
-            enviar_respaldo_correo(pdf_final_para_descargar, nombre_file, cliente, asesor, folio_actual)
+            # 🚀 AQUÍ SE ACTIVA EL ENVÍO CON EL RUTEADOR DINÁMICO
+            enviar_respaldo_correo(pdf_final_para_descargar, nombre_file, cliente, asesor, folio_actual, tipo_obra)
             
         st.success(f"✅ Presupuesto {folio_actual} generado con éxito.")
         st.download_button(f"📄 DESCARGAR PRESUPUESTO", data=pdf_final_para_descargar, file_name=nombre_file)
-           

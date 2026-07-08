@@ -5,6 +5,7 @@ import json
 import datetime
 
 st.set_page_config(page_title="Control de Materiales", page_icon="📦", layout="wide")
+
 # -----------------------------------------
 # 🛡️ CANDADO DE SEGURIDAD POR ROLES
 # -----------------------------------------
@@ -17,9 +18,28 @@ if st.session_state.get("role") not in ROLES_PERMITIDOS:
     st.error(f"🚫 ACCESO RESTRINGIDO: Tu perfil de {st.session_state.get('role')} no tiene autorización para este módulo.")
     st.stop()
 # -----------------------------------------
-# -----------------------------------------
 
 CLAVE_ADMIN = "2289"
+
+# 📋 LISTA MAESTRA DE MATERIALES (Para que todos los menús sean idénticos)
+CATALOGO_IMPERMEABILIZANTES = [
+    "MASTER LASSER 3.0 MM FIBRA POLIESTER LISO ARENADO",
+    "MASTER LASSER 3.5 MM FIBRA POLIESTER BLANCO",
+    "MASTER LASSER 4.0 MM FIBRA POLIESTER BLANCO",
+    "MASTER LASSER 4.5 MM FIBRA POLIESTER ROJO",
+    "MASTER LASSER 3.5 MM FIBRA POLIESTER ROJO",
+    "MASTER LASSER 4.0 MM FIBRA POLIESTER ROJO",
+    "MASTER LASSER 4.5 MM FIBRA POLIESTER BLANCO",
+    "MASTER LASSER 3.5 MM FIBRA VIDRIO ROJO",
+    "MASTER LASSER 3.5 MM FIBRA VIDRIO BLANCO",
+    "MASTER PRIM A",
+    "MASTER PRIM S",
+    "KRIPTOFLEX 5 AÑOS FIBRATADO",
+    "MALLA REFUERZO",
+    "Primario Hidroflex",
+    "Gas L.P.",
+    "Cemento Plástico"
+]
 
 # 💵 DICCIONARIO DE PRECIOS (Modificable para el futuro)
 PRECIO_BASE = 1200.00
@@ -29,7 +49,15 @@ def obtener_precio(nombre_material):
         # --- MATERIALES DE CONSTRUCCIÓN LIGERA Y EXTRAS ---
         "Hoja de Tablaroca (Gypsum Board)": 1200.00,
         "Poste Metálico": 1200.00,
+        "Canal de Amarre": 1200.00,
+        "Reborde J": 1200.00,
+        "Tornillos Bartolos": 1200.00,
+        "Cinta Acústica / Accesorios": 1200.00,
+        
+        # --- EXTRAS DE IMPERMEABILIZACIÓN ---
         "Primario Hidroflex": 1200.00,
+        "Gas L.P.": 1200.00,
+        "Cemento Plástico": 1200.00,
         
         # --- CATÁLOGO DE IMPERMEABILIZANTES PREFABRICADOS ---
         "MASTER LASSER 3.0 MM FIBRA POLIESTER LISO ARENADO": 1200.00,
@@ -105,7 +133,8 @@ if doc:
                     
                     with colB:
                         if categoria_lim == "Impermeabilización":
-                            mat_lim = st.selectbox("Insumo", ["Rollo Master Lasser 3.0mm", "Rollo Master Lasser 3.5mm", "Rollo Master Lasser 4.0mm", "Rollo Master Lasser 4.5mm", "Primario Hidroflex", "Gas L.P.", "Cemento Plástico"], key="mat_lim_imp")
+                            # 🚀 AQUI USAMOS LA LISTA MAESTRA
+                            mat_lim = st.selectbox("Insumo", CATALOGO_IMPERMEABILIZANTES, key="mat_lim_imp")
                         elif categoria_lim == "Sistemas Ligeros":
                             mat_lim = st.selectbox("Insumo", ["Hoja de Tablaroca (Gypsum Board)", "Poste Metálico", "Canal de Amarre", "Reborde J", "Tornillos Bartolos", "Cinta Acústica / Accesorios"], key="mat_lim_sl")
                         else:
@@ -132,7 +161,8 @@ if doc:
                     categoria = st.selectbox("Categoría del Material", ["Impermeabilización", "Sistemas Ligeros", "Otros / Consumibles"])
                     
                     if categoria == "Impermeabilización":
-                        material = st.selectbox("Insumo", ["Rollo Master Lasser 3.0mm", "Rollo Master Lasser 3.5mm", "Rollo Master Lasser 4.0mm", "Rollo Master Lasser 4.5mm", "Primario Hidroflex", "Gas L.P.", "Cemento Plástico"])
+                        # 🚀 AQUI TAMBIÉN USAMOS LA LISTA MAESTRA
+                        material = st.selectbox("Insumo", CATALOGO_IMPERMEABILIZANTES)
                         unidad = "Piezas/Litros"
                     elif categoria == "Sistemas Ligeros":
                         material = st.selectbox("Insumo", ["Hoja de Tablaroca (Gypsum Board)", "Poste Metálico", "Canal de Amarre", "Reborde J", "Tornillos Bartolos", "Cinta Acústica / Accesorios"])

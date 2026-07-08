@@ -3,6 +3,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 import json
 import datetime
+import pandas as pd
 
 st.set_page_config(page_title="Control de Personal", page_icon="👷", layout="wide")
 
@@ -25,12 +26,12 @@ def conectar_sheets():
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(credenciales_dic, scopes=scopes)
         cliente = gspread.authorize(creds)
-        # ⚠️ REEMPLAZA CON TU ID DE EXCEL
+        # ⚠️ REEMPLAZA CON TU ID DE EXCEL AQUÍ
         ID_DEL_EXCEL = "1-grdT2H5dBlGVPvJbZ5wVYDdtVjQEEmUPGpvEm6C0Gc" 
         return cliente.open_by_key(ID_DEL_EXCEL)
     except Exception: return None
 
-st.title("👷 Control de Personal y Estatus IMSS")
+st.title("👷 Control de Personal y Asignación de Obra")
 st.markdown("---")
 
 doc = conectar_sheets()
@@ -39,102 +40,150 @@ if doc:
     try:
         hoja_obras = doc.worksheet("Obras_Activas")
         hoja_trabajadores = doc.worksheet("Registro_Trabajadores")
+        hoja_base = doc.worksheet("Base_Trabajadores")
     except Exception as e:
-        st.error("⚠️ Falta crear la pestaña 'Registro_Trabajadores' en tu Excel.")
+        st.error("⚠️ Falta crear la pestaña 'Base_Trabajadores' o 'Registro_Trabajadores' en tu Excel.")
         st.stop()
 
     datos_obras = hoja_obras.get_all_records()
     datos_trabajadores = hoja_trabajadores.get_all_records()
+    datos_base = hoja_base.get_all_records()
     
-    llave_folio = next((k for k in (datos_obras[0].keys() if datos_obras else []) if "FOLIO" in str(k).upper()), None)
-    llave_estatus = next((k for k in (datos_obras[0].keys() if datos_obras else []) if "ESTATUS" in str(k).upper()), None)
-    obras_ejecucion = [str(fila[llave_folio]) for fila in datos_obras if str(fila.get(llave_estatus, "")).upper() == "EN EJECUCIÓN"] if llave_folio and llave_estatus else []
+    nombres_base = [str(fila.get("Nombre del Trabajador", "")) for fila in datos_base if str(fila.get("Nombre del Trabajador", "")) != ""]
+    
+    tab1, tab2 = st.tabs(["🏗️ Asignación a Obras (Operación)", "🗂️ Base de Datos Maestra (RRHH)"])
 
-    if not obras_ejecucion:
-        st.info("No hay obras en ejecución en este momento.")
-    else:
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            st.subheader("1. Selección de Obra")
-            folio_seleccionado = st.selectbox("Obra Activa:", ["Selecciona un folio..."] + obras_ejecucion)
+    # ==================================================
+    # PESTAÑA 1: ASIGNACIÓN A OBRAS (CON CANDADO IMSS)
+    # ==================================================
+    with tab1:
+        llave_folio = next((k for k in (datos_obras[0].keys() if datos_obras else []) if "FOLIO" in str(k).upper()), None)
+        llave_estatus = next((k for k in (datos_obras[0].keys() if datos_obras else []) if "ESTATUS" in str(k).upper()), None)
+        obras_ejecucion = [str(fila[llave_folio]) for fila in datos_obras if str(fila.get(llave_estatus, "")).upper() == "EN EJECUCIÓN"] if llave_folio and llave_estatus else []
 
-        if folio_seleccionado != "Selecciona un folio...":
-            
-            obra_info = next((f for f in datos_obras if str(f.get(llave_folio, "")) == folio_seleccionado), None)
-            llave_rp = next((k for k in (obra_info.keys() if obra_info else []) if "PATRONAL" in str(k).upper() or "REGISTRO" in str(k).upper()), None)
-            registro_patronal = obra_info.get(llave_rp, "NO ASIGNADO") if llave_rp else "NO ASIGNADO"
-            
-            with col2:
-                st.info(f"🏛️ **Registro Patronal IMSS vinculado a la Obra:** {registro_patronal}")
+        if not obras_ejecucion:
+            st.info("No hay obras en ejecución en este momento.")
+        else:
+            colA, colB = st.columns([1, 2])
+            with colA:
+                st.subheader("1. Selecciona la Obra Activa")
+                folio_seleccionado = st.selectbox("Folio de Obra:", ["Selecciona un folio..."] + obras_ejecucion)
+
+            if folio_seleccionado != "Selecciona un folio...":
+                obra_info = next((f for f in datos_obras if str(f.get(llave_folio, "")) == folio_seleccionado), None)
+                llave_rp = next((k for k in (obra_info.keys() if obra_info else []) if "PATRONAL" in str(k).upper() or "REGISTRO" in str(k).upper()), None)
+                registro_patronal_obra = str(obra_info.get(llave_rp, "NO ASIGNADO")).upper()
                 
-                tab1, tab2 = st.tabs(["➕ Alta de Personal", "🔄 Actualizar Estatus IMSS"])
-                
-                with tab1:
-                    with st.form("form_personal"):
-                        c1, c2 = st.columns(2)
-                        with c1:
-                            nombre = st.text_input("Nombre Completo del Trabajador")
-                            rol = st.selectbox("Puesto / Rol", ["Residente", "Oficial Tablaroquero", "Oficial Impermeabilizador", "Ayudante General", "Chofer", "Contratista Externo"])
-                            nss = st.text_input("Número de Seguridad Social (NSS)")
-                        with c2:
-                            # 📝 NUEVO CAMPO: RFC DEL TRABAJADOR
-                            rfc = st.text_input("RFC del Trabajador", max_chars=13, placeholder="Ej. ROMW900101XXX")
-                            estatus_imss = st.selectbox("Estatus IMSS actual", ["🟢 ACTIVO (Alta confirmada)", "🟡 EN TRÁMITE", "🔴 SIN ALTA (Riesgo)"])
-                        
-                        btn_guardar = st.form_submit_button("➕ ASIGNAR A LA OBRA")
-                        
-                        if btn_guardar:
-                            if not nombre:
-                                st.warning("⚠️ El nombre es obligatorio.")
-                            else:
-                                fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
-                                # Guardamos el RFC al final para mantener el orden del Excel
-                                hoja_trabajadores.append_row([
-                                    folio_seleccionado, nombre.upper(), rol,
-                                    nss if nss else "NO PROPORCIONADO", estatus_imss, fecha_hoy,
-                                    registro_patronal, rfc.upper() if rfc else "NO PROPORCIONADO"
-                                ])
-                                st.success(f"✅ {nombre} asignado con éxito. RFC: {rfc.upper() if rfc else 'N/P'}")
-                                datos_trabajadores = hoja_trabajadores.get_all_records()
-
-                with tab2:
-                    st.write("Selecciona a un trabajador para modificar su estatus IMSS.")
-                    cuadrilla_actual_nombres = [t.get("Nombre del Trabajador", "") for t in datos_trabajadores if str(t.get("Folio Obra", "")) == folio_seleccionado]
+                with colB:
+                    st.info(f"🏛️ **Registro Patronal (RP) de esta Obra:** {registro_patronal_obra}")
                     
-                    if not cuadrilla_actual_nombres:
-                        st.info("Primero debes dar de alta personal en esta obra.")
+                    st.subheader("2. Asignar Trabajador del Catálogo")
+                    if not nombres_base:
+                        st.warning("⚠️ Tu catálogo de trabajadores está vacío. Ve a la pestaña 'Base de Datos Maestra' para registrarlos.")
                     else:
-                        with st.form("form_actualizar_imss"):
-                            trabajador_sel = st.selectbox("Trabajador:", cuadrilla_actual_nombres)
-                            nuevo_estatus = st.selectbox("Nuevo Estatus:", ["🟢 ACTIVO (Alta confirmada)", "🟡 EN TRÁMITE", "🔴 SIN ALTA (Riesgo)"])
-                            btn_actualizar = st.form_submit_button("🔄 GUARDAR CAMBIOS")
+                        with st.form("form_asignacion"):
+                            trabajador_sel = st.selectbox("Selecciona al Trabajador:", nombres_base)
+                            estatus_imss = st.selectbox("Estatus IMSS para esta obra:", ["🟢 ACTIVO (Alta confirmada)", "🟡 EN TRÁMITE", "🔴 BAJA (Desvinculado de la obra)"])
                             
-                            if btn_actualizar:
-                                fila_excel = next((i + 2 for i, f in enumerate(datos_trabajadores) if str(f.get("Folio Obra", "")) == folio_seleccionado and str(f.get("Nombre del Trabajador", "")) == trabajador_sel), 0)
-                                if fila_excel > 0:
-                                    # Mantiene el estatus en la columna 5
-                                    hoja_trabajadores.update_cell(fila_excel, 5, nuevo_estatus)
-                                    st.success(f"✅ Estatus de {trabajador_sel} actualizado.")
+                            btn_asignar = st.form_submit_button("➕ ASIGNAR TRABAJADOR A LA OBRA")
+                            
+                            if btn_asignar:
+                                # LÓGICA DEL CANDADO
+                                trabajador_info = next((t for t in datos_base if str(t.get("Nombre del Trabajador", "")) == trabajador_sel), None)
+                                historial_trabajador = [t for t in datos_trabajadores if str(t.get("Nombre del Trabajador", "")) == trabajador_sel]
+                                
+                                candado_activado = False
+                                
+                                if historial_trabajador:
+                                    # Analizamos su última asignación registrada
+                                    ultimo_registro = historial_trabajador[-1]
+                                    ultimo_estatus = str(ultimo_registro.get("Estatus IMSS", "")).upper()
+                                    ultimo_rp = str(ultimo_registro.get("Registro Patronal", "")).upper()
+                                    
+                                    # Si no está de BAJA y el RP anterior es distinto al de la obra actual = BLOQUEO
+                                    if "BAJA" not in ultimo_estatus and ultimo_rp != "NO ASIGNADO" and ultimo_rp != registro_patronal_obra:
+                                        candado_activado = True
+                                        st.error(f"🔒 **CANDADO IMSS ACTIVADO:** {trabajador_sel} está activo en otra obra con el RP: **{ultimo_rp}**.")
+                                        st.error(f"No puedes moverlo a esta obra (RP: **{registro_patronal_obra}**) sin antes registrarle una '🔴 BAJA' en su obra anterior para evitar multas.")
+
+                                if not candado_activado:
+                                    fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
+                                    hoja_trabajadores.append_row([
+                                        folio_seleccionado, 
+                                        trabajador_info.get("Nombre del Trabajador", ""), 
+                                        trabajador_info.get("Puesto / Rol", ""),
+                                        trabajador_info.get("NSS", ""), 
+                                        estatus_imss, 
+                                        fecha_hoy,
+                                        registro_patronal_obra, 
+                                        trabajador_info.get("RFC", "")
+                                    ])
+                                    st.success(f"✅ ¡Éxito! {trabajador_sel} asignado correctamente a la obra {folio_seleccionado}.")
                                     st.rerun()
 
-            st.markdown("---")
-            st.subheader(f"📋 Cuadrilla Actual - {folio_seleccionado}")
-            
-            datos_trabajadores = hoja_trabajadores.get_all_records()
-            cuadrilla_obra = [t for t in datos_trabajadores if str(t.get("Folio Obra", "")) == folio_seleccionado]
-            
-            if not cuadrilla_obra:
-                st.info("Aún no hay trabajadores asignados a este folio.")
-            else:
-                for trabajador in cuadrilla_obra:
-                    estatus = trabajador.get("Estatus IMSS", "")
-                    rp_trabajador = trabajador.get("Registro Patronal", registro_patronal)
-                    rfc_trabajador = trabajador.get("RFC", "NO PROPORCIONADO")
+                # --- MOSTRAR CUADRILLA ACTUAL ---
+                st.markdown("---")
+                st.subheader(f"📋 Cuadrilla Actual - {folio_seleccionado}")
+                
+                datos_trabajadores = hoja_trabajadores.get_all_records()
+                # Mostramos solo el estatus más reciente de cada trabajador en esta obra
+                cuadrilla_obra = [t for t in datos_trabajadores if str(t.get("Folio Obra", "")) == folio_seleccionado]
+                
+                if not cuadrilla_obra:
+                    st.info("Aún no hay trabajadores asignados a este folio.")
+                else:
+                    # Filtramos para mostrar solo la última actualización de estatus de cada persona en esta obra
+                    trabajadores_unicos = {}
+                    for t in cuadrilla_obra:
+                        trabajadores_unicos[t["Nombre del Trabajador"]] = t
                     
-                    st.markdown(f"""
-                    <div style='padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 12px; background-color: #fafafa;'>
-                        <strong style='font-size: 16px; color: #0f3c8c;'>{trabajador.get('Nombre del Trabajador', 'N/A')}</strong> - <em>{trabajador.get('Puesto / Rol', 'N/A')}</em><br>
-                        <span style='color: #555;'>NSS: {trabajador.get('NSS', 'N/A')} | <strong>RFC: {rfc_trabajador}</strong> | RP Obra: {rp_trabajador}</span><br>
-                        Estatus IMSS: <strong>{estatus}</strong>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    for nombre, trabajador in trabajadores_unicos.items():
+                        estatus = trabajador.get("Estatus IMSS", "")
+                        rp_trabajador = trabajador.get("Registro Patronal", registro_patronal_obra)
+                        rfc_trabajador = trabajador.get("RFC", "NO PROPORCIONADO")
+                        
+                        color_fondo = "#fafafa" if "BAJA" not in estatus.upper() else "#ffebee"
+                        
+                        st.markdown(f"""
+                        <div style='padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 12px; background-color: {color_fondo};'>
+                            <strong style='font-size: 16px; color: #0f3c8c;'>{nombre}</strong> - <em>{trabajador.get('Puesto / Rol', 'N/A')}</em><br>
+                            <span style='color: #555;'>NSS: {trabajador.get('NSS', 'N/A')} | <strong>RFC: {rfc_trabajador}</strong> | RP Vinculado: {rp_trabajador}</span><br>
+                            Estatus Actual: <strong>{estatus}</strong>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+    # ==================================================
+    # PESTAÑA 2: BASE DE DATOS MAESTRA (CATÁLOGO)
+    # ==================================================
+    with tab2:
+        st.subheader("🗂️ Registro de Nuevos Empleados")
+        
+        if st.session_state.get("role") == "Auxiliar":
+            st.warning("⚠️ Tu perfil operativo no tiene permisos para dar de alta nuevos empleados en la base de datos maestra. Solicítalo a RRHH o Dirección.")
+        else:
+            st.write("Agrega aquí a los trabajadores que ingresan por primera vez a Grupo IMAC. Una vez registrados, aparecerán en el menú desplegable para asignarlos a cualquier obra.")
+            with st.form("form_alta_maestra"):
+                c1, c2 = st.columns(2)
+                with c1:
+                    nuevo_nombre = st.text_input("Nombre Completo (Empezando por Apellidos)")
+                    nuevo_rol = st.selectbox("Puesto / Rol Oficial", ["Oficial Tablaroquero", "Oficial Impermeabilizador", "Ayudante General", "Residente", "Chofer", "Contratista Externo"])
+                with c2:
+                    nuevo_nss = st.text_input("Número de Seguridad Social (NSS)", max_chars=11)
+                    nuevo_rfc = st.text_input("RFC con Homoclave", max_chars=13, placeholder="Ej. ROMW900101XXX")
+                
+                btn_maestro = st.form_submit_button("💾 GUARDAR EN BASE DE DATOS")
+                
+                if btn_maestro:
+                    if not nuevo_nombre or not nuevo_nss or not nuevo_rfc:
+                        st.error("⚠️ Debes llenar Nombre, NSS y RFC obligatoriamente.")
+                    elif nuevo_nombre in nombres_base:
+                        st.error(f"⚠️ El trabajador {nuevo_nombre.upper()} ya existe en la base de datos.")
+                    else:
+                        hoja_base.append_row([nuevo_nombre.upper(), nuevo_rol, nuevo_nss, nuevo_rfc.upper()])
+                        st.success(f"✅ ¡Trabajador {nuevo_nombre.upper()} agregado al catálogo general de la empresa!")
+                        st.rerun()
+            
+            st.markdown("---")
+            st.write("### Catálogo Histórico de Grupo IMAC")
+            if datos_base:
+                st.dataframe(pd.DataFrame(datos_base), use_container_width=True, hide_index=True)

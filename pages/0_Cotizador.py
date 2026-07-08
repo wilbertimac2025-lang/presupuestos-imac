@@ -359,10 +359,16 @@ if boton:
             pdf.set_text_color(0, 150, 255)
             pdf.cell(0, 5, 'TARC S.A. DE C.V.', ln=True)
             
+            # 🧠 CAMBIO DINÁMICO DE DATOS SEGÚN LA ZONA
             pdf.set_text_color(100, 100, 100)
             pdf.set_font('Arial', '', 8)
-            pdf.cell(0, 4, 'BOULEVARD MIGUEL ALEMAN 759, COL. CENTRO. VERACRUZ, VER. C.P. 91700', ln=True)
-            pdf.cell(0, 4, 'TEL. (229) 449 00 55 | masterventas@grupo-imac.com | www.grupo-imac.com', ln=True)
+            if tipo_obra == "LOCAL":
+                pdf.cell(0, 4, 'BOULEVARD MIGUEL ALEMAN 759, COL. CENTRO. VERACRUZ, VER. C.P. 91700', ln=True)
+                pdf.cell(0, 4, 'TEL. (229) 449 00 55 | masterventas@grupo-imac.com | www.grupo-imac.com', ln=True)
+            else:
+                # ⚠️ EDITA ESTOS TEXTOS CON TUS DATOS FORÁNEOS REALES
+                pdf.cell(0, 4, 'DIRECCIÓN DE SUCURSAL FORÁNEA O FISCAL, ESTADO. C.P. 00000', ln=True)
+                pdf.cell(0, 4, 'TEL. (000) 000 00 00 | correo_foraneo@grupo-imac.com | www.grupo-imac.com', ln=True)
             
             pdf.set_y(y_base + 40)
             if os.path.exists("footer_marcas.png"):

@@ -346,12 +346,12 @@ if boton:
             pdf_final_para_descargar = pdf_base_bytes
 
 # 🧠 LÓGICA DE DETECCIÓN DE FICHA TÉCNICA CORRESPONDIENTE
-    if tipo_obra == "LOCAL":
+        if tipo_obra == "LOCAL":
         archivo_ficha = "ficha_tecnica_local.pdf"
-    else:
+        else:
         archivo_ficha = "ficha_tecnica_foranea.pdf"
-
-    if os.path.exists(archivo_ficha):
+        
+        if os.path.exists(archivo_ficha):
         fusionador = PdfMerger()
         fusionador.append(io.BytesIO(pdf_base_bytes))
         fusionador.append(archivo_ficha)
@@ -361,18 +361,18 @@ if boton:
         fusionador.close()
         
         pdf_final_para_descargar = archivo_salida.getvalue()
-    else:
+        else:
         st.warning(f"⚠️ Alerta: No se encontró el archivo '{archivo_ficha}'. Se descargará el presupuesto sin la ficha técnica.")
-
-    nombre_file = f"Presupuesto_{folio_actual}_{cliente.replace(' ', '_')}.pdf"
-
-    if hoja:
+        
+        nombre_file = f"Presupuesto_{folio_actual}_{cliente.replace(' ', '_')}.pdf"
+        
+        if hoja:
         resumen = " / ".join([f"{z['area']} ({z['m2']}m2)" for z in zonas_data])
         hoja.append_row([folio_actual, fecha_hoy, asesor, cliente, compania, telefono, correo_cliente, proyecto, resumen, total_final, tipo_obra])
+        
+        enviar_respaldo_correo(pdf_final_para_descargar, nombre_file, cliente, asesor, folio_actual)
+        
+        st.success(f"✅ Presupuesto {folio_actual} generado con éxito.")
+        st.download_button(f"📄 DESCARGAR PRESUPUESTO", data=pdf_final_para_descargar, file_name=nombre_file)
 
-    enviar_respaldo_correo(pdf_final_para_descargar, nombre_file, cliente, asesor, folio_actual)
-
-    st.success(f"✅ Presupuesto {folio_actual} generado con éxito.")
-    st.download_button(f"📄 DESCARGAR PRESUPUESTO", data=pdf_final_para_descargar, file_name=nombre_file)
-            
            

@@ -7,18 +7,16 @@ from fpdf import FPDF
 import os
 
 st.set_page_config(page_title="ERP - Gestión de Obras", page_icon="🏗️", layout="wide")
-# -----------------------------------------
-# 🛡️ CANDADO DE SEGURIDAD POR ROLES
-# -----------------------------------------
+
+# 🛡️ CANDADO DE SEGURIDAD GENERAL POR ROLES
 if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
     st.warning("⚠️ Acceso denegado. Inicia sesión en la página principal.")
     st.stop()
 
-ROLES_PERMITIDOS = ["Admin", "RRHH", "Auxiliar"]
+ROLES_PERMITIDOS = ["Admin"]
 if st.session_state.get("role") not in ROLES_PERMITIDOS:
-    st.error(f"🚫 ACCESO RESTRINGIDO: Tu perfil de {st.session_state.get('role')} no tiene autorización para este módulo.")
+    st.error(f"🚫 ACCESO RESTRINGIDO: Este módulo es exclusivo para Dirección (Admin).")
     st.stop()
-# -----------------------------------------
 
 def limpiar_monto(valor):
     if str(valor).strip() == "" or valor is None: return 0.0
@@ -107,18 +105,22 @@ if doc:
                         residente = st.text_input("Nombre del Residente / Encargado")
                         registro_patronal = st.text_input("Registro Patronal IMSS (Obligatorio para la obra)")
                         
+                        # 📝 NUEVO CAMPO: REGISTRO DE OBRA
+                        registro_obra = st.text_input("Registro de Obra (SIROC / Número de Contrato)")
+                        
                         boton_arranque = st.form_submit_button("🚀 INICIAR PROYECTO")
                         
                         if boton_arranque:
-                            if not residente or not registro_patronal: 
-                                st.warning("⚠️ Debes asignar un residente y el Registro Patronal IMSS.")
+                            if not residente or not registro_patronal or not registro_obra: 
+                                st.warning("⚠️ Debes asignar el residente, el Registro Patronal IMSS y el Registro de Obra.")
                             else:
+                                # Se añade el registro de obra al final de la fila
                                 hoja_obras.append_row([
                                     folio_seleccionado, cliente_obtenido, proyecto_obtenido,
                                     "EN EJECUCIÓN", monto_obtenido, fecha_inicio.strftime("%d/%m/%Y"), 
-                                    residente.upper(), registro_patronal.upper()
+                                    residente.upper(), registro_patronal.upper(), registro_obra.upper()
                                 ])
-                                st.success(f"¡Obra dada de alta con el RP: {registro_patronal.upper()}!")
+                                st.success(f"¡Obra dada de alta con éxito! RP: {registro_patronal.upper()} | Registro Obra: {registro_obra.upper()}")
 
     # ==========================================
     # PESTAÑA 2: CONVENIOS
@@ -169,7 +171,6 @@ if doc:
         if folio_cierre != "...":
             obra_a_cerrar = next((item for item in datos_obras if str(item.get(llave_folio_obra, "")) == folio_cierre), None)
             if obra_a_cerrar:
-                # Buscadores inteligentes para la carta de cierre
                 llave_cliente = next((k for k in obra_a_cerrar.keys() if "CLIENTE" in str(k).upper()), None)
                 cliente_cierre = obra_a_cerrar.get(llave_cliente, "Estimado Cliente") if llave_cliente else "Estimado Cliente"
 
@@ -186,7 +187,6 @@ if doc:
                             if fila_excel > 0:
                                 hoja_obras.update_cell(fila_excel, col_estatus, "CERRADA")
                                 
-                                # GENERACIÓN DEL PDF RESTAURADA
                                 pdf = PDF_Carta()
                                 pdf.add_page()
                                 fecha_hoy = datetime.datetime.now().strftime("%d de %B del %Y")

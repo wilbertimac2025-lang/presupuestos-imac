@@ -23,13 +23,28 @@ CLAVE_ADMIN = "2289"
 
 # 💵 DICCIONARIO DE PRECIOS (Modificable para el futuro)
 PRECIO_BASE = 1200.00
+
 def obtener_precio(nombre_material):
     precios = {
-        "Rollo Master Lasser 3.0mm": 1200.00,
+        # --- MATERIALES DE CONSTRUCCIÓN LIGERA Y EXTRAS ---
         "Hoja de Tablaroca (Gypsum Board)": 1200.00,
         "Poste Metálico": 1200.00,
-        "Primario Hidroflex": 1200.00
-        # Puedes ir agregando más materiales aquí abajo después
+        "Primario Hidroflex": 1200.00,
+        
+        # --- CATÁLOGO DE IMPERMEABILIZANTES PREFABRICADOS ---
+        "MASTER LASSER 3.0 MM FIBRA POLIESTER LISO ARENADO": 1200.00,
+        "MASTER LASSER 3.5 MM FIBRA POLIESTER BLANCO": 1200.00,
+        "MASTER LASSER 4.0 MM FIBRA POLIESTER BLANCO": 1200.00,
+        "MASTER LASSER 4.5 MM FIBRA POLIESTER ROJO": 1200.00,
+        "MASTER LASSER 3.5 MM FIBRA POLIESTER ROJO": 1200.00,
+        "MASTER LASSER 4.0 MM FIBRA POLIESTER ROJO": 1200.00,
+        "MASTER LASSER 4.5 MM FIBRA POLIESTER BLANCO": 1200.00,
+        "MASTER LASSER 3.5 MM FIBRA VIDRIO ROJO": 1200.00,
+        "MASTER LASSER 3.5 MM FIBRA VIDRIO BLANCO": 1200.00,
+        "MASTER PRIM A": 1200.00,
+        "MASTER PRIM S": 1200.00,
+        "KRIPTOFLEX 5 AÑOS FIBRATADO": 1200.00,
+        "MALLA REFUERZO": 1200.00
     }
     return precios.get(nombre_material, PRECIO_BASE)
 

@@ -19,6 +19,12 @@ if st.session_state.get("role") not in ROLES_PERMITIDOS:
     st.error(f"🚫 ACCESO RESTRINGIDO: Tu perfil de {st.session_state.get('role')} no tiene autorización para este módulo.")
     st.stop()
 
+# 🛠️ ESTA ES LA FUNCIÓN QUE FALTABA PARA EVITAR EL ERROR
+def limpiar_monto(valor):
+    if str(valor).strip() == "" or valor is None: return 0.0
+    try: return float(str(valor).replace("$", "").replace(",", "").replace(" ", "").strip())
+    except: return 0.0
+
 @st.cache_resource
 def conectar_sheets():
     try:
@@ -98,7 +104,6 @@ if doc:
             # ==========================================
             st.subheader("📊 Estado de Cuenta del Proyecto")
             
-            # Ampliamos a 5 columnas para incluir el nuevo indicador estadístico
             m1, m2, m3, m4, m5 = st.columns(5)
             
             with m1:
@@ -108,9 +113,9 @@ if doc:
             with m3:
                 st.metric("Nómina Base", f"${costo_nomina:,.2f}")
             with m4:
-                st.metric("FSR (Carga Social 1.32)", f"${costo_fsr:,.2f}")
+                st.metric("FSR (Carga Social)", f"${costo_fsr:,.2f}")
             with m5:
-                st.metric("Gasto Adm. (1% Auto)", f"${gasto_administrativo:,.2f}")
+                st.metric("Gasto Adm. (1%)", f"${gasto_administrativo:,.2f}")
 
             if presupuesto_total > 0:
                 porcentaje_gastado = min(total_gastado / presupuesto_total, 1.0)

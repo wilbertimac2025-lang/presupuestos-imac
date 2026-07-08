@@ -6,6 +6,7 @@ import datetime
 import pandas as pd
 
 st.set_page_config(page_title="Panel Financiero", page_icon="💰", layout="wide")
+
 # -----------------------------------------
 # 🛡️ CANDADO DE SEGURIDAD POR ROLES
 # -----------------------------------------
@@ -17,12 +18,6 @@ ROLES_PERMITIDOS = ["Admin", "RRHH", "Auxiliar"]
 if st.session_state.get("role") not in ROLES_PERMITIDOS:
     st.error(f"🚫 ACCESO RESTRINGIDO: Tu perfil de {st.session_state.get('role')} no tiene autorización para este módulo.")
     st.stop()
-# -----------------------------------------
-
-def limpiar_monto(valor):
-    if str(valor).strip() == "" or valor is None: return 0.0
-    try: return float(str(valor).replace("$", "").replace(",", "").replace(" ", "").strip())
-    except: return 0.0
 
 @st.cache_resource
 def conectar_sheets():
@@ -71,6 +66,9 @@ if doc:
             llave_monto = next((k for k in (obra_info.keys() if obra_info else []) if "PRESUPUESTO" in str(k).upper() or "AUTORIZADO" in str(k).upper() or "MONTO" in str(k).upper()), None)
             presupuesto_total = limpiar_monto(obra_info.get(llave_monto, 0)) if llave_monto else 0.0
 
+            # 📊 CALCULO AUTOMÁTICO DEL GASTO ADMINISTRATIVO (1%)
+            gasto_administrativo = presupuesto_total * 0.01
+
             datos_gastos = hoja_gastos.get_all_records()
             gastos_filtrados = [g for g in datos_gastos if str(g.get("Folio Obra", "")) == folio_seleccionado]
             
@@ -92,26 +90,31 @@ if doc:
                 else:
                     gastos_operativos += monto
             
-            total_gastado = costo_materiales + costo_nomina + costo_fsr + gastos_operativos
+            # El gasto administrativo se suma automáticamente al costo real de ejecución
+            total_gastado = costo_materiales + costo_nomina + costo_fsr + gastos_operativos + gasto_administrativo
 
             # ==========================================
-            # TARJETAS DE INDICADORES
+            # 📊 ESTADÍSTICAS E INDICADORES FINANCIEROS
             # ==========================================
             st.subheader("📊 Estado de Cuenta del Proyecto")
             
-            m1, m2, m3, m4 = st.columns(4)
+            # Ampliamos a 5 columnas para incluir el nuevo indicador estadístico
+            m1, m2, m3, m4, m5 = st.columns(5)
             
             with m1:
-                st.metric("Presupuesto", f"${presupuesto_total:,.2f}")
+                st.metric("Presupuesto Total", f"${presupuesto_total:,.2f}")
             with m2:
                 st.metric("Costo Material", f"${costo_materiales:,.2f}")
             with m3:
                 st.metric("Nómina Base", f"${costo_nomina:,.2f}")
             with m4:
-                st.metric("FSR (Carga Social)", f"${costo_fsr:,.2f}")
+                st.metric("FSR (Carga Social 1.32)", f"${costo_fsr:,.2f}")
+            with m5:
+                st.metric("Gasto Adm. (1% Auto)", f"${gasto_administrativo:,.2f}")
 
             if presupuesto_total > 0:
                 porcentaje_gastado = min(total_gastado / presupuesto_total, 1.0)
+                st.write(f"**Consumo Financiero Global (Incluye Gasto Adm.):** {porcentaje_gastado*100:.1f}%")
                 st.progress(porcentaje_gastado)
 
             st.markdown("---")
@@ -120,9 +123,9 @@ if doc:
             with c_form:
                 st.subheader("📥 Registrar Nuevo Gasto")
                 with st.form("form_gastos_fin"):
-                    concepto = st.text_input("Concepto", placeholder="Ej. Pago de raya Semana 22")
-                    categoria_gasto = st.selectbox("Categoría de Cuenta", ["NÓMINA", "Hospedaje", "Gasolina y Fletes", "Herramientas y Equipos", "Otros Gastos Extras"])
-                    monto_gasto = st.number_input("Monto de Gasto / Nómina ($ MXN)", min_value=0.0, step=50.0)
+                    concepto = st.text_input("Concepto", placeholder="Ej. Compra de tornillería y herramienta menor")
+                    categoria_gasto = st.selectbox("Categoría de Cuenta", ["NÓMINA", "Viáticos y Comidas", "Gasolina y Fletes", "Herramientas y Equipos", "Otros Gastos Extras"])
+                    monto_gasto = st.number_input("Monto de Gasto / Nómina ($ MXN)", min_value=0.0, step=500.0)
                     
                     btn_gasto = st.form_submit_button("💰 INYECTAR GASTO")
                     
@@ -131,19 +134,20 @@ if doc:
                             fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
                             
                             hoja_gastos.append_row([fecha_actual, folio_seleccionado, concepto.upper(), categoria_gasto, monto_gasto])
-                            st.success(f"✅ Gasto de ${monto_gasto:,.2f} registrado.")
+                            st.success(f"✅ Gasto de ${monto_gasto:,.2f} registrado con éxito.")
                             
                             if categoria_gasto == "NÓMINA":
-                                # CORRECCIÓN DEL FSR: Ahora calcula el 32% sobre la base
                                 monto_fsr = monto_gasto * 0.32
                                 concepto_fsr = f"FSR (Factor 1.32) - {concepto.upper()}"
                                 hoja_gastos.append_row([fecha_actual, folio_seleccionado, concepto_fsr, "FSR", monto_fsr])
-                                st.info(f"✅ FSR automático: Se cargaron ${monto_fsr:,.2f} (32% extra) a la obra.")
+                                st.info(f"✅ Carga de FSR automática: Se sumaron ${monto_fsr:,.2f} al proyecto.")
                                 
                             st.rerun()
 
             with c_tabla:
-                st.subheader("📋 Historial Desglosado")
+                st.subheader("📋 Historial Desglosado de Egresos")
                 if gastos_filtrados:
                     df = pd.DataFrame(gastos_filtrados)[["Fecha", "Concepto", "Categoría", "Monto ($)"]]
-                    st.dataframe(df, use_container_width=True)
+                    st.dataframe(df, use_container_width=True, hide_index=True)
+                else:
+                    st.info("No hay transacciones registradas de forma manual en esta obra.")

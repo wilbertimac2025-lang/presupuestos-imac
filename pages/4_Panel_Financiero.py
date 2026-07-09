@@ -105,14 +105,18 @@ if doc:
             # ==========================================
             st.subheader("📊 Estado de Cuenta del Proyecto")
             
-            m1, m2, m3, m4, m5, m6 = st.columns(6)
-            
+            # 💡 SOLUCIÓN: Separamos las métricas en dos filas de 3 para que no se traslapen
+            m1, m2, m3 = st.columns(3)
             with m1:
                 st.metric("Presupuesto Total", f"${presupuesto_total:,.2f}")
             with m2:
                 st.metric("Costo Material", f"${costo_materiales:,.2f}")
             with m3:
                 st.metric("Nómina Base", f"${costo_nomina:,.2f}")
+
+            st.write("") # Agrega un pequeño salto de línea visual entre filas
+
+            m4, m5, m6 = st.columns(3)
             with m4:
                 st.metric("FSR (Carga Social)", f"${costo_fsr:,.2f}")
             with m5:
@@ -120,6 +124,7 @@ if doc:
             with m6:
                 st.metric("Gasto Adm. (10%)", f"${gasto_administrativo:,.2f}")
 
+            st.write("")
             if presupuesto_total > 0:
                 porcentaje_gastado = min(total_gastado / presupuesto_total, 1.0)
                 st.write(f"**Consumo Financiero Global (Incluye Financiamiento 1% y Gasto Adm. 10%):** {porcentaje_gastado*100:.1f}%")

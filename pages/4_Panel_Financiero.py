@@ -72,8 +72,9 @@ if doc:
             llave_monto = next((k for k in (obra_info.keys() if obra_info else []) if "PRESUPUESTO" in str(k).upper() or "AUTORIZADO" in str(k).upper() or "MONTO" in str(k).upper()), None)
             presupuesto_total = limpiar_monto(obra_info.get(llave_monto, 0)) if llave_monto else 0.0
 
-            # 📊 CALCULO AUTOMÁTICO DEL GASTO ADMINISTRATIVO (1%)
-            gasto_administrativo = presupuesto_total * 0.01
+            # 📊 CÁLCULO AUTOMÁTICO DE FINANCIAMIENTO (1%) Y GASTO ADMINISTRATIVO (10%)
+            gasto_financiamiento = presupuesto_total * 0.01
+            gasto_administrativo = presupuesto_total * 0.10
 
             datos_gastos = hoja_gastos.get_all_records()
             gastos_filtrados = [g for g in datos_gastos if str(g.get("Folio Obra", "")) == folio_seleccionado]
@@ -96,15 +97,15 @@ if doc:
                 else:
                     gastos_operativos += monto
             
-            # El gasto administrativo se suma automáticamente al costo real de ejecución
-            total_gastado = costo_materiales + costo_nomina + costo_fsr + gastos_operativos + gasto_administrativo
+            # 🧠 Ambos gastos (1% y 10%) se suman automáticamente al costo real de ejecución
+            total_gastado = costo_materiales + costo_nomina + costo_fsr + gastos_operativos + gasto_financiamiento + gasto_administrativo
 
             # ==========================================
             # 📊 ESTADÍSTICAS E INDICADORES FINANCIEROS
             # ==========================================
             st.subheader("📊 Estado de Cuenta del Proyecto")
             
-            m1, m2, m3, m4, m5 = st.columns(5)
+            m1, m2, m3, m4, m5, m6 = st.columns(6)
             
             with m1:
                 st.metric("Presupuesto Total", f"${presupuesto_total:,.2f}")
@@ -115,11 +116,13 @@ if doc:
             with m4:
                 st.metric("FSR (Carga Social)", f"${costo_fsr:,.2f}")
             with m5:
-                st.metric("Gasto Adm. (1%)", f"${gasto_administrativo:,.2f}")
+                st.metric("Financiamiento (1%)", f"${gasto_financiamiento:,.2f}")
+            with m6:
+                st.metric("Gasto Adm. (10%)", f"${gasto_administrativo:,.2f}")
 
             if presupuesto_total > 0:
                 porcentaje_gastado = min(total_gastado / presupuesto_total, 1.0)
-                st.write(f"**Consumo Financiero Global (Incluye Gasto Adm.):** {porcentaje_gastado*100:.1f}%")
+                st.write(f"**Consumo Financiero Global (Incluye Financiamiento 1% y Gasto Adm. 10%):** {porcentaje_gastado*100:.1f}%")
                 st.progress(porcentaje_gastado)
 
             st.markdown("---")

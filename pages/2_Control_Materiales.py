@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit st
 import gspread
 from google.oauth2.service_account import Credentials
 import json
@@ -41,7 +41,7 @@ CATALOGO_IMPERMEABILIZANTES = [
     "Cemento Plástico"
 ]
 
-# 💵 DICCIONARIO DE PRECIOS (Modificable para el futuro)
+# 💵 DICCIONARIO DE PRECIOS
 PRECIO_BASE = 1200.00
 
 def obtener_precio(nombre_material):
@@ -84,7 +84,6 @@ def conectar_sheets():
         creds = Credentials.from_service_account_info(credenciales_dic, scopes=scopes)
         cliente = gspread.authorize(creds)
         
-        # ⚠️ REEMPLAZA CON TU ID DE EXCEL
         ID_DEL_EXCEL = "1-grdT2H5dBlGVPvJbZ5wVYDdtVjQEEmUPGpvEm6C0Gc" 
         return cliente.open_by_key(ID_DEL_EXCEL)
     except Exception:
@@ -100,7 +99,7 @@ if doc:
         hoja_obras = doc.worksheet("Obras_Activas")
         hoja_consumos = doc.worksheet("Consumo_Materiales")
         hoja_limites = doc.worksheet("Limites_Materiales") 
-        hoja_gastos = doc.worksheet("Gastos_Financieros") # Conectamos los gastos
+        hoja_gastos = doc.worksheet("Gastos_Financieros")
     except Exception as e:
         st.error("⚠️ Falta crear las pestañas necesarias en tu Excel.")
         st.stop()
@@ -133,7 +132,6 @@ if doc:
                     
                     with colB:
                         if categoria_lim == "Impermeabilización":
-                            # 🚀 AQUI USAMOS LA LISTA MAESTRA
                             mat_lim = st.selectbox("Insumo", CATALOGO_IMPERMEABILIZANTES, key="mat_lim_imp")
                         elif categoria_lim == "Sistemas Ligeros":
                             mat_lim = st.selectbox("Insumo", ["Hoja de Tablaroca (Gypsum Board)", "Poste Metálico", "Canal de Amarre", "Reborde J", "Tornillos Bartolos", "Cinta Acústica / Accesorios"], key="mat_lim_sl")
@@ -141,13 +139,18 @@ if doc:
                             mat_lim = st.text_input("Especificar Insumo:", key="mat_lim_ot")
                             
                         cant_maxima = st.number_input("Cantidad Máxima a Autorizar:", min_value=0.0, step=1.0)
+                        
+                        # 🚀 NUEVO: CASILLA DE REQUISICIÓN
+                        num_requisicion = st.text_input("Número de Requisición:", placeholder="Ej. REQ-1045", key="num_req_lim")
                     
                     btn_limite = st.form_submit_button("🔒 FIJAR LÍMITE EN SISTEMA")
                     
                     if btn_limite:
                         if folio_limite != "...":
-                            hoja_limites.append_row([folio_limite, mat_lim, cant_maxima])
-                            st.success(f"✅ Límite fijado para {folio_limite}.")
+                            # Guardamos en Excel incluyendo la requisición al final
+                            req_final = num_requisicion.strip().upper() if num_requisicion.strip() else "SIN REQ"
+                            hoja_limites.append_row([folio_limite, mat_lim, cant_maxima, req_final])
+                            st.success(f"✅ Límite fijado para {folio_limite} bajo la Requisición: {req_final}.")
 
         # --- PESTAÑA DE SALIDAS ---
         with tab1:
@@ -161,7 +164,6 @@ if doc:
                     categoria = st.selectbox("Categoría del Material", ["Impermeabilización", "Sistemas Ligeros", "Otros / Consumibles"])
                     
                     if categoria == "Impermeabilización":
-                        # 🚀 AQUI TAMBIÉN USAMOS LA LISTA MAESTRA
                         material = st.selectbox("Insumo", CATALOGO_IMPERMEABILIZANTES)
                         unidad = "Piezas/Litros"
                     elif categoria == "Sistemas Ligeros":
@@ -188,7 +190,6 @@ if doc:
                             
                     disponible = limite_actual - consumido_actual
                     
-                    # 💰 Mostramos el precio al usuario
                     precio_unitario = obtener_precio(material)
                     st.markdown("---")
                     
@@ -205,27 +206,34 @@ if doc:
 
                     with st.form("form_materiales"):
                         cantidad = st.number_input(f"Cantidad a retirar ({unidad})", min_value=0.0, step=1.0)
+                        
+                        # 🚀 NUEVO: CASILLA DE REMISIÓN
+                        num_remision = st.text_input("Número de Remisión de Entrega:", placeholder="Ej. REM-2089")
+                        
                         btn_guardar = st.form_submit_button("💾 REGISTRAR SALIDA Y CARGAR COSTO A OBRA")
                         
                         if btn_guardar:
                             if bloquear_salida or cantidad <= 0 or cantidad > disponible:
                                 st.error("❌ OPERACIÓN DENEGADA.")
+                            elif not num_remision.strip():
+                                st.error("⚠️ El número de Remisión es obligatorio para poder autorizar la salida física.")
                             else:
                                 fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
                                 costo_total_movimiento = cantidad * precio_unitario
+                                rem_final = num_remision.strip().upper()
                                 
-                                # 1. Guarda la salida de almacén
+                                # 1. Guarda la salida de almacén incluyendo la remisión
                                 hoja_consumos.append_row([
-                                    fecha_hoy, folio_seleccionado, categoria, material, cantidad, unidad
+                                    fecha_hoy, folio_seleccionado, categoria, material, cantidad, unidad, rem_final
                                 ])
                                 
-                                # 2. INYECTA EL COSTO DIRECTO A GASTOS FINANCIEROS (¡LA MAGIA!)
+                                # 2. INYECTA EL COSTO DIRECTO A GASTOS FINANCIEROS (Reflejando la remisión en la descripción)
                                 hoja_gastos.append_row([
                                     fecha_hoy, 
                                     folio_seleccionado, 
-                                    f"Salida de Almacén: {cantidad} {unidad} de {material}", 
+                                    f"Salida Almacén (Rem. {rem_final}): {cantidad} {unidad} de {material}", 
                                     "Costo de Material", 
                                     costo_total_movimiento
                                 ])
                                 
-                                st.success(f"✅ Se entregaron {cantidad} de {material}. Se cargó un costo de ${costo_total_movimiento:,.2f} a la obra.")
+                                st.success(f"✅ Se entregaron {cantidad} de {material} bajo la Remisión {rem_final}. Se cargó un costo de ${costo_total_movimiento:,.2f} a la obra.")

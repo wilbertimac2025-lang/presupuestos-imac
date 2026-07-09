@@ -102,23 +102,21 @@ def obtener_nuevo_folio(hoja):
     anio_corto = datetime.datetime.now().strftime("%y")
     return f"OBRA-TEMP-{datetime.datetime.now().strftime('%H%M')}-{anio_corto}"
 
-# 🧠 RUTEADOR DE CORREOS AUTOMÁTICO
-def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio, tipo_obra):
+def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio, tipo_obra, proyecto, ubicacion):
     try:
         remitente = st.secrets["CORREO_BOT"]
         password = st.secrets["PASS_BOT"]
         
-        # ⚠️ AQUÍ PONES LOS CORREOS REALES DE TU EMPRESA
         if tipo_obra == "LOCAL":
-            correo_destino = "comercial@grupo-imac.com" # <--- CAMBIA ESTO
+            correo_destino = "ventas_local@grupo-imac.com"
         else:
-            correo_destino = "comercial@grupo-imac.com" # <--- CAMBIA ESTO
+            correo_destino = "ventas_foranea@grupo-imac.com"
         
         msg = EmailMessage()
         msg['Subject'] = f'NUEVO FOLIO {folio}: Presupuesto {cliente} (Asesor: {asesor}) - Zona: {tipo_obra}'
         msg['From'] = remitente
         msg['To'] = correo_destino
-        msg.set_content(f"Se ha registrado un nuevo presupuesto en el sistema.\n\nFolio Asignado: {folio}\nCliente: {cliente}\nAsesor: {asesor}\nZona Logística: {tipo_obra}\n\nSe adjunta el documento oficial.")
+        msg.set_content(f"Se ha registrado un nuevo presupuesto en el sistema.\n\nFolio Asignado: {folio}\nCliente: {cliente}\nAsesor: {asesor}\nProyecto: {proyecto}\nUbicación: {ubicacion}\nZona Logística: {tipo_obra}\n\nSe adjunta el documento oficial.")
         msg.add_attachment(pdf_bytes, maintype='application', subtype='pdf', filename=nombre_archivo)
         
         with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
@@ -145,6 +143,8 @@ with st.form("form_presupuesto"):
     st.write("---")
     st.write("### 2. Información del Proyecto")
     proyecto = st.text_input("Nombre del Proyecto / Obra")
+    # 🚀 NUEVO: CASILLA DE UBICACIÓN FALTANTE
+    ubicacion = st.text_input("Ubicación / Dirección de la Obra", placeholder="Ej. Calzada Cuauhtémoc #15-16, Alvarado, Ver.")
     
     st.write("---")
     st.write("### 3. Desglose de Áreas")
@@ -185,8 +185,8 @@ with st.form("form_presupuesto"):
     boton = st.form_submit_button("GENERAR PRESUPUESTO OFICIAL")
 
 if boton:
-    if not cliente or not asesor:
-        st.error("⚠️ El nombre del Cliente y el Asesor son obligatorios.")
+    if not cliente or not asesor or not ubicacion:
+        st.error("⚠️ El nombre del Cliente, el Asesor y la Ubicación son obligatorios.")
     else:
         with st.spinner("Ensamblando Presupuesto, Fotos, Comentarios y Ficha Técnica..."):
             
@@ -242,6 +242,10 @@ if boton:
                 pdf.set_text_color(0, 0, 0)
                 pdf.cell(0, 5, f"PROYECTO: {proyecto.upper()}", ln=True)
             
+            # Imprime la ubicación de forma elegante en el PDF
+            pdf.set_font('Arial', 'I', 10)
+            pdf.cell(0, 5, f"UBICACIÓN: {ubicacion.upper()}", ln=True)
+
             pdf.ln(5)
             pdf.set_font('Arial', 'I', 10)
             pdf.set_text_color(80, 80, 80) 
@@ -325,9 +329,8 @@ if boton:
             pdf.multi_cell(0, 4, txt="- Se deberá hacer un levantamiento físico para determinar los alcances exactos.\n- No incluye trabajos no cotizados.")
             pdf.ln(3)
             
-            # 🧠 CÁLCULO DINÁMICO DE GARANTÍA
+            # --- CÁLCULO DINÁMICO DE GARANTÍA ---
             sistema_principal = zonas_data[0]["sistema"].upper()
-            
             if "3.0" in sistema_principal and "POLIESTER" in sistema_principal:
                 texto_garantia = "6 AÑOS CONTRA DEFECTOS DE FABRICACIÓN"
             elif "3.5" in sistema_principal and "VIDRIO" in sistema_principal:
@@ -388,7 +391,7 @@ if boton:
             pdf.set_text_color(0, 150, 255)
             pdf.cell(0, 5, 'TARC S.A. DE C.V.', ln=True)
             
-            # 🧠 PIE DE PÁGINA DINÁMICO
+            # --- PIE DE PÁGINA DINÁMICO ---
             pdf.set_text_color(100, 100, 100)
             pdf.set_font('Arial', '', 8)
             if tipo_obra == "LOCAL":
@@ -406,7 +409,7 @@ if boton:
                 if pdf.get_y() > 250: pdf.add_page()
                 pdf.image("footer_marcas.jpg", x=10, y=pdf.get_y(), w=190)
 
-            # 📸 --- ANEXO FOTOGRÁFICO ---
+            # --- ANEXO FOTOGRÁFICO ---
             if temp_paths:
                 for i, temp_img in enumerate(temp_paths):
                     if i % 2 == 0:
@@ -439,7 +442,6 @@ if boton:
                 if os.path.exists(temp_img): os.remove(temp_img)
 
             pdf_base_bytes = pdf.output(dest='S').encode('latin-1')
-            
             pdf_final_para_descargar = pdf_base_bytes
 
             if tipo_obra == "LOCAL":
@@ -462,12 +464,13 @@ if boton:
             
             nombre_file = f"Presupuesto_{folio_actual}_{cliente.replace(' ', '_')}.pdf"
             
+            # 🚀 AQUÍ SE INYECTA LA UBICACIÓN DIRECTA A EXCEL EN LA 9NA COLUMNA
             if hoja:
                 resumen = " / ".join([f"{z['area']} ({z['m2']}m2)" for z in zonas_data])
-                hoja.append_row([folio_actual, fecha_hoy, asesor, cliente, compania, telefono, correo_cliente, proyecto, resumen, total_final, tipo_obra])
+                hoja.append_row([folio_actual, fecha_hoy, asesor, cliente, compania, telefono, correo_cliente, proyecto, ubicacion.upper(), resumen, total_final, tipo_obra])
             
-            # 🚀 AQUÍ SE ACTIVA EL ENVÍO CON EL RUTEADOR DINÁMICO
-            enviar_respaldo_correo(pdf_final_para_descargar, nombre_file, cliente, asesor, folio_actual, tipo_obra)
+            # Envío de respaldo con los datos completos
+            enviar_respaldo_correo(pdf_final_para_descargar, nombre_file, cliente, asesor, folio_actual, tipo_obra, proyecto, ubicacion)
             
         st.success(f"✅ Presupuesto {folio_actual} generado con éxito.")
         st.download_button(f"📄 DESCARGAR PRESUPUESTO", data=pdf_final_para_descargar, file_name=nombre_file)

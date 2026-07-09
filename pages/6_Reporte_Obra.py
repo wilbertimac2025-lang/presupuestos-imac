@@ -5,6 +5,7 @@ import json
 import pandas as pd
 
 st.set_page_config(page_title="Reporte de Obra", page_icon="📑", layout="wide")
+
 # -----------------------------------------
 # 🛡️ CANDADO DE SEGURIDAD POR ROLES
 # -----------------------------------------
@@ -93,6 +94,10 @@ if clave_ingresada == CLAVE_ADMIN:
             llave_monto = next((k for k in (obra_info.keys() if obra_info else []) if "PRESUPUESTO" in str(k).upper() or "AUTORIZADO" in str(k).upper() or "MONTO" in str(k).upper()), None)
             presupuesto_total = limpiar_monto(obra_info.get(llave_monto, 0)) if llave_monto else 0.0
 
+            # 🧠 INYECCIÓN DE LOS COSTOS INDIRECTOS AUTOMÁTICOS
+            gasto_financiamiento = presupuesto_total * 0.01
+            gasto_administrativo = presupuesto_total * 0.10
+
             # --- ENCABEZADO OFICIAL DEL REPORTE ---
             st.subheader(f"🏢 Proyecto: {proyecto}")
             c_info1, c_info2, c_info3 = st.columns(3)
@@ -109,9 +114,15 @@ if clave_ingresada == CLAVE_ADMIN:
 
             st.markdown("---")
 
+            # --- CÁLCULOS FINANCIEROS (AHORA CON FINANCIAMIENTO Y ADMINISTRATIVO INCLUIDO) ---
             datos_gastos = hoja_gastos.get_all_records()
             gastos_obra = [g for g in datos_gastos if str(g.get("Folio Obra", "")) == folio_seleccionado]
-            total_gastos = sum(limpiar_monto(g.get("Monto ($)", 0)) for g in gastos_obra)
+            
+            gastos_registrados = sum(limpiar_monto(g.get("Monto ($)", 0)) for g in gastos_obra)
+            
+            # Se suman los registrados en Excel + los calculados en el momento
+            total_gastos = gastos_registrados + gasto_financiamiento + gasto_administrativo 
+            
             utilidad_calculada = presupuesto_total - total_gastos
             
             # ==========================================
@@ -129,11 +140,11 @@ if clave_ingresada == CLAVE_ADMIN:
 
             # 🚀 AQUÍ ESTÁ LA LÍNEA AZUL DE PROGRESO
             if presupuesto_total > 0:
-                # Calculamos el porcentaje consumido (ej. 0.70 si se ha gastado el 70%)
+                # Calculamos el porcentaje consumido
                 porcentaje_consumido = min(total_gastos / presupuesto_total, 1.0)
                 porcentaje_texto = porcentaje_consumido * 100
-                st.write(f"**Consumo del Presupuesto:** {porcentaje_texto:.1f}%")
-                st.progress(porcentaje_consumido) # Esta es la barra azul
+                st.write(f"**Consumo del Presupuesto (Incluye Financiamento y Gastos Adm.):** {porcentaje_texto:.1f}%")
+                st.progress(porcentaje_consumido)
             
             st.markdown("---")
             
@@ -142,12 +153,15 @@ if clave_ingresada == CLAVE_ADMIN:
             tab1, tab2, tab3, tab4 = st.tabs(["💰 Finanzas y Egresos", "📦 Almacén y Materiales", "👷 Cuadrilla e IMSS", "📝 Convenios Extra"])
             
             with tab1:
+                # NOTA PARA EL USUARIO: Añadimos una leyenda para que quede claro de dónde vienen los números
+                st.info(f"💡 **Nota Técnica:** Además de los egresos listados abajo, el Balance General ya contempla **${gasto_financiamiento:,.2f}** de Financiamiento (1%) y **${gasto_administrativo:,.2f}** de Gastos Administrativos (10%).")
+                
                 if gastos_obra:
                     df_gastos = pd.DataFrame(gastos_obra)[["Fecha", "Concepto", "Categoría", "Monto ($)"]]
                     df_gastos["Monto ($)"] = df_gastos["Monto ($)"].apply(lambda x: f"${limpiar_monto(x):,.2f}")
                     st.dataframe(df_gastos, use_container_width=True, hide_index=True)
                 else:
-                    st.info("No hay gastos registrados en esta obra.")
+                    st.warning("No hay gastos registrados manualmente en esta obra.")
 
             with tab2:
                 datos_consumos = hoja_consumos.get_all_records()

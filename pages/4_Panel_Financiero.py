@@ -25,6 +25,14 @@ def limpiar_monto(valor):
     try: return float(str(valor).replace("$", "").replace(",", "").replace(" ", "").strip())
     except: return 0.0
 
+# 🧠 FUNCIÓN SABUESO (Busca el valor sin importar si la columna se movió)
+def obtener_valor(diccionario, palabras_clave, default=0.0):
+    for k, v in diccionario.items():
+        if any(p in str(k).upper() for p in palabras_clave):
+            if str(v).strip() != "":
+                return v
+    return default
+
 @st.cache_resource
 def conectar_sheets():
     try:
@@ -47,11 +55,13 @@ if doc:
     try:
         hoja_obras = doc.worksheet("Obras_Activas")
         hoja_gastos = doc.worksheet("Gastos_Financieros")
+        hoja_presupuestos = doc.worksheet("Presupuestos") # <-- Agregamos conexión directa al origen
     except Exception as e:
         st.error("⚠️ Faltan pestañas en tu Excel.")
         st.stop()
 
     datos_obras = hoja_obras.get_all_records()
+    datos_presupuestos = hoja_presupuestos.get_all_records()
     
     llave_folio = next((k for k in (datos_obras[0].keys() if datos_obras else []) if "FOLIO" in str(k).upper()), None)
     llave_estatus = next((k for k in (datos_obras[0].keys() if datos_obras else []) if "ESTATUS" in str(k).upper()), None)
@@ -68,9 +78,17 @@ if doc:
             folio_seleccionado = st.selectbox("Selecciona la Obra Financiera:", ["Selecciona un folio..."] + obras_ejecucion)
 
         if folio_seleccionado != "Selecciona un folio...":
-            obra_info = next((f for f in datos_obras if str(f.get(llave_folio, "")) == folio_seleccionado), None)
-            llave_monto = next((k for k in (obra_info.keys() if obra_info else []) if "PRESUPUESTO" in str(k).upper() or "AUTORIZADO" in str(k).upper() or "MONTO" in str(k).upper()), None)
-            presupuesto_total = limpiar_monto(obra_info.get(llave_monto, 0)) if llave_monto else 0.0
+            
+            # 🧠 MAGIA DE CRUCE DE DATOS
+            obra_activa = next((f for f in datos_obras if str(f.get(llave_folio, "")) == folio_seleccionado), {})
+            obra_presupuesto = next((f for f in datos_presupuestos if str(obtener_valor(f, ["FOLIO"], "")).upper() == folio_seleccionado.upper()), {})
+            
+            # Juntamos lo que hay en Obras Activas con lo que hay en Presupuestos
+            datos_completos = {**obra_activa, **obra_presupuesto}
+            
+            # Buscamos el monto en cualquier columna que se llame Total, Monto, Presupuesto...
+            valor_monto = obtener_valor(datos_completos, ["TOTAL", "MONTO", "PRESUPUESTO", "AUTORIZADO"], 0.0)
+            presupuesto_total = limpiar_monto(valor_monto)
 
             # 📊 CÁLCULO AUTOMÁTICO DE FINANCIAMIENTO (1%) Y GASTO ADMINISTRATIVO (10%)
             gasto_financiamiento = presupuesto_total * 0.01
@@ -105,7 +123,6 @@ if doc:
             # ==========================================
             st.subheader("📊 Estado de Cuenta del Proyecto")
             
-            # 💡 SOLUCIÓN: Separamos las métricas en dos filas de 3 para que no se traslapen
             m1, m2, m3 = st.columns(3)
             with m1:
                 st.metric("Presupuesto Total", f"${presupuesto_total:,.2f}")
@@ -114,7 +131,7 @@ if doc:
             with m3:
                 st.metric("Nómina Base", f"${costo_nomina:,.2f}")
 
-            st.write("") # Agrega un pequeño salto de línea visual entre filas
+            st.write("") 
 
             m4, m5, m6 = st.columns(3)
             with m4:

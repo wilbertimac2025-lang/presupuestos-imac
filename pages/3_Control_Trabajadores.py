@@ -19,6 +19,18 @@ if st.session_state.get("role") not in ROLES_PERMITIDOS:
     st.error(f"🚫 ACCESO RESTRINGIDO: Tu perfil de {st.session_state.get('role')} no tiene autorización para este módulo.")
     st.stop()
 
+# 🕵️ FUNCIÓN DE BITÁCORA SILENCIOSA
+def registrar_bitacora(doc, modulo, accion):
+    try:
+        if doc:
+            hoja_bitacora = doc.worksheet("Bitacora_Movimientos")
+            fecha_hora = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            usuario = st.session_state.get("usuario", st.session_state.get("username", "Usuario Sistema"))
+            rol = st.session_state.get("role", "Desconocido")
+            hoja_bitacora.append_row([fecha_hora, usuario, rol, modulo, accion])
+    except Exception:
+        pass # Si la pestaña no existe, el sistema sigue funcionando normal
+
 @st.cache_resource
 def conectar_sheets():
     try:
@@ -116,6 +128,10 @@ if doc:
                                         registro_patronal_obra, 
                                         trabajador_info.get("RFC", "")
                                     ])
+                                    
+                                    # 🚀 INYECCIÓN A LA BITÁCORA
+                                    registrar_bitacora(doc, "Control de Trabajadores", f"Asignó a {trabajador_sel} a la obra {folio_seleccionado}. Estatus: {estatus_imss}")
+                                    
                                     st.success(f"✅ ¡Éxito! {trabajador_sel} asignado correctamente a la obra {folio_seleccionado}.")
                                     st.rerun()
 
@@ -176,6 +192,10 @@ if doc:
                         st.error(f"⚠️ El trabajador {nuevo_nombre.upper()} ya existe en la base de datos.")
                     else:
                         hoja_base.append_row([nuevo_nombre.upper(), nuevo_rol, nuevo_nss, nuevo_rfc.upper()])
+                        
+                        # 🚀 INYECCIÓN A LA BITÁCORA
+                        registrar_bitacora(doc, "Control de Trabajadores", f"Registró al nuevo empleado {nuevo_nombre.upper()} ({nuevo_rol}) en el Catálogo Maestro")
+                        
                         st.success(f"✅ ¡Trabajador {nuevo_nombre.upper()} agregado al catálogo general de la empresa!")
                         st.rerun()
             

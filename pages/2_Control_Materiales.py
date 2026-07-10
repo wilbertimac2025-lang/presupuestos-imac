@@ -21,6 +21,18 @@ if st.session_state.get("role") not in ROLES_PERMITIDOS:
 
 CLAVE_ADMIN = "2289"
 
+# 🕵️ FUNCIÓN DE BITÁCORA SILENCIOSA
+def registrar_bitacora(doc, modulo, accion):
+    try:
+        if doc:
+            hoja_bitacora = doc.worksheet("Bitacora_Movimientos")
+            fecha_hora = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            usuario = st.session_state.get("usuario", st.session_state.get("username", "Usuario Sistema"))
+            rol = st.session_state.get("role", "Desconocido")
+            hoja_bitacora.append_row([fecha_hora, usuario, rol, modulo, accion])
+    except Exception:
+        pass # Si la pestaña no existe, el sistema sigue funcionando normal
+
 # 📋 LISTA MAESTRA DE MATERIALES (Para que todos los menús sean idénticos)
 CATALOGO_IMPERMEABILIZANTES = [
     "MASTER LASSER 3.0 MM FIBRA POLIESTER LISO ARENADO",
@@ -150,6 +162,10 @@ if doc:
                             # Guardamos en Excel incluyendo la requisición al final
                             req_final = num_requisicion.strip().upper() if num_requisicion.strip() else "SIN REQ"
                             hoja_limites.append_row([folio_limite, mat_lim, cant_maxima, req_final])
+                            
+                            # 🚀 INYECCIÓN A LA BITÁCORA
+                            registrar_bitacora(doc, "Control de Materiales", f"Autorizó límite de {cant_maxima} de {mat_lim} para la obra {folio_limite}. Req: {req_final}")
+                            
                             st.success(f"✅ Límite fijado para {folio_limite} bajo la Requisición: {req_final}.")
 
         # --- PESTAÑA DE SALIDAS ---
@@ -235,5 +251,8 @@ if doc:
                                     "Costo de Material", 
                                     costo_total_movimiento
                                 ])
+                                
+                                # 🚀 INYECCIÓN A LA BITÁCORA
+                                registrar_bitacora(doc, "Control de Materiales", f"Entregó {cantidad} de {material} a la obra {folio_seleccionado}. Remisión: {rem_final}")
                                 
                                 st.success(f"✅ Se entregaron {cantidad} de {material} bajo la Remisión {rem_final}. Se cargó un costo de ${costo_total_movimiento:,.2f} a la obra.")

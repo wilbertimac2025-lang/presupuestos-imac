@@ -18,7 +18,7 @@ USUARIOS_VALIDOS = {
     "aux_foraneo": {"clave": "FORANEO2026", "rol": "Auxiliar", "zona": "Foránea"},
     
     # 🚀 NUEVO: Usuario Operativo (Exclusivo para zona Foránea)
-    "operativo": {"clave": "OPE2026", "rol": "Auxiliar", "zona": "Foránea"}
+    "operativo": {"clave": "OPE2026", "rol": "Opetativo", "zona": "Foránea"}
 }
 
 def login():

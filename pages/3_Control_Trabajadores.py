@@ -51,7 +51,7 @@ if doc:
     
     nombres_base = [str(fila.get("Nombre del Trabajador", "")) for fila in datos_base if str(fila.get("Nombre del Trabajador", "")) != ""]
     
-    tab1, tab2 = st.tabs(["🏗️ Asignación a Obras (Operación)", "🗂️ Base de Datos Maestra (RRHH)"])
+    tab1, tab2, tab3 = st.tabs(["🏗️ Asignación a Obras (Operación)", "🗂️ Base de Datos Maestra (RRHH)", "🔍 Visor de Cuadrillas en Obra"])
 
     # ==================================================
     # PESTAÑA 1: ASIGNACIÓN A OBRAS (CON CANDADO IMSS)
@@ -187,3 +187,38 @@ if doc:
             st.write("### Catálogo Histórico de Grupo IMAC")
             if datos_base:
                 st.dataframe(pd.DataFrame(datos_base), use_container_width=True, hide_index=True)
+
+    # ==================================================
+    # PESTAÑA 3: VISOR GENERAL DE CUADRILLAS
+    # ==================================================
+    with tab3:
+        st.subheader("🔍 Consultar Personal en Obra")
+        st.write("Selecciona un proyecto para ver la cuadrilla en forma de tabla.")
+        
+        if not obras_ejecucion:
+            st.info("No hay obras en ejecución.")
+        else:
+            visor_folio = st.selectbox("Selecciona Obra a Consultar:", ["Selecciona un folio..."] + obras_ejecucion, key="visor_cuadrilla")
+            
+            if visor_folio != "Selecciona un folio...":
+                # Re-cargamos para tener la info más fresca
+                datos_frescos = hoja_trabajadores.get_all_records()
+                visor_obra = [t for t in datos_frescos if str(t.get("Folio Obra", "")) == visor_folio]
+                
+                if visor_obra:
+                    # Nos quedamos con el último registro de cada persona
+                    trabajadores_visor = {}
+                    for t in visor_obra:
+                        trabajadores_visor[t["Nombre del Trabajador"]] = t
+                    
+                    # Convertimos el diccionario a una lista plana para pandas
+                    lista_final = list(trabajadores_visor.values())
+                    df_visor = pd.DataFrame(lista_final)
+                    
+                    columnas_visor = ["Nombre del Trabajador", "Puesto / Rol", "NSS", "Registro Patronal", "Estatus IMSS", "Fecha de Asignación"]
+                    cols_finales = [c for c in columnas_visor if c in df_visor.columns]
+                    
+                    st.success(f"👷 Hay {len(lista_final)} trabajador(es) registrados en el proyecto **{visor_folio}**:")
+                    st.dataframe(df_visor[cols_finales] if cols_finales else df_visor, use_container_width=True, hide_index=True)
+                else:
+                    st.info(f"No hay registros de trabajadores en el folio {visor_folio}.")

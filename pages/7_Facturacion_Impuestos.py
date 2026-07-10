@@ -16,7 +16,7 @@ if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
     st.warning("⚠️ Acceso denegado. Inicia sesión en la página principal.")
     st.stop()
 
-ROLES_PERMITIDOS = ["Admin", "Directivo", "RRHH"]
+ROLES_PERMITIDOS = ["Admin", "Directivo", "RRHH", "Operativo"]
 if st.session_state.get("role") not in ROLES_PERMITIDOS:
     st.error(f"🚫 ACCESO RESTRINGIDO: Tu perfil no tiene autorización para ver estados de cuenta.")
     st.stop()

@@ -21,6 +21,18 @@ if st.session_state.get("role") not in ROLES_PERMITIDOS:
     st.error(f"🚫 ACCESO RESTRINGIDO: Tu perfil no tiene autorización para ver estados de cuenta.")
     st.stop()
 
+# 🕵️ FUNCIÓN DE BITÁCORA SILENCIOSA
+def registrar_bitacora(doc, modulo, accion):
+    try:
+        hoja_bitacora = doc.worksheet("Bitacora_Movimientos")
+        fecha_hora = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        # Intenta jalar el nombre del usuario, si no hay, usa "Usuario Sistema"
+        usuario = st.session_state.get("usuario", st.session_state.get("username", "Usuario Sistema"))
+        rol = st.session_state.get("role", "Desconocido")
+        hoja_bitacora.append_row([fecha_hora, usuario, rol, modulo, accion])
+    except Exception:
+        pass # Si la pestaña no existe, el sistema sigue funcionando normal
+
 def limpiar_monto(valor):
     if str(valor).strip() == "" or valor is None: return 0.0
     try: return float(str(valor).replace("$", "").replace(",", "").replace(" ", "").strip())
@@ -143,6 +155,10 @@ if doc:
                     else:
                         fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
                         hoja_facturas.append_row([fecha_actual, folio_seleccionado, num_factura.upper(), concepto_factura.upper(), monto_factura])
+                        
+                        # 🚀 INYECCIÓN A LA BITÁCORA
+                        registrar_bitacora(doc, "Facturación e Impuestos", f"Cobró/Registró pago de ${monto_factura:,.2f} al folio {folio_seleccionado}. Recibo: {num_factura.upper()}")
+                        
                         st.success(f"✅ Pago de ${monto_factura:,.2f} registrado con éxito.")
                         st.rerun()
 
@@ -162,6 +178,10 @@ if doc:
         
         if st.button("🖨️ GENERAR AVISO DE TÉRMINO EN UNA HOJA"):
             with st.spinner("Creando documento estilizado en azul..."):
+                
+                # 🚀 INYECCIÓN A LA BITÁCORA
+                registrar_bitacora(doc, "Facturación e Impuestos", f"Generó PDF de Estado de Cuenta Final para el folio {folio_seleccionado}")
+                
                 pdf = PDF_EstadoCuenta()
                 pdf.add_page()
                 

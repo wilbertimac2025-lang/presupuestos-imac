@@ -14,7 +14,7 @@ if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
     st.stop()
 
 # Este buscador es útil para casi todos, así que le damos acceso amplio
-ROLES_PERMITIDOS = ["Admin", "Directivo", "RRHH", "Auxiliar"]
+ROLES_PERMITIDOS = ["Admin", "Directivo", "RRHH", "Auxiliar", "Operativo"]
 if st.session_state.get("role") not in ROLES_PERMITIDOS:
     st.error(f"🚫 ACCESO RESTRINGIDO: Tu perfil de {st.session_state.get('role')} no tiene autorización.")
     st.stop()

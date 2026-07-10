@@ -19,6 +19,18 @@ if st.session_state.get("role") not in ROLES_PERMITIDOS:
     st.error(f"🚫 ACCESO RESTRINGIDO: Tu perfil de {st.session_state.get('role')} no tiene autorización para este módulo.")
     st.stop()
 
+# 🕵️ FUNCIÓN DE BITÁCORA SILENCIOSA
+def registrar_bitacora(doc, modulo, accion):
+    try:
+        if doc:
+            hoja_bitacora = doc.worksheet("Bitacora_Movimientos")
+            fecha_hora = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            usuario = st.session_state.get("usuario", st.session_state.get("username", "Usuario Sistema"))
+            rol = st.session_state.get("role", "Desconocido")
+            hoja_bitacora.append_row([fecha_hora, usuario, rol, modulo, accion])
+    except Exception:
+        pass # Si la pestaña no existe, el sistema sigue funcionando normal
+
 # 🛠️ ESTA ES LA FUNCIÓN QUE FALTABA PARA EVITAR EL ERROR
 def limpiar_monto(valor):
     if str(valor).strip() == "" or valor is None: return 0.0
@@ -171,7 +183,10 @@ if doc:
                                 concepto_fsr = f"FSR (Factor 1.32) - {concepto.upper()}"
                                 hoja_gastos.append_row([fecha_actual, folio_seleccionado, concepto_fsr, "FSR", monto_fsr])
                                 st.info(f"✅ Carga de FSR automática: Se sumaron ${monto_fsr:,.2f} al proyecto.")
-                                
+                            
+                            # 🚀 INYECCIÓN A LA BITÁCORA (Registra el gasto manual, sea nómina o normal)
+                            registrar_bitacora(doc, "Panel Financiero", f"Inyectó gasto de ${monto_gasto:,.2f} a {folio_seleccionado} ({categoria_gasto}). Concepto: {concepto.upper()}")
+                            
                             st.rerun()
 
             with c_tabla:

@@ -3,6 +3,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 import json
 import datetime
+import pandas as pd
 from fpdf import FPDF
 import os
 
@@ -70,13 +71,15 @@ if doc:
     try:
         hoja_presupuestos = doc.worksheet("Presupuestos")
         hoja_obras = doc.worksheet("Obras_Activas")
-        hoja_convenios = doc.worksheet("Convenios_Adicionales") 
+        hoja_convenios = doc.worksheet("Convenios_Adicionales")
+        hoja_rp = doc.worksheet("Registros_Patronales") # <-- NUEVA CONEXIÓN
     except Exception as e:
-        st.error("⚠️ Faltan pestañas en tu Excel.")
+        st.error("⚠️ Faltan pestañas en tu Excel. Asegúrate de haber creado 'Registros_Patronales'.")
         st.stop()
 
     datos_presupuestos = hoja_presupuestos.get_all_records()
     datos_obras = hoja_obras.get_all_records()
+    datos_rp = hoja_rp.get_all_records() # <-- OBTENER CATÁLOGO DE RP
     
     llave_folio_pres = next((k for k in (datos_presupuestos[0].keys() if datos_presupuestos else []) if "FOLIO" in str(k).upper()), None)
     folios_disponibles = [str(fila[llave_folio_pres]) for fila in datos_presupuestos if str(fila.get(llave_folio_pres, "")) != ""] if llave_folio_pres else []
@@ -85,7 +88,10 @@ if doc:
     llave_estatus = next((k for k in (datos_obras[0].keys() if datos_obras else []) if "ESTATUS" in str(k).upper()), None)
     obras_activas = [str(fila[llave_folio_obra]) for fila in datos_obras if str(fila.get(llave_estatus, "")).upper() == "EN EJECUCIÓN"] if llave_folio_obra and llave_estatus else []
 
-    tab1, tab2, tab3 = st.tabs(["🚀 Apertura de Obra", "📝 Convenios (Trabajos Extra)", "🏁 Cierre de Proyecto"])
+    # Construir lista de RPs para el menú desplegable
+    lista_rps = [f'{str(r.get("Registro Patronal", ""))} - {str(r.get("Razón Social", ""))}' for r in datos_rp if str(r.get("Registro Patronal", "")) != ""]
+
+    tab1, tab2, tab3, tab4 = st.tabs(["🚀 Apertura de Obra", "📝 Convenios (Trabajos Extra)", "🏁 Cierre de Proyecto", "🏛️ Catálogo Registros Patronales"])
 
     # ==========================================
     # PESTAÑA 1: APERTURA DE OBRA
@@ -115,28 +121,34 @@ if doc:
                         
                         fecha_inicio = st.date_input("Fecha Oficial de Arranque")
                         residente = st.text_input("Nombre del Residente / Encargado")
-                        registro_patronal = st.text_input("Registro Patronal IMSS (Obligatorio para la obra)")
                         
-                        # 📝 NUEVO CAMPO: REGISTRO DE OBRA
+                        # 🚀 NUEVO: MENÚ DESPLEGABLE DE REGISTRO PATRONAL
+                        if not lista_rps:
+                            st.warning("⚠️ No hay Registros Patronales dados de alta. Ve a la pestaña 'Catálogo Registros Patronales' para agregarlos primero.")
+                            registro_patronal_sel = ""
+                        else:
+                            registro_patronal_sel = st.selectbox("Registro Patronal IMSS Asignado:", lista_rps)
+                        
                         registro_obra = st.text_input("Registro de Obra (SIROC / Número de Contrato)")
                         
                         boton_arranque = st.form_submit_button("🚀 INICIAR PROYECTO")
                         
                         if boton_arranque:
-                            if not residente or not registro_patronal or not registro_obra: 
+                            if not residente or not registro_patronal_sel or not registro_obra: 
                                 st.warning("⚠️ Debes asignar el residente, el Registro Patronal IMSS y el Registro de Obra.")
                             else:
-                                # Se añade el registro de obra al final de la fila
+                                # Extraemos solo la clave del RP seleccionada (lo que está antes del " - ")
+                                rp_final = registro_patronal_sel.split(" - ")[0].strip()
+                                
                                 hoja_obras.append_row([
                                     folio_seleccionado, cliente_obtenido, proyecto_obtenido,
                                     "EN EJECUCIÓN", monto_obtenido, fecha_inicio.strftime("%d/%m/%Y"), 
-                                    residente.upper(), registro_patronal.upper(), registro_obra.upper()
+                                    residente.upper(), rp_final.upper(), registro_obra.upper()
                                 ])
                                 
-                                # 🚀 INYECCIÓN A LA BITÁCORA
-                                registrar_bitacora(doc, "Gestor de Obras", f"Dio de alta la obra {folio_seleccionado} (RP: {registro_patronal.upper()}, SIROC: {registro_obra.upper()})")
+                                registrar_bitacora(doc, "Gestor de Obras", f"Dio de alta la obra {folio_seleccionado} (RP: {rp_final.upper()}, SIROC: {registro_obra.upper()})")
                                 
-                                st.success(f"¡Obra dada de alta con éxito! RP: {registro_patronal.upper()} | Registro Obra: {registro_obra.upper()}")
+                                st.success(f"¡Obra dada de alta con éxito! RP: {rp_final.upper()} | Registro Obra: {registro_obra.upper()}")
 
     # ==========================================
     # PESTAÑA 2: CONVENIOS
@@ -172,10 +184,7 @@ if doc:
                                 
                                 if fila_excel > 0 and col_excel > 0:
                                     hoja_obras.update_cell(fila_excel, col_excel, nuevo_presupuesto)
-                                    
-                                    # 🚀 INYECCIÓN A LA BITÁCORA
                                     registrar_bitacora(doc, "Gestor de Obras", f"Registró convenio en {folio_convenio} por ${monto_conv:,.2f}. Concepto: {concepto_conv.upper()}")
-                                    
                                     st.success(f"✅ Presupuesto elevado a ${nuevo_presupuesto:,.2f}")
                                     st.rerun()
 
@@ -206,8 +215,6 @@ if doc:
                             
                             if fila_excel > 0:
                                 hoja_obras.update_cell(fila_excel, col_estatus, "CERRADA")
-                                
-                                # 🚀 INYECCIÓN A LA BITÁCORA
                                 registrar_bitacora(doc, "Gestor de Obras", f"Cerró definitivamente la obra {folio_cierre} y generó carta de agradecimiento")
                                 
                                 pdf = PDF_Carta()
@@ -255,3 +262,42 @@ if doc:
                                     file_name=f"Carta_Cierre_{folio_cierre}.pdf", 
                                     mime="application/pdf"
                                 )
+
+    # ==========================================
+    # 🚀 PESTAÑA 4: ALTA DE REGISTROS PATRONALES
+    # ==========================================
+    with tab4:
+        st.subheader("🏛️ Alta de Registros Patronales (IMSS)")
+        st.write("Agrega aquí los Registros Patronales (RP) de la empresa o subcontratistas. Al guardarlos, aparecerán como opción múltiple al dar de alta una nueva obra.")
+        
+        with st.form("form_alta_rp"):
+            col1, col2 = st.columns(2)
+            with col1:
+                nuevo_rp = st.text_input("Clave del Registro Patronal", placeholder="Ej. Y545678910")
+            with col2:
+                razon_social = st.text_input("Razón Social / Empresa Asociada", placeholder="Ej. TARC S.A. DE C.V.")
+            
+            notas_rp = st.text_input("Notas o Detalles (Opcional)")
+            
+            btn_rp = st.form_submit_button("💾 GUARDAR REGISTRO PATRONAL")
+            
+            if btn_rp:
+                if not nuevo_rp or not razon_social:
+                    st.error("⚠️ La Clave del RP y la Razón Social son obligatorias.")
+                else:
+                    # Validar que no exista ya la misma clave
+                    claves_existentes = [str(r.get("Registro Patronal", "")).upper() for r in datos_rp]
+                    if nuevo_rp.upper() in claves_existentes:
+                        st.error(f"⚠️ El Registro Patronal {nuevo_rp.upper()} ya existe en la base de datos.")
+                    else:
+                        hoja_rp.append_row([nuevo_rp.upper(), razon_social.upper(), notas_rp])
+                        registrar_bitacora(doc, "Gestor de Obras", f"Dio de alta el Registro Patronal {nuevo_rp.upper()} ({razon_social.upper()})")
+                        st.success(f"✅ Registro Patronal {nuevo_rp.upper()} agregado exitosamente al catálogo.")
+                        st.rerun()
+        
+        st.markdown("---")
+        st.subheader("📋 Catálogo Actual de Registros Patronales")
+        if datos_rp:
+            st.dataframe(pd.DataFrame(datos_rp), use_container_width=True, hide_index=True)
+        else:
+            st.info("Aún no hay registros patronales guardados.")

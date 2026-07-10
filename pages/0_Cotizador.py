@@ -108,9 +108,9 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio, ti
         password = st.secrets["PASS_BOT"]
         
         if tipo_obra == "LOCAL":
-            correo_destino = "ventas_local@grupo-imac.com"
+            correo_destino = "comercial@grupo-imac.com"
         else:
-            correo_destino = "ventas_foranea@grupo-imac.com"
+            correo_destino = "comercial@grupo-imac.com"
         
         msg = EmailMessage()
         msg['Subject'] = f'NUEVO FOLIO {folio}: Presupuesto {cliente} (Asesor: {asesor}) - Zona: {tipo_obra}'

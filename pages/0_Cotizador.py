@@ -27,6 +27,18 @@ if st.session_state.get("role") not in ROLES_PERMITIDOS:
     st.stop()
 # -----------------------------------------
 
+# 🕵️ FUNCIÓN DE BITÁCORA SILENCIOSA
+def registrar_bitacora(doc, modulo, accion):
+    try:
+        if doc:
+            hoja_bitacora = doc.worksheet("Bitacora_Movimientos")
+            fecha_hora = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            usuario = st.session_state.get("usuario", st.session_state.get("username", "Usuario Sistema"))
+            rol = st.session_state.get("role", "Desconocido")
+            hoja_bitacora.append_row([fecha_hora, usuario, rol, modulo, accion])
+    except Exception:
+        pass # Si la pestaña no existe, no interrumpe el proceso
+
 # --- TEXTOS PREDEFINIDOS ---
 TEXTO_DESCRIPCION = ("Es un sistema de impermeabilizacion prefabricado, consiste en una membrana multicapa elaborada a base de "
                      "asfaltos modificados un refuerzo central de fibra poliester, son de larga vida, resistiendo mucho mas al "
@@ -86,8 +98,7 @@ def conectar_sheets():
         cliente = gspread.authorize(creds)
         
         ID_DEL_EXCEL = "1-grdT2H5dBlGVPvJbZ5wVYDdtVjQEEmUPGpvEm6C0Gc" 
-        sheet = cliente.open_by_key(ID_DEL_EXCEL).worksheet("Presupuestos")
-        return sheet
+        return cliente.open_by_key(ID_DEL_EXCEL)
     except Exception: return None
 
 def obtener_nuevo_folio(hoja):
@@ -143,7 +154,6 @@ with st.form("form_presupuesto"):
     st.write("---")
     st.write("### 2. Información del Proyecto")
     proyecto = st.text_input("Nombre del Proyecto / Obra")
-    # 🚀 NUEVO: CASILLA DE UBICACIÓN FALTANTE
     ubicacion = st.text_input("Ubicación / Dirección de la Obra", placeholder="Ej. Calzada Cuauhtémoc #15-16, Alvarado, Ver.")
     
     st.write("---")
@@ -199,7 +209,9 @@ if boton:
                         f.write(foto.getbuffer())
                     temp_paths.append(temp_path)
 
-            hoja = conectar_sheets()
+            # --- Conexión modificada para habilitar la Bitácora ---
+            doc = conectar_sheets()
+            hoja = doc.worksheet("Presupuestos") if doc else None
             folio_actual = obtener_nuevo_folio(hoja)
 
             subtotal_obras = sum(z["m2"] * z["precio"] for z in zonas_data)
@@ -468,6 +480,9 @@ if boton:
             if hoja:
                 resumen = " / ".join([f"{z['area']} ({z['m2']}m2)" for z in zonas_data])
                 hoja.append_row([folio_actual, fecha_hoy, asesor, cliente, compania, telefono, correo_cliente, proyecto, ubicacion.upper(), resumen, total_final, tipo_obra])
+                
+                # 🚀 INYECCIÓN A LA BITÁCORA
+                registrar_bitacora(doc, "Cotizador", f"Generó presupuesto {folio_actual} para el cliente {cliente.upper()} por un total de ${total_final:,.2f}")
             
             # Envío de respaldo con los datos completos
             enviar_respaldo_correo(pdf_final_para_descargar, nombre_file, cliente, asesor, folio_actual, tipo_obra, proyecto, ubicacion)

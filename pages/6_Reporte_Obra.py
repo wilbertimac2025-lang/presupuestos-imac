@@ -14,7 +14,7 @@ if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
     st.stop()
 
 # Nota: Si el Tablero General no lo debe ver RRHH, quita "RRHH" de esta lista en ese archivo.
-ROLES_PERMITIDOS = ["Admin", "Directivo", "RRHH"]
+ROLES_PERMITIDOS = ["Admin", "Directivo", "RRHH", "Operativo"]
 if st.session_state.get("role") not in ROLES_PERMITIDOS:
     st.error(f"🚫 ACCESO RESTRINGIDO: Tu perfil de {st.session_state.get('role')} no tiene autorización para este módulo.")
     st.stop()

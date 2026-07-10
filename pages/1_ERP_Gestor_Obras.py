@@ -18,6 +18,18 @@ if st.session_state.get("role") not in ROLES_PERMITIDOS:
     st.error(f"🚫 ACCESO RESTRINGIDO: Este módulo es exclusivo para Dirección (Admin).")
     st.stop()
 
+# 🕵️ FUNCIÓN DE BITÁCORA SILENCIOSA
+def registrar_bitacora(doc, modulo, accion):
+    try:
+        if doc:
+            hoja_bitacora = doc.worksheet("Bitacora_Movimientos")
+            fecha_hora = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            usuario = st.session_state.get("usuario", st.session_state.get("username", "Usuario Sistema"))
+            rol = st.session_state.get("role", "Desconocido")
+            hoja_bitacora.append_row([fecha_hora, usuario, rol, modulo, accion])
+    except Exception:
+        pass # Si la pestaña no existe, el sistema sigue funcionando normal
+
 def limpiar_monto(valor):
     if str(valor).strip() == "" or valor is None: return 0.0
     try: return float(str(valor).replace("$", "").replace(",", "").replace(" ", "").strip())
@@ -120,6 +132,10 @@ if doc:
                                     "EN EJECUCIÓN", monto_obtenido, fecha_inicio.strftime("%d/%m/%Y"), 
                                     residente.upper(), registro_patronal.upper(), registro_obra.upper()
                                 ])
+                                
+                                # 🚀 INYECCIÓN A LA BITÁCORA
+                                registrar_bitacora(doc, "Gestor de Obras", f"Dio de alta la obra {folio_seleccionado} (RP: {registro_patronal.upper()}, SIROC: {registro_obra.upper()})")
+                                
                                 st.success(f"¡Obra dada de alta con éxito! RP: {registro_patronal.upper()} | Registro Obra: {registro_obra.upper()}")
 
     # ==========================================
@@ -156,6 +172,10 @@ if doc:
                                 
                                 if fila_excel > 0 and col_excel > 0:
                                     hoja_obras.update_cell(fila_excel, col_excel, nuevo_presupuesto)
+                                    
+                                    # 🚀 INYECCIÓN A LA BITÁCORA
+                                    registrar_bitacora(doc, "Gestor de Obras", f"Registró convenio en {folio_convenio} por ${monto_conv:,.2f}. Concepto: {concepto_conv.upper()}")
+                                    
                                     st.success(f"✅ Presupuesto elevado a ${nuevo_presupuesto:,.2f}")
                                     st.rerun()
 
@@ -186,6 +206,9 @@ if doc:
                             
                             if fila_excel > 0:
                                 hoja_obras.update_cell(fila_excel, col_estatus, "CERRADA")
+                                
+                                # 🚀 INYECCIÓN A LA BITÁCORA
+                                registrar_bitacora(doc, "Gestor de Obras", f"Cerró definitivamente la obra {folio_cierre} y generó carta de agradecimiento")
                                 
                                 pdf = PDF_Carta()
                                 pdf.add_page()

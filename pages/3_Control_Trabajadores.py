@@ -51,7 +51,7 @@ if doc:
     
     nombres_base = [str(fila.get("Nombre del Trabajador", "")) for fila in datos_base if str(fila.get("Nombre del Trabajador", "")) != ""]
     
-    tab1, tab2, tab3 = st.tabs(["🏗️ Asignación a Obras (Operación)", "🗂️ Base de Datos Maestra (RRHH)", "🔍 Visor de Cuadrillas en Obra"])
+    tab1, tab2, tab3 = st.tabs(["🏗️ Asignación a Obras (Operación)", "🗂️ Base de Datos Maestra (RRHH)", "📊 Tablero Maestro de Ocupación"])
 
     # ==================================================
     # PESTAÑA 1: ASIGNACIÓN A OBRAS (CON CANDADO IMSS)
@@ -95,12 +95,10 @@ if doc:
                                 candado_activado = False
                                 
                                 if historial_trabajador:
-                                    # Analizamos su última asignación registrada
                                     ultimo_registro = historial_trabajador[-1]
                                     ultimo_estatus = str(ultimo_registro.get("Estatus IMSS", "")).upper()
                                     ultimo_rp = str(ultimo_registro.get("Registro Patronal", "")).upper()
                                     
-                                    # Si no está de BAJA y el RP anterior es distinto al de la obra actual = BLOQUEO
                                     if "BAJA" not in ultimo_estatus and ultimo_rp != "NO ASIGNADO" and ultimo_rp != registro_patronal_obra:
                                         candado_activado = True
                                         st.error(f"🔒 **CANDADO IMSS ACTIVADO:** {trabajador_sel} está activo en otra obra con el RP: **{ultimo_rp}**.")
@@ -126,13 +124,11 @@ if doc:
                 st.subheader(f"📋 Cuadrilla Actual - {folio_seleccionado}")
                 
                 datos_trabajadores = hoja_trabajadores.get_all_records()
-                # Mostramos solo el estatus más reciente de cada trabajador en esta obra
                 cuadrilla_obra = [t for t in datos_trabajadores if str(t.get("Folio Obra", "")) == folio_seleccionado]
                 
                 if not cuadrilla_obra:
                     st.info("Aún no hay trabajadores asignados a este folio.")
                 else:
-                    # Filtramos para mostrar solo la última actualización de estatus de cada persona en esta obra
                     trabajadores_unicos = {}
                     for t in cuadrilla_obra:
                         trabajadores_unicos[t["Nombre del Trabajador"]] = t
@@ -189,36 +185,69 @@ if doc:
                 st.dataframe(pd.DataFrame(datos_base), use_container_width=True, hide_index=True)
 
     # ==================================================
-    # PESTAÑA 3: VISOR GENERAL DE CUADRILLAS
+    # 🚀 PESTAÑA 3: NUEVO TABLERO MAESTRO DE OCUPACIÓN (SÁBANA GLOBAL)
     # ==================================================
     with tab3:
-        st.subheader("🔍 Consultar Personal en Obra")
-        st.write("Selecciona un proyecto para ver la cuadrilla en forma de tabla.")
+        st.subheader("📊 Estatus de Ocupación General de Plantilla")
+        st.write("Control total de asignaciones. Muestra de forma unificada dónde está parado cada elemento del catálogo maestro.")
         
-        if not obras_ejecucion:
-            st.info("No hay obras en ejecución.")
+        if not datos_base:
+            st.info("No hay personal registrado en el Catálogo Maestro.")
         else:
-            visor_folio = st.selectbox("Selecciona Obra a Consultar:", ["Selecciona un folio..."] + obras_ejecucion, key="visor_cuadrilla")
-            
-            if visor_folio != "Selecciona un folio...":
-                # Re-cargamos para tener la info más fresca
-                datos_frescos = hoja_trabajadores.get_all_records()
-                visor_obra = [t for t in datos_frescos if str(t.get("Folio Obra", "")) == visor_folio]
+            # 1. Mapeamos la última asignación cronológica de cada persona
+            ultimas_asignaciones = {}
+            for reg in datos_trabajadores:
+                nombre_t = str(reg.get("Nombre del Trabajador", "")).strip().upper()
+                if nombre_t:
+                    ultimas_asignaciones[nombre_t] = reg
+
+            # 2. Construimos la Sábana Cruzando el histórico con el estatus
+            tabla_global = []
+            for emp in datos_base:
+                nombre_emp = str(emp.get("Nombre del Trabajador", "")).strip().upper()
+                if not nombre_emp:
+                    continue
                 
-                if visor_obra:
-                    # Nos quedamos con el último registro de cada persona
-                    trabajadores_visor = {}
-                    for t in visor_obra:
-                        trabajadores_visor[t["Nombre del Trabajador"]] = t
-                    
-                    # Convertimos el diccionario a una lista plana para pandas
-                    lista_final = list(trabajadores_visor.values())
-                    df_visor = pd.DataFrame(lista_final)
-                    
-                    columnas_visor = ["Nombre del Trabajador", "Puesto / Rol", "NSS", "Registro Patronal", "Estatus IMSS", "Fecha de Asignación"]
-                    cols_finales = [c for c in columnas_visor if c in df_visor.columns]
-                    
-                    st.success(f"👷 Hay {len(lista_final)} trabajador(es) registrados en el proyecto **{visor_folio}**:")
-                    st.dataframe(df_visor[cols_finales] if cols_finales else df_visor, use_container_width=True, hide_index=True)
+                puesto_emp = emp.get("Puesto / Rol", "N/A")
+                nss_emp = emp.get("NSS", "N/A")
+                rfc_emp = emp.get("RFC", "N/A")
+
+                # Analizamos su situación IMSS / Obra
+                registro_asig = ultimas_asignaciones.get(nombre_emp)
+                if registro_asig:
+                    estatus_imss_act = str(registro_asig.get("Estatus IMSS", "")).upper()
+                    if "BAJA" in estatus_imss_act:
+                        obra_activa = "🟢 DISPONIBLE (SIN OBRA)"
+                        estatus_pantalla = "🔴 BAJA"
+                        rp_act = "N/A"
+                    else:
+                        obra_activa = registro_asig.get("Folio Obra", "N/A")
+                        estatus_pantalla = registro_asig.get("Estatus IMSS", "N/A")
+                        rp_act = registro_asig.get("Registro Patronal", "N/A")
                 else:
-                    st.info(f"No hay registros de trabajadores en el folio {visor_folio}.")
+                    obra_activa = "🟢 DISPONIBLE (SIN OBRA)"
+                    estatus_pantalla = "SIN ASIGNACIONES"
+                    rp_act = "N/A"
+
+                tabla_global.append({
+                    "Nombre del Trabajador": nombre_emp,
+                    "Puesto / Rol": puesto_emp,
+                    "NSS": nss_emp,
+                    "RFC": rfc_emp,
+                    "Obra Asignada": obra_activa,
+                    "Estatus IMSS": estatus_pantalla,
+                    "RP de Obra": rp_act
+                })
+
+            df_master = pd.DataFrame(tabla_global)
+
+            # 🔍 Buscador interactivo integrado
+            filtro_texto = st.text_input("🔍 Filtrar Tabla (Escribe nombre, obra o puesto):", placeholder="Ej. Oficial, OBRA04, Juan...")
+            
+            if filtro_texto:
+                # Filtrado inteligente sin importar mayúsculas
+                termino = filtro_texto.upper().strip()
+                df_master = df_master[df_master.astype(str).apply(lambda x: x.str.contains(termino)).any(axis=1)]
+
+            # Desplegamos la tabla corporativa limpia
+            st.dataframe(df_master, use_container_width=True, hide_index=True)

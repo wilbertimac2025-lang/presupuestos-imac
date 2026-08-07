@@ -118,10 +118,11 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio, ti
         remitente = st.secrets["CORREO_BOT"]
         password = st.secrets["PASS_BOT"]
         
+        # 🚀 AQUI AGREGAS LOS CORREOS SEPARADOS POR COMA DENTRO DE LAS MISMAS COMILLAS
         if tipo_obra == "LOCAL":
-            correo_destino = "comercial@grupo-imac.com"
+            correo_destino = "comercial@grupo-imac.com, direccion@grupo-imac.com, otro.correo@grupo-imac.com"
         else:
-            correo_destino = "comercial@grupo-imac.com"
+            correo_destino = "comercial@grupo-imac.com, foraneos@grupo-imac.com, direccion@grupo-imac.com"
         
         msg = EmailMessage()
         msg['Subject'] = f'NUEVO FOLIO {folio}: Presupuesto {cliente} (Asesor: {asesor}) - Zona: {tipo_obra}'

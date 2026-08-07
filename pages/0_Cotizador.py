@@ -152,20 +152,21 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio, ti
 st.title("🍊 Presupuestos Obras Grupo IMAC")
 num_areas = st.number_input("¿Cuántas áreas distintas vas a cotizar?", min_value=1, max_value=10, value=1)
 
+# 🚀 AÑADIDAS LLAVES FIJAS (KEYS) PARA BLINDAR LA MEMORIA
 st.write("### 1. Datos de Contacto y Asignación")
 fecha_validez = st.date_input("Presupuesto válido hasta:") 
-cliente = st.text_input("Nombre del Cliente")
+cliente = st.text_input("Nombre del Cliente", key="in_cliente")
 compania = st.text_input("Compañía / Empresa")
 telefono = st.text_input("Teléfono de Contacto")
 correo_cliente = st.text_input("Correo Electrónico del Cliente")
-asesor = st.text_input("Nombre del Asesor")
+asesor = st.text_input("Nombre del Asesor", key="in_asesor")
 
 tipo_obra = st.selectbox("Tipo de Proyecto / Logística:", ["LOCAL", "FORÁNEA"])
 
 st.write("---")
 st.write("### 2. Información del Proyecto")
 proyecto = st.text_input("Nombre del Proyecto / Obra")
-ubicacion = st.text_input("Ubicación / Dirección de la Obra", placeholder="Ej. Calzada Cuauhtémoc #15-16, Alvarado, Ver.")
+ubicacion = st.text_input("Ubicación / Dirección de la Obra", placeholder="Ej. Calzada Cuauhtémoc #15-16, Alvarado, Ver.", key="in_ubicacion")
 
 st.write("---")
 st.write("### 3. Desglose de Áreas")
@@ -181,8 +182,6 @@ for i in range(int(num_areas)):
     with col2:
         m = st.number_input(f"Metros (m²)", min_value=0.0, key=f"m_{i}")
         
-        # 🚀 LA SOLUCIÓN: Usamos text_input y le pegamos el nombre del sistema 's' a la llave (key).
-        # Así, cada vez que cambias el sistema, Streamlit genera una llave nueva y refresca el precio al instante.
         precio_catalogo = float(CATALOGO_SISTEMAS[s]["precio"])
         st.text_input(f"Precio x m² (Fijo + IVA)", value=f"${precio_catalogo:,.2f}", disabled=True, key=f"precio_{i}_{s}")
         
@@ -213,7 +212,12 @@ comentarios_fotos = [c0, c1, c2, c3, c4, c5]
 boton = st.button("GENERAR PRESUPUESTO OFICIAL", type="primary")
 
 if boton:
-    if not cliente or not asesor or not ubicacion:
+    # 🚀 LIMPIEZA DE "ESPACIOS FANTASMAS" Y VERIFICACIÓN SEGURA
+    c_valido = cliente.strip() if cliente else ""
+    a_valido = asesor.strip() if asesor else ""
+    u_valido = ubicacion.strip() if ubicacion else ""
+    
+    if not c_valido or not a_valido or not u_valido:
         st.error("⚠️ El nombre del Cliente, el Asesor y la Ubicación son obligatorios.")
     else:
         with st.spinner("Ensamblando Presupuesto, Fotos, Comentarios y Ficha Técnica..."):

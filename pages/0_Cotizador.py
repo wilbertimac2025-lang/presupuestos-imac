@@ -37,7 +37,7 @@ def registrar_bitacora(doc, modulo, accion):
             rol = st.session_state.get("role", "Desconocido")
             hoja_bitacora.append_row([fecha_hora, usuario, rol, modulo, accion])
     except Exception:
-        pass # Si la pestaña no existe, no interrumpe el proceso
+        pass 
 
 # --- TEXTOS PREDEFINIDOS ---
 TEXTO_DESCRIPCION = ("Es un sistema de impermeabilizacion prefabricado, consiste en una membrana multicapa elaborada a base de "
@@ -52,7 +52,7 @@ TEXTO_ESPECIFICACIONES = ("PREPARACION DE LA SUPERFICIE A IMPERMEABILIZAR.\n"
                           "COLOCACION DEL IMPERMEABILIZANTE PREFABRICADO\n"
                           "- Sellado de orillas y traslapes por medio de fusion.")
 
-# 🚀 NUEVO CATÁLOGO MAESTRO INTELIGENTE (Precios y Garantías)
+# 🚀 CATÁLOGO MAESTRO INTELIGENTE 
 CATALOGO_SISTEMAS = {
     "LEVANTAMIENTO": {"precio": 30.00, "garantia": "NO APLICA"},
     "ACRILTECHO GREEN POWER": {"precio": 244.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN"},
@@ -152,65 +152,65 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio, ti
 st.title("🍊 Presupuestos Obras Grupo IMAC")
 num_areas = st.number_input("¿Cuántas áreas distintas vas a cotizar?", min_value=1, max_value=10, value=1)
 
-with st.form("form_presupuesto"):
-    st.write("### 1. Datos de Contacto y Asignación")
-    fecha_validez = st.date_input("Presupuesto válido hasta:") 
-    cliente = st.text_input("Nombre del Cliente")
-    compania = st.text_input("Compañía / Empresa")
-    telefono = st.text_input("Teléfono de Contacto")
-    correo_cliente = st.text_input("Correo Electrónico del Cliente")
-    asesor = st.text_input("Nombre del Asesor")
-    
-    tipo_obra = st.selectbox("Tipo de Proyecto / Logística:", ["LOCAL", "FORÁNEA"])
-    
-    st.write("---")
-    st.write("### 2. Información del Proyecto")
-    proyecto = st.text_input("Nombre del Proyecto / Obra")
-    ubicacion = st.text_input("Ubicación / Dirección de la Obra", placeholder="Ej. Calzada Cuauhtémoc #15-16, Alvarado, Ver.")
-    
-    st.write("---")
-    st.write("### 3. Desglose de Áreas")
-    zonas_data = []
-    # Convertimos las llaves del catálogo en una lista para el menú desplegable
-    opciones_sistemas = list(CATALOGO_SISTEMAS.keys()) 
-    
-    for i in range(int(num_areas)):
-        st.markdown(f"**Área {i+1}**")
-        col1, col2 = st.columns(2)
-        with col1:
-            n = st.text_input(f"Nombre de la zona", key=f"n_{i}")
-            s = st.selectbox(f"Sistema", opciones_sistemas, key=f"s_{i}")
-        with col2:
-            m = st.number_input(f"Metros (m²)", min_value=0.0, key=f"m_{i}")
-            # 🚀 AQUÍ BLOQUEAMOS EL CAMPO DE PRECIO, JALA AUTOMÁTICO DESDE EL CATÁLOGO
-            precio_catalogo = float(CATALOGO_SISTEMAS[s]["precio"])
-            p = st.number_input(f"Precio x m² (Automático)", value=precio_catalogo, disabled=True, key=f"p_{i}")
-            
-        zonas_data.append({"area": n, "sistema": s, "m2": m, "precio": p})
+# 🚀 QUITAMOS EL ST.FORM PARA QUE SEA 100% EN VIVO
+st.write("### 1. Datos de Contacto y Asignación")
+fecha_validez = st.date_input("Presupuesto válido hasta:") 
+cliente = st.text_input("Nombre del Cliente")
+compania = st.text_input("Compañía / Empresa")
+telefono = st.text_input("Teléfono de Contacto")
+correo_cliente = st.text_input("Correo Electrónico del Cliente")
+asesor = st.text_input("Nombre del Asesor")
 
-    st.write("---")
-    st.write("### 4. Ajustes y Anexos")
-    costo_extra = st.number_input("Costo Extra Adicional (Pesos $)", min_value=0.0)
-    desc_extra = st.text_input("Concepto del Costo Extra")
-    anotaciones_asesor = st.text_area("Anotaciones Especiales para el Cliente")
-    
-    st.write("**Evidencia Fotográfica de la Obra:**")
-    fotos_subidas = st.file_uploader("📸 Subir Evidencia (Opcional)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
-    
-    st.info("💡 Si subiste fotos, puedes agregarles un comentario a cada una en el orden que las seleccionaste:")
-    colA, colB = st.columns(2)
-    with colA:
-        c0 = st.text_input("Nota para Foto 1")
-        c2 = st.text_input("Nota para Foto 3")
-        c4 = st.text_input("Nota para Foto 5")
-    with colB:
-        c1 = st.text_input("Nota para Foto 2")
-        c3 = st.text_input("Nota para Foto 4")
-        c5 = st.text_input("Nota para Foto 6")
+tipo_obra = st.selectbox("Tipo de Proyecto / Logística:", ["LOCAL", "FORÁNEA"])
+
+st.write("---")
+st.write("### 2. Información del Proyecto")
+proyecto = st.text_input("Nombre del Proyecto / Obra")
+ubicacion = st.text_input("Ubicación / Dirección de la Obra", placeholder="Ej. Calzada Cuauhtémoc #15-16, Alvarado, Ver.")
+
+st.write("---")
+st.write("### 3. Desglose de Áreas")
+zonas_data = []
+opciones_sistemas = list(CATALOGO_SISTEMAS.keys()) 
+
+for i in range(int(num_areas)):
+    st.markdown(f"**Área {i+1}**")
+    col1, col2 = st.columns(2)
+    with col1:
+        n = st.text_input(f"Nombre de la zona", key=f"n_{i}")
+        s = st.selectbox(f"Sistema", opciones_sistemas, key=f"s_{i}")
+    with col2:
+        m = st.number_input(f"Metros (m²)", min_value=0.0, key=f"m_{i}")
+        # Al no haber 'form', esto se actualiza instantáneamente en la pantalla
+        precio_catalogo = float(CATALOGO_SISTEMAS[s]["precio"])
+        p = st.number_input(f"Precio x m² (Fijo + IVA)", value=precio_catalogo, disabled=True, key=f"p_{i}")
         
-    comentarios_fotos = [c0, c1, c2, c3, c4, c5]
+    zonas_data.append({"area": n, "sistema": s, "m2": m})
+
+st.write("---")
+st.write("### 4. Ajustes y Anexos")
+costo_extra = st.number_input("Costo Extra Adicional (Pesos $)", min_value=0.0)
+desc_extra = st.text_input("Concepto del Costo Extra")
+anotaciones_asesor = st.text_area("Anotaciones Especiales para el Cliente")
+
+st.write("**Evidencia Fotográfica de la Obra:**")
+fotos_subidas = st.file_uploader("📸 Subir Evidencia (Opcional)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+
+st.info("💡 Si subiste fotos, puedes agregarles un comentario a cada una en el orden que las seleccionaste:")
+colA, colB = st.columns(2)
+with colA:
+    c0 = st.text_input("Nota para Foto 1")
+    c2 = st.text_input("Nota para Foto 3")
+    c4 = st.text_input("Nota para Foto 5")
+with colB:
+    c1 = st.text_input("Nota para Foto 2")
+    c3 = st.text_input("Nota para Foto 4")
+    c5 = st.text_input("Nota para Foto 6")
     
-    boton = st.form_submit_button("GENERAR PRESUPUESTO OFICIAL")
+comentarios_fotos = [c0, c1, c2, c3, c4, c5]
+
+# Botón normal de Streamlit
+boton = st.button("GENERAR PRESUPUESTO OFICIAL", type="primary")
 
 if boton:
     if not cliente or not asesor or not ubicacion:
@@ -231,7 +231,8 @@ if boton:
             hoja = doc.worksheet("Presupuestos") if doc else None
             folio_actual = obtener_nuevo_folio(hoja)
 
-            subtotal_obras = sum(z["m2"] * z["precio"] for z in zonas_data)
+            # 🚀 CÁLCULO ESTRICTO: Se extrae directo del catálogo maestro para evitar errores
+            subtotal_obras = sum(z["m2"] * CATALOGO_SISTEMAS[z["sistema"]]["precio"] for z in zonas_data)
             
             pdf = PDF()
             pdf.set_auto_page_break(auto=True, margin=20)
@@ -281,6 +282,9 @@ if boton:
             pdf.ln(5)
 
             for z in zonas_data:
+                precio_unitario_real = CATALOGO_SISTEMAS[z["sistema"]]["precio"]
+                subtotal_area_real = z["m2"] * precio_unitario_real
+
                 pdf.set_font('Arial', 'B', 11)
                 pdf.set_text_color(0, 150, 255)
                 pdf.multi_cell(0, 6, txt=f"SUMINISTRO Y APLICACIÓN EN {z['area'].upper()}:")
@@ -311,9 +315,11 @@ if boton:
                 pdf.cell(70, 6, "SUBTOTAL", 'B', 1, 'C', True)
                 pdf.set_text_color(0,0,0)
                 pdf.set_font('Arial', '', 9)
+                
+                # 🚀 INYECCIÓN DE LA MATEMÁTICA DIRECTA AL PDF
                 pdf.cell(60, 6, f"{z['m2']:,.2f}", 'B', 0, 'C')
-                pdf.cell(60, 6, f"${z['precio']:,.2f}", 'B', 0, 'C')
-                pdf.cell(70, 6, f"${z['m2']*z['precio']:,.2f}", 'B', 1, 'C')
+                pdf.cell(60, 6, f"${precio_unitario_real:,.2f}", 'B', 0, 'C')
+                pdf.cell(70, 6, f"${subtotal_area_real:,.2f}", 'B', 1, 'C')
                 pdf.ln(8)
 
             subtotal_final = subtotal_obras + costo_extra
@@ -357,7 +363,6 @@ if boton:
             pdf.multi_cell(0, 4, txt="- Se deberá hacer un levantamiento físico para determinar los alcances exactos.\n- No incluye trabajos no cotizados.")
             pdf.ln(3)
             
-            # 🚀 AQUÍ SE ASIGNA LA GARANTÍA EXACTA DESDE EL CATÁLOGO INTELIGENTE
             sistema_principal = zonas_data[0]["sistema"]
             texto_garantia = CATALOGO_SISTEMAS[sistema_principal]["garantia"]
                 

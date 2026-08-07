@@ -152,7 +152,6 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio, ti
 st.title("🍊 Presupuestos Obras Grupo IMAC")
 num_areas = st.number_input("¿Cuántas áreas distintas vas a cotizar?", min_value=1, max_value=10, value=1)
 
-# 🚀 QUITAMOS EL ST.FORM PARA QUE SEA 100% EN VIVO
 st.write("### 1. Datos de Contacto y Asignación")
 fecha_validez = st.date_input("Presupuesto válido hasta:") 
 cliente = st.text_input("Nombre del Cliente")
@@ -181,9 +180,11 @@ for i in range(int(num_areas)):
         s = st.selectbox(f"Sistema", opciones_sistemas, key=f"s_{i}")
     with col2:
         m = st.number_input(f"Metros (m²)", min_value=0.0, key=f"m_{i}")
-        # Al no haber 'form', esto se actualiza instantáneamente en la pantalla
+        
+        # 🚀 LA SOLUCIÓN: Usamos text_input y le pegamos el nombre del sistema 's' a la llave (key).
+        # Así, cada vez que cambias el sistema, Streamlit genera una llave nueva y refresca el precio al instante.
         precio_catalogo = float(CATALOGO_SISTEMAS[s]["precio"])
-        p = st.number_input(f"Precio x m² (Fijo + IVA)", value=precio_catalogo, disabled=True, key=f"p_{i}")
+        st.text_input(f"Precio x m² (Fijo + IVA)", value=f"${precio_catalogo:,.2f}", disabled=True, key=f"precio_{i}_{s}")
         
     zonas_data.append({"area": n, "sistema": s, "m2": m})
 
@@ -209,7 +210,6 @@ with colB:
     
 comentarios_fotos = [c0, c1, c2, c3, c4, c5]
 
-# Botón normal de Streamlit
 boton = st.button("GENERAR PRESUPUESTO OFICIAL", type="primary")
 
 if boton:
@@ -231,7 +231,6 @@ if boton:
             hoja = doc.worksheet("Presupuestos") if doc else None
             folio_actual = obtener_nuevo_folio(hoja)
 
-            # 🚀 CÁLCULO ESTRICTO: Se extrae directo del catálogo maestro para evitar errores
             subtotal_obras = sum(z["m2"] * CATALOGO_SISTEMAS[z["sistema"]]["precio"] for z in zonas_data)
             
             pdf = PDF()
@@ -316,7 +315,6 @@ if boton:
                 pdf.set_text_color(0,0,0)
                 pdf.set_font('Arial', '', 9)
                 
-                # 🚀 INYECCIÓN DE LA MATEMÁTICA DIRECTA AL PDF
                 pdf.cell(60, 6, f"{z['m2']:,.2f}", 'B', 0, 'C')
                 pdf.cell(60, 6, f"${precio_unitario_real:,.2f}", 'B', 0, 'C')
                 pdf.cell(70, 6, f"${subtotal_area_real:,.2f}", 'B', 1, 'C')

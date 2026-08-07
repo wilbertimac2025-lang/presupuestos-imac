@@ -102,16 +102,17 @@ if doc:
             valor_monto = obtener_valor(datos_completos, ["TOTAL", "MONTO", "PRESUPUESTO", "AUTORIZADO"], 0.0)
             presupuesto_total = limpiar_monto(valor_monto)
 
-            # 📊 CÁLCULO AUTOMÁTICO DE FINANCIAMIENTO (1%) Y GASTO ADMINISTRATIVO (10%)
+            # 📊 CÁLCULOS AUTOMÁTICOS GLOBALES
             gasto_financiamiento = presupuesto_total * 0.01
             gasto_administrativo = presupuesto_total * 0.10
+            # 🚀 NUEVA FÓRMULA DE IMSS Y PRESTACIONES
+            costo_imss = (presupuesto_total * 0.18) * 0.35
 
             datos_gastos = hoja_gastos.get_all_records()
             gastos_filtrados = [g for g in datos_gastos if str(g.get("Folio Obra", "")) == folio_seleccionado]
             
             costo_materiales = 0.0
             costo_nomina = 0.0
-            costo_fsr = 0.0
             gastos_operativos = 0.0
             
             for g in gastos_filtrados:
@@ -123,12 +124,12 @@ if doc:
                 elif categoria == "NÓMINA":
                     costo_nomina += monto
                 elif categoria == "FSR":
-                    costo_fsr += monto
+                    pass # 🛡️ Ignoramos los FSR viejos para no alterar las nuevas cuentas
                 else:
                     gastos_operativos += monto
             
-            # 🧠 Ambos gastos (1% y 10%) se suman automáticamente al costo real de ejecución
-            total_gastado = costo_materiales + costo_nomina + costo_fsr + gastos_operativos + gasto_financiamiento + gasto_administrativo
+            # 🧠 Sumamos los gastos físicos más las cuotas y tarifas fijas de la empresa
+            total_gastado = costo_materiales + costo_nomina + costo_imss + gastos_operativos + gasto_financiamiento + gasto_administrativo
 
             # ==========================================
             # 📊 ESTADÍSTICAS E INDICADORES FINANCIEROS
@@ -147,7 +148,7 @@ if doc:
 
             m4, m5, m6 = st.columns(3)
             with m4:
-                st.metric("FSR (Carga Social)", f"${costo_fsr:,.2f}")
+                st.metric("Costos IMSS y Prest. Sociales", f"${costo_imss:,.2f}")
             with m5:
                 st.metric("Financiamiento (1%)", f"${gasto_financiamiento:,.2f}")
             with m6:
@@ -156,7 +157,7 @@ if doc:
             st.write("")
             if presupuesto_total > 0:
                 porcentaje_gastado = min(total_gastado / presupuesto_total, 1.0)
-                st.write(f"**Consumo Financiero Global (Incluye Financiamiento 1% y Gasto Adm. 10%):** {porcentaje_gastado*100:.1f}%")
+                st.write(f"**Consumo Financiero Global:** {porcentaje_gastado*100:.1f}%")
                 st.progress(porcentaje_gastado)
 
             st.markdown("---")
@@ -178,13 +179,7 @@ if doc:
                             hoja_gastos.append_row([fecha_actual, folio_seleccionado, concepto.upper(), categoria_gasto, monto_gasto])
                             st.success(f"✅ Gasto de ${monto_gasto:,.2f} registrado con éxito.")
                             
-                            if categoria_gasto == "NÓMINA":
-                                monto_fsr = monto_gasto * 0.32
-                                concepto_fsr = f"FSR (Factor 1.32) - {concepto.upper()}"
-                                hoja_gastos.append_row([fecha_actual, folio_seleccionado, concepto_fsr, "FSR", monto_fsr])
-                                st.info(f"✅ Carga de FSR automática: Se sumaron ${monto_fsr:,.2f} al proyecto.")
-                            
-                            # 🚀 INYECCIÓN A LA BITÁCORA (Registra el gasto manual, sea nómina o normal)
+                            # 🚀 INYECCIÓN A LA BITÁCORA
                             registrar_bitacora(doc, "Panel Financiero", f"Inyectó gasto de ${monto_gasto:,.2f} a {folio_seleccionado} ({categoria_gasto}). Concepto: {concepto.upper()}")
                             
                             st.rerun()

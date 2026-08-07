@@ -152,7 +152,6 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio, ti
 st.title("🍊 Presupuestos Obras Grupo IMAC")
 num_areas = st.number_input("¿Cuántas áreas distintas vas a cotizar?", min_value=1, max_value=10, value=1)
 
-# 🚀 AÑADIDAS LLAVES FIJAS (KEYS) PARA BLINDAR LA MEMORIA
 st.write("### 1. Datos de Contacto y Asignación")
 fecha_validez = st.date_input("Presupuesto válido hasta:") 
 cliente = st.text_input("Nombre del Cliente", key="in_cliente")
@@ -212,7 +211,6 @@ comentarios_fotos = [c0, c1, c2, c3, c4, c5]
 boton = st.button("GENERAR PRESUPUESTO OFICIAL", type="primary")
 
 if boton:
-    # 🚀 LIMPIEZA DE "ESPACIOS FANTASMAS" Y VERIFICACIÓN SEGURA
     c_valido = cliente.strip() if cliente else ""
     a_valido = asesor.strip() if asesor else ""
     u_valido = ubicacion.strip() if ubicacion else ""
@@ -365,8 +363,13 @@ if boton:
             pdf.multi_cell(0, 4, txt="- Se deberá hacer un levantamiento físico para determinar los alcances exactos.\n- No incluye trabajos no cotizados.")
             pdf.ln(3)
             
-            sistema_principal = zonas_data[0]["sistema"]
-            texto_garantia = CATALOGO_SISTEMAS[sistema_principal]["garantia"]
+            # 🚀 RASTREADOR INTELIGENTE DE GARANTÍAS (ESCANEA TODAS LAS ÁREAS)
+            sistemas_validos = [CATALOGO_SISTEMAS[z["sistema"]]["garantia"] for z in zonas_data if CATALOGO_SISTEMAS[z["sistema"]]["garantia"] != "NO APLICA"]
+            
+            if sistemas_validos:
+                texto_garantia = sistemas_validos[0] # Toma la garantía real del sistema impermeable
+            else:
+                texto_garantia = "NO APLICA" # Solo imprime esto si TODAS las áreas dicen NO APLICA
                 
             pdf.set_font('Arial', 'B', 9)
             pdf.set_text_color(50, 50, 50)

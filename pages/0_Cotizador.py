@@ -70,7 +70,7 @@ ESPEC_GENERAL = ("PREPARACION DE SUPERFICIE.\n"
                  "- LIMPIEZA DEL AREA HASTA QUEDAR LIBRE DE POLVO.\n"
                  "- APLICACIÓN DE MATERIAL SEGÚN ESPECIFICACIONES TÉCNICAS.")
 
-# 🚀 CATÁLOGO MAESTRO INTELIGENTE (Ahora enlazado a archivos PDF específicos)
+# 🚀 CATÁLOGO MAESTRO INTELIGENTE (Restauramos la condición LOCAL/FORANEA para Master Lasser)
 CATALOGO_SISTEMAS = {
     "LEVANTAMIENTO": {"precio": 30.00, "garantia": "NO APLICA", "desc": "SERVICIO DE LEVANTAMIENTO FÍSICO Y MEDICIÓN DE ÁREAS EN SITIO.", "espec": "TOMA DE MEDIDAS Y REVISIÓN DE CONDICIONES DE LA SUPERFICIE.", "ficha": "NO APLICA"},
     "ACRILTECHO GREEN POWER": {"precio": 244.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_acriltecho.pdf"},
@@ -87,14 +87,14 @@ CATALOGO_SISTEMAS = {
     "JUNTA LINEAL 50 CM MASTER LASSER 3.0 LISO": {"precio": 184.00, "garantia": "NO APLICA", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "NO APLICA"},
     "JUNTA LINEAL 50 CM MASTER LASSER 4.0 LISO": {"precio": 203.00, "garantia": "NO APLICA", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "NO APLICA"},
     "JUNTA LINEAL 15 A 50 CM KRIPTOFLEX": {"precio": 125.00, "garantia": "NO APLICA", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "NO APLICA"},
-    "MASTER LASSER 3.5 MM FP": {"precio": 250.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "ficha_master_lasser_35.pdf"},
-    "MASTER LASSER 4.0 MM FP": {"precio": 294.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "ficha_master_lasser_4.pdf"},
-    "MASTER LASSER 4.5 MM FP": {"precio": 325.00, "garantia": "10 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "ficha_master_lasser_45.pdf"},
-    "MASTER LASSER 4.0 MM FP (ESCUELAS)": {"precio": 238.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "ficha_master_lasser_4.pdf"},
-    "MASTER LASSER 3.0 MM FP LISO SIN ACABADO": {"precio": 230.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "ficha_master_lasser_3_liso.pdf"},
-    "MASTER LASSER 4.0 MM FP LISO SIN ACABADO": {"precio": 280.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "ficha_master_lasser_4_liso.pdf"},
-    "MASTER LASSER 3.0 MM FV": {"precio": 169.00, "garantia": "NO APLICA", "desc": DESC_PREFAB_FV, "espec": ESPEC_PREFAB, "ficha": "ficha_master_lasser_3_fv.pdf"},
-    "MASTER LASSER 3.5 MM FV": {"precio": 211.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FV, "espec": ESPEC_PREFAB, "ficha": "ficha_master_lasser_35_fv.pdf"},
+    "MASTER LASSER 3.5 MM FP": {"precio": 250.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA"},
+    "MASTER LASSER 4.0 MM FP": {"precio": 294.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA"},
+    "MASTER LASSER 4.5 MM FP": {"precio": 325.00, "garantia": "10 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA"},
+    "MASTER LASSER 4.0 MM FP (ESCUELAS)": {"precio": 238.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA"},
+    "MASTER LASSER 3.0 MM FP LISO SIN ACABADO": {"precio": 230.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA"},
+    "MASTER LASSER 4.0 MM FP LISO SIN ACABADO": {"precio": 280.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA"},
+    "MASTER LASSER 3.0 MM FV": {"precio": 169.00, "garantia": "NO APLICA", "desc": DESC_PREFAB_FV, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA"},
+    "MASTER LASSER 3.5 MM FV": {"precio": 211.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FV, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA"},
     "BITUFLEX": {"precio": 252.00, "garantia": "NO APLICA", "desc": "SUMINISTRO DE SOLVENTE Y/O MATERIAL BASE.", "espec": "APLICACIÓN SEGÚN REQUERIMIENTOS EN OBRA.", "ficha": "NO APLICA"}
 }
 
@@ -487,9 +487,19 @@ if boton:
             pdf_base_bytes = pdf.output(dest='S').encode('latin-1')
             pdf_final_para_descargar = pdf_base_bytes
 
-            # 🚀 LÓGICA DE FICHAS TÉCNICAS DINÁMICAS
+            # 🚀 LÓGICA DE FICHAS TÉCNICAS DINÁMICAS Y CONDICIONAL MASTER LASSER
             sistema_principal_para_ficha = zonas_data[0]["sistema"]
-            archivo_ficha = CATALOGO_SISTEMAS[sistema_principal_para_ficha]["ficha"]
+            ficha_asignada = CATALOGO_SISTEMAS[sistema_principal_para_ficha]["ficha"]
+            
+            if ficha_asignada == "DINAMICA_LOCAL_FORANEA":
+                # Rescatamos tu regla original para los Master Lasser
+                if tipo_obra == "LOCAL":
+                    archivo_ficha = "ficha_tecnica_local.pdf"
+                else:
+                    archivo_ficha = "ficha_tecnica_foranea.pdf"
+            else:
+                # Usamos la ficha nueva específica para Kriptoflex, Impac, etc.
+                archivo_ficha = ficha_asignada
             
             if archivo_ficha != "NO APLICA":
                 if os.path.exists(archivo_ficha):

@@ -70,7 +70,7 @@ ESPEC_GENERAL = ("PREPARACION DE SUPERFICIE.\n"
                  "- LIMPIEZA DEL AREA HASTA QUEDAR LIBRE DE POLVO.\n"
                  "- APLICACIÓN DE MATERIAL SEGÚN ESPECIFICACIONES TÉCNICAS.")
 
-# 🚀 CATÁLOGO MAESTRO INTELIGENTE (Restauramos la condición LOCAL/FORANEA para Master Lasser)
+# 🚀 CATÁLOGO MAESTRO INTELIGENTE 
 CATALOGO_SISTEMAS = {
     "LEVANTAMIENTO": {"precio": 30.00, "garantia": "NO APLICA", "desc": "SERVICIO DE LEVANTAMIENTO FÍSICO Y MEDICIÓN DE ÁREAS EN SITIO.", "espec": "TOMA DE MEDIDAS Y REVISIÓN DE CONDICIONES DE LA SUPERFICIE.", "ficha": "NO APLICA"},
     "ACRILTECHO GREEN POWER": {"precio": 244.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_acriltecho.pdf"},
@@ -95,7 +95,7 @@ CATALOGO_SISTEMAS = {
     "MASTER LASSER 4.0 MM FP LISO SIN ACABADO": {"precio": 280.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA"},
     "MASTER LASSER 3.0 MM FV": {"precio": 169.00, "garantia": "NO APLICA", "desc": DESC_PREFAB_FV, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA"},
     "MASTER LASSER 3.5 MM FV": {"precio": 211.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FV, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA"},
-    "BITUFLEX": {"precio": 252.00, "garantia": "NO APLICA", "desc": "SUMINISTRO DE SOLVENTE Y/O MATERIAL BASE.", "espec": "APLICACIÓN SEGÚN REQUERIMIENTOS EN OBRA.", "ficha": "NO APLICA"}
+    "BITUFLEX": {"precio": 252.00, "garantia": "NO APLICA", "desc": "SUMINISTRO DE SOLVENTE Y/O MATERIAL BASE.", "espec": "APLICACIÓN SEGÚN REQUERIMIENTOS EN OBRA.", "ficha": "ficha_bituflex.pdf"}
 }
 
 class PDF(FPDF):
@@ -487,18 +487,15 @@ if boton:
             pdf_base_bytes = pdf.output(dest='S').encode('latin-1')
             pdf_final_para_descargar = pdf_base_bytes
 
-            # 🚀 LÓGICA DE FICHAS TÉCNICAS DINÁMICAS Y CONDICIONAL MASTER LASSER
             sistema_principal_para_ficha = zonas_data[0]["sistema"]
             ficha_asignada = CATALOGO_SISTEMAS[sistema_principal_para_ficha]["ficha"]
             
             if ficha_asignada == "DINAMICA_LOCAL_FORANEA":
-                # Rescatamos tu regla original para los Master Lasser
                 if tipo_obra == "LOCAL":
                     archivo_ficha = "ficha_tecnica_local.pdf"
                 else:
                     archivo_ficha = "ficha_tecnica_foranea.pdf"
             else:
-                # Usamos la ficha nueva específica para Kriptoflex, Impac, etc.
                 archivo_ficha = ficha_asignada
             
             if archivo_ficha != "NO APLICA":

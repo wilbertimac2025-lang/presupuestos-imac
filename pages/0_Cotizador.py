@@ -76,10 +76,10 @@ CATALOGO_SISTEMAS = {
     "ACRILTECHO GREEN POWER": {"precio": 244.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_acriltecho.pdf"},
     "IMPAC 3000 FIBRATADO": {"precio": 198.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_impac_3000.pdf"},
     "IMPAC 5000 FIBRATADO": {"precio": 219.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_impac_5000.pdf"},
-    "KRIPTOFLEX 3 AÑOS CON MALLA": {"precio": 189.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_kriptoflex3000.pdf"},
-    "KRIPTOFLEX 3 AÑOS FIBRATADO": {"precio": 171.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_kriptoflex3000.pdf"},
-    "KRIPTOFLEX 5 AÑOS FIBRATADO": {"precio": 209.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_kriptoflex5000.pdf"},
-    "KRIPTOFLEX 5 AÑOS CON MALLA": {"precio": 219.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_kriptoflex5000.pdf"},
+    "KRIPTOFLEX 3 AÑOS CON MALLA": {"precio": 189.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_kriptoflex.pdf"},
+    "KRIPTOFLEX 3 AÑOS FIBRATADO": {"precio": 171.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_kriptoflex.pdf"},
+    "KRIPTOFLEX 5 AÑOS FIBRATADO": {"precio": 209.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_kriptoflex.pdf"},
+    "KRIPTOFLEX 5 AÑOS CON MALLA": {"precio": 219.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_kriptoflex.pdf"},
     "IMPAC 7000 FIBRATADO": {"precio": 239.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_impac_7000.pdf"},
     "IMPAC 7000 FIBRATADO CON MALLA": {"precio": 265.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_impac_7000.pdf"},
     "SELLOTEX": {"precio": 334.00, "garantia": "NO APLICA", "desc": DESC_GENERAL, "espec": ESPEC_GENERAL, "ficha": "ficha_sellotex.pdf"},
@@ -436,11 +436,12 @@ if boton:
             pdf.set_text_color(0, 150, 255)
             pdf.cell(0, 5, 'TARC S.A. DE C.V.', ln=True)
             
+            # 🚀 AQUÍ SE ACTUALIZARON LOS DATOS LOCALES
             pdf.set_text_color(100, 100, 100)
             pdf.set_font('Arial', '', 8)
             if tipo_obra == "LOCAL":
                 pdf.cell(0, 4, 'BOULEVARD MIGUEL ALEMAN 759, COL. CENTRO. VERACRUZ, VER. C.P. 91700', ln=True)
-                pdf.cell(0, 4, 'TEL. (229) 449 00 55 | masterventas@grupo-imac.com | www.grupo-imac.com', ln=True)
+                pdf.cell(0, 4, 'Cel. 229 337 1080 | rh@grupo-imac.com | www.grupo-imac.com', ln=True)
             else:
                 pdf.cell(0, 4, 'DIRECCIÓN DE SUCURSAL FORÁNEA O FISCAL, ESTADO. C.P. 00000', ln=True)
                 pdf.cell(0, 4, 'TEL. (000) 000 00 00 | correo_foraneo@grupo-imac.com | www.grupo-imac.com', ln=True)

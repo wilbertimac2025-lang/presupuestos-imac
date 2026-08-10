@@ -25,7 +25,6 @@ ROLES_PERMITIDOS = ["Admin", "RRHH", "Auxiliar", "Operativo"]
 if st.session_state.get("role") not in ROLES_PERMITIDOS:
     st.error(f"🚫 ACCESO RESTRINGIDO: Tu perfil de {st.session_state.get('role')} no tiene autorización para este módulo.")
     st.stop()
-# -----------------------------------------
 
 # 🕵️ FUNCIÓN DE BITÁCORA SILENCIOSA
 def registrar_bitacora(doc, modulo, accion):
@@ -39,45 +38,64 @@ def registrar_bitacora(doc, modulo, accion):
     except Exception:
         pass 
 
-# --- TEXTOS PREDEFINIDOS ---
-TEXTO_DESCRIPCION = ("Es un sistema de impermeabilizacion prefabricado, consiste en una membrana multicapa elaborada a base de "
-                     "asfaltos modificados un refuerzo central de fibra poliester, son de larga vida, resistiendo mucho mas al "
-                     "intemperismo, son de facil aplicacion pues se adhiere por fusion termica a cualquier techo o sustrato, es "
-                     "flexible por lo que se puede colocar en cualquier superficie lograndose total seguridad a lo largo de "
-                     "todas sus uniones y remates pues quedan practicamente soldadas, obteniendose asi una total impermeabilidad.")
+# 🚀 BLOQUES DE TEXTOS DINÁMICOS EXTRAÍDOS DE COTIZACIONES REALES
+DESC_ACRILICO = ("RECUBRIMIENTO ELASTICO IMPERMEABLE CON BASE EN RESINAS ACRILICAS DE LARGA VIDA Y EFICIENCIA, IDEAL PARA "
+                 "APLICARSE SOBRE TECHOS Y CUBIERTAS TANTO EN OBRAS NUEVAS, O EN SUPERFICIES QUE YA HABIAN SIDO IMPERMEABILIZADAS.")
+ESPEC_ACRILICO = ("PREPARACION DE LA SUPERFICIE A IMPERMEABILIZAR.\n"
+                  "- SELLADO DE FISURAS CON CEMENTO PLASTICO ACRILICO.\n"
+                  "- LIMPIEZA DEL AREA HASTA QUEDAR LIBRE DE POLVO.\n"
+                  "- APLICACIÓN DE SELLADOR ACRILICO COMO PRIMARIO SELLADOR.\n"
+                  "- COLOCACION DEL IMPERMEABILIZANTE ACRILICO.")
 
-TEXTO_ESPECIFICACIONES = ("PREPARACION DE LA SUPERFICIE A IMPERMEABILIZAR.\n"
-                          "- Limpieza del area hasta quedar libre de polvo.\n"
-                          "- Aplicacion de hidroflex como primario sellador.\n"
-                          "COLOCACION DEL IMPERMEABILIZANTE PREFABRICADO\n"
-                          "- Sellado de orillas y traslapes por medio de fusion.")
+DESC_PREFAB_FV = ("ES UN SISTEMA DE IMPERMEABILIZACION PREFABRICADO, CONSISTE EN UNA MEMBRANA MULTICAPA ELABORADA A BASE DE ASFALTOS "
+                  "MODIFICADOS UN REFUERZO CENTRAL DE FIBRA DE VIDRIO, ACABADO GRANULAR, SON DE LARGA VIDA, RESISTIENDO MUCHO MAS "
+                  "AL INTEMPERISMO, SON DE FACIL APLICACIÓN, SE ADHIERE POR FUSION TERMICA A CUALQUIER TECHO O SUSTRATO, ES FLEXIBLE POR "
+                  "LO QUE SE PUEDE COLOCAR EN CUALQUIER SUPERFICIE LOGRANDOSE TOTAL SEGURIDAD A LO LARGO DE TODAS SUS UNIONES Y "
+                  "REMATES PUES QUEDAN PRACTICAMENTE SOLDADAS, OBTENIENDOSE ASI UNA TOTAL IMPERMEABILIDAD.")
+                  
+DESC_PREFAB_FP = ("ES UN SISTEMA DE IMPERMEABILIZACION PREFABRICADO, CONSISTE EN UNA MEMBRANA MULTICAPA ELABORADA A BASE DE ASFALTOS "
+                  "MODIFICADOS UN REFUERZO CENTRAL DE FIBRA DE POLIESTER, ACABADO GRANULAR O LISO, SON DE LARGA VIDA, RESISTIENDO MUCHO MAS "
+                  "AL INTEMPERISMO, SON DE FACIL APLICACIÓN, SE ADHIERE POR FUSION TERMICA A CUALQUIER TECHO O SUSTRATO, ES FLEXIBLE POR "
+                  "LO QUE SE PUEDE COLOCAR EN CUALQUIER SUPERFICIE LOGRANDOSE TOTAL SEGURIDAD A LO LARGO DE TODAS SUS UNIONES Y "
+                  "REMATES PUES QUEDAN PRACTICAMENTE SOLDADAS, OBTENIENDOSE ASI UNA TOTAL IMPERMEABILIDAD.")
 
-# 🚀 CATÁLOGO MAESTRO INTELIGENTE 
+ESPEC_PREFAB = ("PREPARACION DE LA SUPERFICIE A IMPERMEABILIZAR.\n"
+                "- LIMPIEZA DEL AREA HASTA QUEDAR LIBRE DE POLVO.\n"
+                "- APLICACIÓN DE HIDROFLEX COMO PRIMARIO SELLADOR.\n"
+                "- COLOCACION DEL IMPERMEABILIZANTE PREFABRICADO.\n"
+                "- SELLADO DE ORILLAS Y TRASLAPES POR MEDIO DE FUSION.")
+
+DESC_GENERAL = "SUMINISTRO Y APLICACIÓN DE MATERIAL DE ACUERDO A REQUERIMIENTOS TÉCNICOS EN OBRA."
+ESPEC_GENERAL = ("PREPARACION DE SUPERFICIE.\n"
+                 "- LIMPIEZA DEL AREA HASTA QUEDAR LIBRE DE POLVO.\n"
+                 "- APLICACIÓN DE MATERIAL SEGÚN ESPECIFICACIONES TÉCNICAS.")
+
+# 🚀 CATÁLOGO MAESTRO INTELIGENTE (Ahora con textos dinámicos incluidos)
 CATALOGO_SISTEMAS = {
-    "LEVANTAMIENTO": {"precio": 30.00, "garantia": "NO APLICA"},
-    "ACRILTECHO GREEN POWER": {"precio": 244.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN"},
-    "IMPAC 3000 FIBRATADO": {"precio": 198.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN"},
-    "IMPAC 5000 FIBRATADO": {"precio": 219.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN"},
-    "KRIPTOFLEX 3 AÑOS CON MALLA": {"precio": 189.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN"},
-    "KRIPTOFLEX 3 AÑOS FIBRATADO": {"precio": 171.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN"},
-    "KRIPTOFLEX 5 AÑOS FIBRATADO": {"precio": 209.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN"},
-    "KRIPTOFLEX 5 AÑOS CON MALLA": {"precio": 219.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN"},
-    "IMPAC 7000 FIBRATADO": {"precio": 239.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN"},
-    "IMPAC 7000 FIBRATADO CON MALLA": {"precio": 265.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN"},
-    "SELLOTEX": {"precio": 334.00, "garantia": "NO APLICA"},
-    "JUNTA LINEAL 30 CM MASTER LASSER 3.0 LISO": {"precio": 148.00, "garantia": "NO APLICA"},
-    "JUNTA LINEAL 50 CM MASTER LASSER 3.0 LISO": {"precio": 184.00, "garantia": "NO APLICA"},
-    "JUNTA LINEAL 50 CM MASTER LASSER 4.0 LISO": {"precio": 203.00, "garantia": "NO APLICA"},
-    "JUNTA LINEAL 15 A 50 CM KRIPTOFLEX": {"precio": 125.00, "garantia": "NO APLICA"},
-    "MASTER LASSER 3.5 MM FP": {"precio": 250.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN"},
-    "MASTER LASSER 4.0 MM FP": {"precio": 294.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN"},
-    "MASTER LASSER 4.5 MM FP": {"precio": 325.00, "garantia": "10 AÑOS CONTRA DEFECTOS DE FABRICACIÓN"},
-    "MASTER LASSER 4.0 MM FP (ESCUELAS)": {"precio": 238.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN"},
-    "MASTER LASSER 3.0 MM FP LISO SIN ACABADO": {"precio": 230.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN"},
-    "MASTER LASSER 4.0 MM FP LISO SIN ACABADO": {"precio": 280.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN"},
-    "MASTER LASSER 3.0 MM FV": {"precio": 169.00, "garantia": "NO APLICA"},
-    "MASTER LASSER 3.5 MM FV": {"precio": 211.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN"},
-    "BITUFLEX": {"precio": 252.00, "garantia": "NO APLICA"}
+    "LEVANTAMIENTO": {"precio": 30.00, "garantia": "NO APLICA", "desc": "SERVICIO DE LEVANTAMIENTO FÍSICO Y MEDICIÓN DE ÁREAS EN SITIO.", "espec": "TOMA DE MEDIDAS Y REVISIÓN DE CONDICIONES DE LA SUPERFICIE."},
+    "ACRILTECHO GREEN POWER": {"precio": 244.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO},
+    "IMPAC 3000 FIBRATADO": {"precio": 198.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO},
+    "IMPAC 5000 FIBRATADO": {"precio": 219.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO},
+    "KRIPTOFLEX 3 AÑOS CON MALLA": {"precio": 189.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO},
+    "KRIPTOFLEX 3 AÑOS FIBRATADO": {"precio": 171.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO},
+    "KRIPTOFLEX 5 AÑOS FIBRATADO": {"precio": 209.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO},
+    "KRIPTOFLEX 5 AÑOS CON MALLA": {"precio": 219.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO},
+    "IMPAC 7000 FIBRATADO": {"precio": 239.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO},
+    "IMPAC 7000 FIBRATADO CON MALLA": {"precio": 265.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO},
+    "SELLOTEX": {"precio": 334.00, "garantia": "NO APLICA", "desc": DESC_GENERAL, "espec": ESPEC_GENERAL},
+    "JUNTA LINEAL 30 CM MASTER LASSER 3.0 LISO": {"precio": 148.00, "garantia": "NO APLICA", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB},
+    "JUNTA LINEAL 50 CM MASTER LASSER 3.0 LISO": {"precio": 184.00, "garantia": "NO APLICA", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB},
+    "JUNTA LINEAL 50 CM MASTER LASSER 4.0 LISO": {"precio": 203.00, "garantia": "NO APLICA", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB},
+    "JUNTA LINEAL 15 A 50 CM KRIPTOFLEX": {"precio": 125.00, "garantia": "NO APLICA", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO},
+    "MASTER LASSER 3.5 MM FP": {"precio": 250.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB},
+    "MASTER LASSER 4.0 MM FP": {"precio": 294.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB},
+    "MASTER LASSER 4.5 MM FP": {"precio": 325.00, "garantia": "10 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB},
+    "MASTER LASSER 4.0 MM FP (ESCUELAS)": {"precio": 238.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB},
+    "MASTER LASSER 3.0 MM FP LISO SIN ACABADO": {"precio": 230.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB},
+    "MASTER LASSER 4.0 MM FP LISO SIN ACABADO": {"precio": 280.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB},
+    "MASTER LASSER 3.0 MM FV": {"precio": 169.00, "garantia": "NO APLICA", "desc": DESC_PREFAB_FV, "espec": ESPEC_PREFAB},
+    "MASTER LASSER 3.5 MM FV": {"precio": 211.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FV, "espec": ESPEC_PREFAB},
+    "BITUFLEX": {"precio": 252.00, "garantia": "NO APLICA", "desc": "SUMINISTRO DE SOLVENTE Y/O MATERIAL BASE.", "espec": "APLICACIÓN SEGÚN REQUERIMIENTOS EN OBRA."}
 }
 
 class PDF(FPDF):
@@ -285,6 +303,10 @@ if boton:
             for z in zonas_data:
                 precio_unitario_real = CATALOGO_SISTEMAS[z["sistema"]]["precio"]
                 subtotal_area_real = z["m2"] * precio_unitario_real
+                
+                # 🚀 EXTRACCIÓN DINÁMICA DE TEXTOS POR SISTEMA
+                desc_real = CATALOGO_SISTEMAS[z["sistema"]]["desc"]
+                espec_real = CATALOGO_SISTEMAS[z["sistema"]]["espec"]
 
                 pdf.set_font('Arial', 'B', 11)
                 pdf.set_text_color(0, 150, 255)
@@ -296,7 +318,7 @@ if boton:
                 
                 pdf.set_font('Arial', 'I', 9)
                 pdf.set_text_color(80, 80, 80)
-                pdf.multi_cell(0, 4, txt=TEXTO_DESCRIPCION)
+                pdf.multi_cell(0, 4, txt=desc_real)
                 
                 pdf.ln(3)
                 pdf.set_font('Arial', 'B', 9)
@@ -304,7 +326,7 @@ if boton:
                 pdf.cell(0, 5, "Especificaciones Técnicas:", ln=True)
                 pdf.set_text_color(50, 50, 50)
                 pdf.set_font('Arial', '', 9)
-                pdf.multi_cell(0, 4, txt=TEXTO_ESPECIFICACIONES)
+                pdf.multi_cell(0, 4, txt=espec_real)
                 pdf.ln(4)
                 
                 pdf.set_fill_color(240, 248, 255)
@@ -363,13 +385,12 @@ if boton:
             pdf.multi_cell(0, 4, txt="- Se deberá hacer un levantamiento físico para determinar los alcances exactos.\n- No incluye trabajos no cotizados.")
             pdf.ln(3)
             
-            # 🚀 RASTREADOR INTELIGENTE DE GARANTÍAS (ESCANEA TODAS LAS ÁREAS)
             sistemas_validos = [CATALOGO_SISTEMAS[z["sistema"]]["garantia"] for z in zonas_data if CATALOGO_SISTEMAS[z["sistema"]]["garantia"] != "NO APLICA"]
             
             if sistemas_validos:
-                texto_garantia = sistemas_validos[0] # Toma la garantía real del sistema impermeable
+                texto_garantia = sistemas_validos[0]
             else:
-                texto_garantia = "NO APLICA" # Solo imprime esto si TODAS las áreas dicen NO APLICA
+                texto_garantia = "NO APLICA" 
                 
             pdf.set_font('Arial', 'B', 9)
             pdf.set_text_color(50, 50, 50)

@@ -38,7 +38,7 @@ def registrar_bitacora(doc, modulo, accion):
     except Exception:
         pass 
 
-# 🚀 BLOQUES DE TEXTOS DINÁMICOS EXTRAÍDOS DE COTIZACIONES REALES
+# 🚀 BLOQUES DE TEXTOS DINÁMICOS
 DESC_ACRILICO = ("RECUBRIMIENTO ELASTICO IMPERMEABLE CON BASE EN RESINAS ACRILICAS DE LARGA VIDA Y EFICIENCIA, IDEAL PARA "
                  "APLICARSE SOBRE TECHOS Y CUBIERTAS TANTO EN OBRAS NUEVAS, O EN SUPERFICIES QUE YA HABIAN SIDO IMPERMEABILIZADAS.")
 ESPEC_ACRILICO = ("PREPARACION DE LA SUPERFICIE A IMPERMEABILIZAR.\n"
@@ -70,32 +70,32 @@ ESPEC_GENERAL = ("PREPARACION DE SUPERFICIE.\n"
                  "- LIMPIEZA DEL AREA HASTA QUEDAR LIBRE DE POLVO.\n"
                  "- APLICACIÓN DE MATERIAL SEGÚN ESPECIFICACIONES TÉCNICAS.")
 
-# 🚀 CATÁLOGO MAESTRO INTELIGENTE (Ahora con textos dinámicos incluidos)
+# 🚀 CATÁLOGO MAESTRO INTELIGENTE (Ahora enlazado a archivos PDF específicos)
 CATALOGO_SISTEMAS = {
-    "LEVANTAMIENTO": {"precio": 30.00, "garantia": "NO APLICA", "desc": "SERVICIO DE LEVANTAMIENTO FÍSICO Y MEDICIÓN DE ÁREAS EN SITIO.", "espec": "TOMA DE MEDIDAS Y REVISIÓN DE CONDICIONES DE LA SUPERFICIE."},
-    "ACRILTECHO GREEN POWER": {"precio": 244.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO},
-    "IMPAC 3000 FIBRATADO": {"precio": 198.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO},
-    "IMPAC 5000 FIBRATADO": {"precio": 219.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO},
-    "KRIPTOFLEX 3 AÑOS CON MALLA": {"precio": 189.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO},
-    "KRIPTOFLEX 3 AÑOS FIBRATADO": {"precio": 171.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO},
-    "KRIPTOFLEX 5 AÑOS FIBRATADO": {"precio": 209.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO},
-    "KRIPTOFLEX 5 AÑOS CON MALLA": {"precio": 219.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO},
-    "IMPAC 7000 FIBRATADO": {"precio": 239.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO},
-    "IMPAC 7000 FIBRATADO CON MALLA": {"precio": 265.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO},
-    "SELLOTEX": {"precio": 334.00, "garantia": "NO APLICA", "desc": DESC_GENERAL, "espec": ESPEC_GENERAL},
-    "JUNTA LINEAL 30 CM MASTER LASSER 3.0 LISO": {"precio": 148.00, "garantia": "NO APLICA", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB},
-    "JUNTA LINEAL 50 CM MASTER LASSER 3.0 LISO": {"precio": 184.00, "garantia": "NO APLICA", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB},
-    "JUNTA LINEAL 50 CM MASTER LASSER 4.0 LISO": {"precio": 203.00, "garantia": "NO APLICA", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB},
-    "JUNTA LINEAL 15 A 50 CM KRIPTOFLEX": {"precio": 125.00, "garantia": "NO APLICA", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO},
-    "MASTER LASSER 3.5 MM FP": {"precio": 250.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB},
-    "MASTER LASSER 4.0 MM FP": {"precio": 294.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB},
-    "MASTER LASSER 4.5 MM FP": {"precio": 325.00, "garantia": "10 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB},
-    "MASTER LASSER 4.0 MM FP (ESCUELAS)": {"precio": 238.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB},
-    "MASTER LASSER 3.0 MM FP LISO SIN ACABADO": {"precio": 230.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB},
-    "MASTER LASSER 4.0 MM FP LISO SIN ACABADO": {"precio": 280.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB},
-    "MASTER LASSER 3.0 MM FV": {"precio": 169.00, "garantia": "NO APLICA", "desc": DESC_PREFAB_FV, "espec": ESPEC_PREFAB},
-    "MASTER LASSER 3.5 MM FV": {"precio": 211.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FV, "espec": ESPEC_PREFAB},
-    "BITUFLEX": {"precio": 252.00, "garantia": "NO APLICA", "desc": "SUMINISTRO DE SOLVENTE Y/O MATERIAL BASE.", "espec": "APLICACIÓN SEGÚN REQUERIMIENTOS EN OBRA."}
+    "LEVANTAMIENTO": {"precio": 30.00, "garantia": "NO APLICA", "desc": "SERVICIO DE LEVANTAMIENTO FÍSICO Y MEDICIÓN DE ÁREAS EN SITIO.", "espec": "TOMA DE MEDIDAS Y REVISIÓN DE CONDICIONES DE LA SUPERFICIE.", "ficha": "NO APLICA"},
+    "ACRILTECHO GREEN POWER": {"precio": 244.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_acriltecho.pdf"},
+    "IMPAC 3000 FIBRATADO": {"precio": 198.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_impac_3000.pdf"},
+    "IMPAC 5000 FIBRATADO": {"precio": 219.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_impac_5000.pdf"},
+    "KRIPTOFLEX 3 AÑOS CON MALLA": {"precio": 189.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_kriptoflex.pdf"},
+    "KRIPTOFLEX 3 AÑOS FIBRATADO": {"precio": 171.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_kriptoflex.pdf"},
+    "KRIPTOFLEX 5 AÑOS FIBRATADO": {"precio": 209.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_kriptoflex.pdf"},
+    "KRIPTOFLEX 5 AÑOS CON MALLA": {"precio": 219.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_kriptoflex.pdf"},
+    "IMPAC 7000 FIBRATADO": {"precio": 239.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_impac_7000.pdf"},
+    "IMPAC 7000 FIBRATADO CON MALLA": {"precio": 265.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_impac_7000.pdf"},
+    "SELLOTEX": {"precio": 334.00, "garantia": "NO APLICA", "desc": DESC_GENERAL, "espec": ESPEC_GENERAL, "ficha": "ficha_sellotex.pdf"},
+    "JUNTA LINEAL 30 CM MASTER LASSER 3.0 LISO": {"precio": 148.00, "garantia": "NO APLICA", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "NO APLICA"},
+    "JUNTA LINEAL 50 CM MASTER LASSER 3.0 LISO": {"precio": 184.00, "garantia": "NO APLICA", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "NO APLICA"},
+    "JUNTA LINEAL 50 CM MASTER LASSER 4.0 LISO": {"precio": 203.00, "garantia": "NO APLICA", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "NO APLICA"},
+    "JUNTA LINEAL 15 A 50 CM KRIPTOFLEX": {"precio": 125.00, "garantia": "NO APLICA", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "NO APLICA"},
+    "MASTER LASSER 3.5 MM FP": {"precio": 250.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "ficha_master_lasser_35.pdf"},
+    "MASTER LASSER 4.0 MM FP": {"precio": 294.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "ficha_master_lasser_4.pdf"},
+    "MASTER LASSER 4.5 MM FP": {"precio": 325.00, "garantia": "10 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "ficha_master_lasser_45.pdf"},
+    "MASTER LASSER 4.0 MM FP (ESCUELAS)": {"precio": 238.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "ficha_master_lasser_4.pdf"},
+    "MASTER LASSER 3.0 MM FP LISO SIN ACABADO": {"precio": 230.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "ficha_master_lasser_3_liso.pdf"},
+    "MASTER LASSER 4.0 MM FP LISO SIN ACABADO": {"precio": 280.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "ficha_master_lasser_4_liso.pdf"},
+    "MASTER LASSER 3.0 MM FV": {"precio": 169.00, "garantia": "NO APLICA", "desc": DESC_PREFAB_FV, "espec": ESPEC_PREFAB, "ficha": "ficha_master_lasser_3_fv.pdf"},
+    "MASTER LASSER 3.5 MM FV": {"precio": 211.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FV, "espec": ESPEC_PREFAB, "ficha": "ficha_master_lasser_35_fv.pdf"},
+    "BITUFLEX": {"precio": 252.00, "garantia": "NO APLICA", "desc": "SUMINISTRO DE SOLVENTE Y/O MATERIAL BASE.", "espec": "APLICACIÓN SEGÚN REQUERIMIENTOS EN OBRA.", "ficha": "NO APLICA"}
 }
 
 class PDF(FPDF):
@@ -149,7 +149,7 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio, ti
         password = st.secrets["PASS_BOT"]
         
         if tipo_obra == "LOCAL":
-            correo_destino = "comercial@grupo-imac.com, rh@grupo-imac.com, otro.correo@grupo-imac.com"
+            correo_destino = "comercial@grupo-imac.com, direccion@grupo-imac.com, otro.correo@grupo-imac.com"
         else:
             correo_destino = "comercial@grupo-imac.com, foraneos@grupo-imac.com, direccion@grupo-imac.com"
         
@@ -304,7 +304,6 @@ if boton:
                 precio_unitario_real = CATALOGO_SISTEMAS[z["sistema"]]["precio"]
                 subtotal_area_real = z["m2"] * precio_unitario_real
                 
-                # 🚀 EXTRACCIÓN DINÁMICA DE TEXTOS POR SISTEMA
                 desc_real = CATALOGO_SISTEMAS[z["sistema"]]["desc"]
                 espec_real = CATALOGO_SISTEMAS[z["sistema"]]["espec"]
 
@@ -488,23 +487,23 @@ if boton:
             pdf_base_bytes = pdf.output(dest='S').encode('latin-1')
             pdf_final_para_descargar = pdf_base_bytes
 
-            if tipo_obra == "LOCAL":
-                archivo_ficha = "ficha_tecnica_local.pdf"
-            else:
-                archivo_ficha = "ficha_tecnica_foranea.pdf"
+            # 🚀 LÓGICA DE FICHAS TÉCNICAS DINÁMICAS
+            sistema_principal_para_ficha = zonas_data[0]["sistema"]
+            archivo_ficha = CATALOGO_SISTEMAS[sistema_principal_para_ficha]["ficha"]
             
-            if os.path.exists(archivo_ficha):
-                fusionador = PdfMerger()
-                fusionador.append(io.BytesIO(pdf_base_bytes))
-                fusionador.append(archivo_ficha)
-                
-                archivo_salida = io.BytesIO()
-                fusionador.write(archivo_salida)
-                fusionador.close()
-                
-                pdf_final_para_descargar = archivo_salida.getvalue()
-            else:
-                st.warning(f"⚠️ Alerta: No se encontró el archivo '{archivo_ficha}'. Se descargará el presupuesto sin la ficha técnica.")
+            if archivo_ficha != "NO APLICA":
+                if os.path.exists(archivo_ficha):
+                    fusionador = PdfMerger()
+                    fusionador.append(io.BytesIO(pdf_base_bytes))
+                    fusionador.append(archivo_ficha)
+                    
+                    archivo_salida = io.BytesIO()
+                    fusionador.write(archivo_salida)
+                    fusionador.close()
+                    
+                    pdf_final_para_descargar = archivo_salida.getvalue()
+                else:
+                    st.warning(f"⚠️ Alerta: No se encontró la ficha técnica '{archivo_ficha}' para el sistema {sistema_principal_para_ficha}. Sube este PDF a tu GitHub para que se adjunte automáticamente.")
             
             nombre_file = f"Presupuesto_{folio_actual}_{cliente.replace(' ', '_')}.pdf"
             

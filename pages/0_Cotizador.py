@@ -149,7 +149,7 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio, ti
         password = st.secrets["PASS_BOT"]
         
         if tipo_obra == "LOCAL":
-            correo_destino = "comercial@grupo-imac.com, rh@grupo-imac.com, obrasauxiliar@grupo-imac.com, aco@grupo-imac.com, act@grupo-imac.com"
+            correo_destino = "comercial@grupo-imac.com, direccion@grupo-imac.com, otro.correo@grupo-imac.com"
         else:
             correo_destino = "comercial@grupo-imac.com, foraneos@grupo-imac.com, direccion@grupo-imac.com"
         
@@ -384,19 +384,31 @@ if boton:
             pdf.multi_cell(0, 4, txt="- Se deberá hacer un levantamiento físico para determinar los alcances exactos.\n- No incluye trabajos no cotizados.")
             pdf.ln(3)
             
-            sistemas_validos = [CATALOGO_SISTEMAS[z["sistema"]]["garantia"] for z in zonas_data if CATALOGO_SISTEMAS[z["sistema"]]["garantia"] != "NO APLICA"]
-            
-            if sistemas_validos:
-                texto_garantia = sistemas_validos[0]
-            else:
-                texto_garantia = "NO APLICA" 
-                
+            # 🚀 RASTREADOR MÚLTIPLE DE GARANTÍAS
+            garantias_unicas = {}
+            for z in zonas_data:
+                sis = z["sistema"]
+                gar = CATALOGO_SISTEMAS[sis]["garantia"]
+                if gar != "NO APLICA" and sis not in garantias_unicas:
+                    garantias_unicas[sis] = gar
+                    
             pdf.set_font('Arial', 'B', 9)
             pdf.set_text_color(50, 50, 50)
-            pdf.cell(60, 5, "Garantía del Sistema:")
+            pdf.cell(60, 5, "Garantías por Sistema:")
             pdf.set_font('Arial', '', 9)
             pdf.set_text_color(15, 60, 140)
-            pdf.cell(0, 5, texto_garantia, ln=True)
+            
+            if not garantias_unicas:
+                pdf.cell(0, 5, "NO APLICA", ln=True)
+            else:
+                primer_item = True
+                for sis, gar in garantias_unicas.items():
+                    if primer_item:
+                        pdf.cell(0, 5, f"{sis}: {gar}", ln=True)
+                        primer_item = False
+                    else:
+                        pdf.cell(60, 5, "") # Espacio en blanco para que quede alineado abajo del anterior
+                        pdf.cell(0, 5, f"{sis}: {gar}", ln=True)
             
             pdf.set_font('Arial', 'B', 9)
             pdf.set_text_color(50, 50, 50)
@@ -436,7 +448,6 @@ if boton:
             pdf.set_text_color(0, 150, 255)
             pdf.cell(0, 5, 'TARC S.A. DE C.V.', ln=True)
             
-            # 🚀 AQUÍ SE ACTUALIZARON LOS DATOS LOCALES
             pdf.set_text_color(100, 100, 100)
             pdf.set_font('Arial', '', 8)
             if tipo_obra == "LOCAL":
@@ -486,33 +497,43 @@ if boton:
                 if os.path.exists(temp_img): os.remove(temp_img)
 
             pdf_base_bytes = pdf.output(dest='S').encode('latin-1')
-            pdf_final_para_descargar = pdf_base_bytes
 
-            sistema_principal_para_ficha = zonas_data[0]["sistema"]
-            ficha_asignada = CATALOGO_SISTEMAS[sistema_principal_para_ficha]["ficha"]
-            
-            if ficha_asignada == "DINAMICA_LOCAL_FORANEA":
-                if tipo_obra == "LOCAL":
-                    archivo_ficha = "ficha_tecnica_local.pdf"
+            # 🚀 FUSIÓN MÚLTIPLE DE FICHAS TÉCNICAS
+            archivos_unicos_a_fusionar = []
+            sistemas_con_alerta = []
+
+            for z in zonas_data:
+                sis = z["sistema"]
+                ficha_asignada = CATALOGO_SISTEMAS[sis]["ficha"]
+                
+                if ficha_asignada == "DINAMICA_LOCAL_FORANEA":
+                    archivo_ficha = "ficha_tecnica_local.pdf" if tipo_obra == "LOCAL" else "ficha_tecnica_foranea.pdf"
                 else:
-                    archivo_ficha = "ficha_tecnica_foranea.pdf"
+                    archivo_ficha = ficha_asignada
+                    
+                if archivo_ficha != "NO APLICA" and archivo_ficha not in [f[1] for f in archivos_unicos_a_fusionar]:
+                    archivos_unicos_a_fusionar.append((sis, archivo_ficha))
+
+            if archivos_unicos_a_fusionar:
+                fusionador = PdfMerger()
+                fusionador.append(io.BytesIO(pdf_base_bytes))
+                
+                for sis, archivo in archivos_unicos_a_fusionar:
+                    if os.path.exists(archivo):
+                        fusionador.append(archivo)
+                    else:
+                        sistemas_con_alerta.append(f"{sis}")
+                        
+                archivo_salida = io.BytesIO()
+                fusionador.write(archivo_salida)
+                fusionador.close()
+                pdf_final_para_descargar = archivo_salida.getvalue()
+                
+                if sistemas_con_alerta:
+                    st.warning(f"⚠️ Alerta: Faltan las siguientes fichas técnicas en tu GitHub: {', '.join(sistemas_con_alerta)}")
             else:
-                archivo_ficha = ficha_asignada
-            
-            if archivo_ficha != "NO APLICA":
-                if os.path.exists(archivo_ficha):
-                    fusionador = PdfMerger()
-                    fusionador.append(io.BytesIO(pdf_base_bytes))
-                    fusionador.append(archivo_ficha)
-                    
-                    archivo_salida = io.BytesIO()
-                    fusionador.write(archivo_salida)
-                    fusionador.close()
-                    
-                    pdf_final_para_descargar = archivo_salida.getvalue()
-                else:
-                    st.warning(f"⚠️ Alerta: No se encontró la ficha técnica '{archivo_ficha}' para el sistema {sistema_principal_para_ficha}. Sube este PDF a tu GitHub para que se adjunte automáticamente.")
-            
+                pdf_final_para_descargar = pdf_base_bytes
+
             nombre_file = f"Presupuesto_{folio_actual}_{cliente.replace(' ', '_')}.pdf"
             
             if hoja:

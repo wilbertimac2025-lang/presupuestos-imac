@@ -14,7 +14,7 @@ USUARIOS_VALIDOS = {
     "rrhh_imac": {"clave": "RRHH2026", "rol": "RRHH", "zona": "Local"},
     
     # Auxiliares y Operativos segmentados por territorio
-    "aux_local": {"clave": "LOCAL2026", "rol": "Auxiliar", "zona": "Local"},
+    "jose": {"clave": "local26", "rol": "Auxiliar", "zona": "Local"},
     "aux_foraneo": {"clave": "FORANEO2026", "rol": "Auxiliar", "zona": "Foránea"},
     
     # 🚀 NUEVO: Usuario Operativo (Exclusivo para zona Foránea)

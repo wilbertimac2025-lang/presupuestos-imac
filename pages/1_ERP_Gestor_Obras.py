@@ -7,10 +7,10 @@ import pandas as pd
 from fpdf import FPDF
 import os
 import io
+import smtplib
+from email.message import EmailMessage
 from PyPDF2 import PdfMerger
 from PIL import Image
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
 
 st.set_page_config(page_title="ERP - Gestión de Obras", page_icon="🏗️", layout="wide")
 
@@ -41,6 +41,30 @@ def limpiar_monto(valor):
     try: return float(str(valor).replace("$", "").replace(",", "").replace(" ", "").strip())
     except: return 0.0
 
+# 📧 NUEVA FUNCIÓN: ENVÍO DE PDF A LOS 4 CORREOS CORPORATIVOS
+def enviar_cierre_por_correo(pdf_bytes, nombre_archivo, cliente, folio):
+    try:
+        remitente = st.secrets["CORREO_BOT"]
+        password = st.secrets["PASS_BOT"]
+        
+        # 🚀 AQUÍ ESTÁN LOS 4 CORREOS CONFIGURADOS
+        correo_destino = "comercial@grupo-imac.com, direccion@grupo-imac.com, pue@grupo-imac.com, mpue@grupo-imac.com" 
+        
+        msg = EmailMessage()
+        msg['Subject'] = f'CIERRE DE OBRA Y EVIDENCIA: {folio} - {cliente}'
+        msg['From'] = remitente
+        msg['To'] = correo_destino
+        msg.set_content(f"Se ha registrado el cierre definitivo de la obra en el ERP.\n\nFolio: {folio}\nCliente: {cliente}\n\nSe adjunta la carta de agradecimiento junto con la evidencia fotográfica del trabajo entregado.")
+        msg.add_attachment(pdf_bytes, maintype='application', subtype='pdf', filename=nombre_archivo)
+        
+        with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
+            smtp.starttls()
+            smtp.login(remitente, password)
+            smtp.send_message(msg)
+        return True
+    except Exception as e: 
+        return False
+
 # --- CLASE PARA EL PDF DE LA CARTA ---
 class PDF_Carta(FPDF):
     def header(self):
@@ -65,33 +89,6 @@ def conectar_sheets():
         ID_DEL_EXCEL = "1-grdT2H5dBlGVPvJbZ5wVYDdtVjQEEmUPGpvEm6C0Gc" 
         return cliente.open_by_key(ID_DEL_EXCEL)
     except Exception: return None
-
-# ☁️ NUEVA FUNCIÓN CORREGIDA CON LA CARPETA DE DRIVE
-def subir_a_drive_y_obtener_link(pdf_bytes, filename):
-    try:
-        credenciales_dic = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
-        scopes = ["https://www.googleapis.com/auth/drive"]
-        creds = Credentials.from_service_account_info(credenciales_dic, scopes=scopes)
-        servicio_drive = build('drive', 'v3', credentials=creds)
-        
-        # 🚀 AQUÍ ESTÁ EL ID DE LA CARPETA PARA ELIMINAR EL ERROR
-        folder_id = "19f6IF6JLpdmbiAXNc_XRILmy05llZggY"
-        
-        file_metadata = {
-            'name': filename,
-            'parents': [folder_id] 
-        }
-        media = MediaIoBaseUpload(io.BytesIO(pdf_bytes), mimetype='application/pdf')
-        
-        archivo = servicio_drive.files().create(body=file_metadata, media_body=media, fields='id, webViewLink').execute()
-        id_archivo = archivo.get('id')
-        
-        servicio_drive.permissions().create(fileId=id_archivo, body={'type': 'anyone', 'role': 'reader'}).execute()
-        
-        return archivo.get('webViewLink')
-    except Exception as e:
-        st.error(f"⚠️ Error al guardar en la nube (Drive): {e}")
-        return None
 
 st.title("🏗️ Centro de Control de Obras")
 st.markdown("---")
@@ -153,7 +150,7 @@ if doc:
                         residente = st.text_input("Nombre del Residente / Encargado")
                         
                         if not lista_rps:
-                            st.warning("⚠️ No hay Registros Patronales dados de alta. Ve a la pestaña 'Catálogo Registros Patronales' para agregarlos primero.")
+                            st.warning("⚠️ No hay Registros Patronales dados de alta.")
                             registro_patronal_sel = ""
                         else:
                             registro_patronal_sel = st.selectbox("Registro Patronal IMSS Asignado:", lista_rps)
@@ -167,16 +164,13 @@ if doc:
                                 st.warning("⚠️ Debes asignar el residente, el Registro Patronal IMSS y el Registro de Obra.")
                             else:
                                 rp_final = registro_patronal_sel.split(" - ")[0].strip()
-                                
                                 hoja_obras.append_row([
                                     folio_seleccionado, cliente_obtenido, proyecto_obtenido,
                                     "EN EJECUCIÓN", monto_obtenido, fecha_inicio.strftime("%d/%m/%Y"), 
                                     residente.upper(), rp_final.upper(), registro_obra.upper()
                                 ])
-                                
-                                registrar_bitacora(doc, "Gestor de Obras", f"Dio de alta la obra {folio_seleccionado} (RP: {rp_final.upper()}, SIROC: {registro_obra.upper()})")
-                                
-                                st.success(f"¡Obra dada de alta con éxito! RP: {rp_final.upper()} | Registro Obra: {registro_obra.upper()}")
+                                registrar_bitacora(doc, "Gestor de Obras", f"Dio de alta la obra {folio_seleccionado}")
+                                st.success(f"¡Obra dada de alta con éxito!")
 
     # ==========================================
     # PESTAÑA 2: CONVENIOS
@@ -196,7 +190,7 @@ if doc:
                 with colB:
                     st.info(f"📊 **Presupuesto Actual Autorizado:** ${presupuesto_actual:,.2f} MXN")
                     with st.form("form_convenio"):
-                        concepto_conv = st.text_input("Concepto del Convenio", placeholder="Ej. Trabajos extra")
+                        concepto_conv = st.text_input("Concepto del Convenio")
                         monto_conv = st.number_input("Monto Adicional ($ MXN)", min_value=0.0, step=500.0)
                         btn_conv = st.form_submit_button("📝 REGISTRAR CONVENIO")
                         
@@ -206,18 +200,16 @@ if doc:
                                 fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
                                 hoja_convenios.append_row([fecha_hoy, folio_convenio, concepto_conv.upper(), monto_conv])
                                 nuevo_presupuesto = presupuesto_actual + monto_conv
-                                
                                 fila_excel = next((i + 2 for i, f in enumerate(datos_obras) if str(f.get(llave_folio_obra, "")) == folio_convenio), 0)
                                 col_excel = list(datos_obras[0].keys()).index(llave_monto) + 1 if datos_obras and llave_monto in datos_obras[0] else 0
                                 
                                 if fila_excel > 0 and col_excel > 0:
                                     hoja_obras.update_cell(fila_excel, col_excel, nuevo_presupuesto)
-                                    registrar_bitacora(doc, "Gestor de Obras", f"Registró convenio en {folio_convenio} por ${monto_conv:,.2f}. Concepto: {concepto_conv.upper()}")
                                     st.success(f"✅ Presupuesto elevado a ${nuevo_presupuesto:,.2f}")
                                     st.rerun()
 
     # ==========================================
-    # PESTAÑA 3: CIERRE DE OBRA Y GENERACIÓN PDF
+    # PESTAÑA 3: CIERRE DE OBRA Y GENERACIÓN PDF (VÍA CORREO)
     # ==========================================
     with tab3:
         colX, colY = st.columns([1, 2])
@@ -242,12 +234,11 @@ if doc:
                 with colY:
                     st.info(f"Vas a cerrar definitivamente la obra de **{cliente_cierre}**.")
                     
-                    if st.button("🔒 CERRAR OBRA, GUARDAR Y GENERAR CARTA", type="primary"):
-                        
+                    if st.button("🔒 CERRAR OBRA, GUARDAR Y ENVIAR CARTA", type="primary"):
                         if not foto_responsiva:
-                            st.error("⚠️ ACCIÓN DENEGADA: Es estrictamente obligatorio subir la foto del trabajo entregado para poder procesar el cierre de la obra.")
+                            st.error("⚠️ ACCIÓN DENEGADA: Es estrictamente obligatorio subir la foto del trabajo entregado para procesar el cierre.")
                         else:
-                            with st.spinner("Ensamblando PDF cuadrado, subiendo a la nube y actualizando Excel..."):
+                            with st.spinner("Ensamblando PDF con foto centrada y enviando a los 4 correos corporativos..."):
                                 
                                 pdf = PDF_Carta()
                                 pdf.add_page()
@@ -271,7 +262,7 @@ if doc:
                                     f"le extiende nuestro más sincero agradecimiento por la confianza depositada en nosotros para la "
                                     f"ejecución de la obra: '{proyecto_cierre}'.\n\n"
                                     f"Hacemos de su conocimiento que los trabajos han sido concluidos satisfactoriamente. "
-                                    f"Nuestro compromiso es brindarle la más alta calidad en materiales y mano de obra, esperando que el resultado final cumpla y supere sus expectativas.\n\n"
+                                    f"Nuestro compromiso es brindarle la más alta calidad en materiales y mano de obra.\n\n"
                                     f"Quedamos a su entera disposición para futuros proyectos y garantías correspondientes.\n\n"
                                     f"Sin más por el momento, le enviamos un cordial saludo."
                                 )
@@ -285,30 +276,26 @@ if doc:
                                 pdf.cell(0, 5, "Departamento de Operaciones", ln=True, align='C')
                                 pdf.cell(0, 5, "TARC S.A. DE C.V.", ln=True, align='C')
 
-                                # 🚀 NUEVO MOTOR PARA CUADRAR FOTOS A TAMAÑO CARTA
                                 ext = foto_responsiva.name.split('.')[-1].lower()
                                 es_pdf = ext == 'pdf'
                                 
                                 if not es_pdf:
-                                    # Agregamos una nueva hoja al reporte
                                     pdf.add_page()
                                     pdf.set_font('Arial', 'B', 14)
                                     pdf.set_text_color(15, 60, 140)
                                     pdf.cell(0, 10, "EVIDENCIA FOTOGRÁFICA DE CIERRE", ln=True, align='C')
                                     
-                                    # Limpiamos y procesamos la imagen
                                     temp_img_path = "temp_cierre.jpg"
                                     img = Image.open(foto_responsiva)
                                     if img.mode in ('RGBA', 'P'): 
                                         img = img.convert('RGB')
                                     img.save(temp_img_path, format="JPEG")
                                     
-                                    # Matemáticas para cuadrar la foto en la hoja
                                     w_px, h_px = img.size
                                     ratio = min(180 / w_px, 220 / h_px)
                                     w_mm = w_px * ratio
                                     h_mm = h_px * ratio
-                                    x_mm = (210 - w_mm) / 2 # Centrado horizontal perfecto
+                                    x_mm = (210 - w_mm) / 2
                                     
                                     pdf.image(temp_img_path, x=x_mm, y=40, w=w_mm, h=h_mm)
                                     
@@ -319,16 +306,14 @@ if doc:
                                     fusionador = PdfMerger()
                                     fusionador.append(io.BytesIO(pdf_base_bytes))
                                     fusionador.append(io.BytesIO(foto_responsiva.getvalue()))
-                                    
                                     archivo_salida = io.BytesIO()
                                     fusionador.write(archivo_salida)
                                     fusionador.close()
                                     pdf_final_bytes = archivo_salida.getvalue()
 
-                                # Subimos a Drive con el ID de la carpeta
-                                link_drive = subir_a_drive_y_obtener_link(pdf_final_bytes, f"Cierre_{folio_cierre}_{cliente_cierre}.pdf")
+                                nombre_doc = f"Cierre_{folio_cierre}_{cliente_cierre}.pdf"
+                                envio_exitoso = enviar_cierre_por_correo(pdf_final_bytes, nombre_doc, cliente_cierre, folio_cierre)
 
-                                # Actualizamos el Excel
                                 fila_excel = next((i + 2 for i, f in enumerate(datos_obras) if str(f.get(llave_folio_obra, "")) == folio_cierre), 0)
                                 col_estatus = list(datos_obras[0].keys()).index(llave_estatus) + 1 if datos_obras and llave_estatus in datos_obras[0] else 0
                                 
@@ -338,19 +323,19 @@ if doc:
                                     headers_obras = list(datos_obras[0].keys()) if datos_obras else []
                                     col_link = next((i + 1 for i, h in enumerate(headers_obras) if "LINK" in str(h).upper() or "CARTA" in str(h).upper()), None)
                                     
-                                    if col_link and link_drive:
-                                        hoja_obras.update_cell(fila_excel, col_link, link_drive)
+                                    texto_respaldo = f"ENVIADO POR CORREO ({datetime.datetime.now().strftime('%d/%m/%y')})" if envio_exitoso else "FALLO ENVÍO - DESCARGAR MANUAL"
+                                    if col_link: hoja_obras.update_cell(fila_excel, col_link, texto_respaldo)
                                     
-                                    registrar_bitacora(doc, "Gestor de Obras", f"Cerró definitivamente la obra {folio_cierre}. Evidencia subida.")
+                                    registrar_bitacora(doc, "Gestor de Obras", f"Cerró obra {folio_cierre}. Evidencia enviada por correo: {envio_exitoso}")
                                     
                                 st.success(f"✅ ¡La obra {folio_cierre} ha sido marcada como CERRADA exitosamente!")
-                                if link_drive:
-                                    st.info(f"☁️ Documento guardado de por vida en la nube. Puedes verlo desde tu Excel.")
+                                if envio_exitoso:
+                                    st.info(f"📧 El documento de cierre y la foto de evidencia han sido enviados automáticamente a los 4 correos directivos de Grupo IMAC.")
                                     
                                 st.download_button(
                                     label="📥 DESCARGAR DOCUMENTO FINAL", 
                                     data=pdf_final_bytes, 
-                                    file_name=f"Cierre_Oficial_{folio_cierre}.pdf", 
+                                    file_name=nombre_doc, 
                                     mime="application/pdf"
                                 )
 
@@ -359,35 +344,25 @@ if doc:
     # ==========================================
     with tab4:
         st.subheader("🏛️ Alta de Registros Patronales (IMSS)")
-        st.write("Agrega aquí los Registros Patronales (RP) de la empresa o subcontratistas. Al guardarlos, aparecerán como opción múltiple al dar de alta una nueva obra.")
+        st.write("Agrega aquí los Registros Patronales (RP) de la empresa o subcontratistas.")
         
         with st.form("form_alta_rp"):
             col1, col2 = st.columns(2)
-            with col1:
-                nuevo_rp = st.text_input("Clave del Registro Patronal", placeholder="Ej. Y545678910")
-            with col2:
-                razon_social = st.text_input("Razón Social / Empresa Asociada", placeholder="Ej. TARC S.A. DE C.V.")
-            
+            with col1: nuevo_rp = st.text_input("Clave del Registro Patronal", placeholder="Ej. Y545678910")
+            with col2: razon_social = st.text_input("Razón Social / Empresa Asociada", placeholder="Ej. TARC S.A. DE C.V.")
             notas_rp = st.text_input("Notas o Detalles (Opcional)")
-            
             btn_rp = st.form_submit_button("💾 GUARDAR REGISTRO PATRONAL")
             
             if btn_rp:
-                if not nuevo_rp or not razon_social:
-                    st.error("⚠️ La Clave del RP y la Razón Social son obligatorias.")
+                if not nuevo_rp or not razon_social: st.error("⚠️ La Clave del RP y la Razón Social son obligatorias.")
                 else:
                     claves_existentes = [str(r.get("Registro Patronal", "")).upper() for r in datos_rp]
-                    if nuevo_rp.upper() in claves_existentes:
-                        st.error(f"⚠️ El Registro Patronal {nuevo_rp.upper()} ya existe en la base de datos.")
+                    if nuevo_rp.upper() in claves_existentes: st.error(f"⚠️ El Registro Patronal {nuevo_rp.upper()} ya existe.")
                     else:
                         hoja_rp.append_row([nuevo_rp.upper(), razon_social.upper(), notas_rp])
-                        registrar_bitacora(doc, "Gestor de Obras", f"Dio de alta el Registro Patronal {nuevo_rp.upper()} ({razon_social.upper()})")
-                        st.success(f"✅ Registro Patronal {nuevo_rp.upper()} agregado exitosamente al catálogo.")
+                        st.success(f"✅ Registro Patronal agregado exitosamente.")
                         st.rerun()
         
         st.markdown("---")
         st.subheader("📋 Catálogo Actual de Registros Patronales")
-        if datos_rp:
-            st.dataframe(pd.DataFrame(datos_rp), use_container_width=True, hide_index=True)
-        else:
-            st.info("Aún no hay registros patronales guardados.")
+        if datos_rp: st.dataframe(pd.DataFrame(datos_rp), use_container_width=True, hide_index=True)

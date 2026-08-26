@@ -212,7 +212,7 @@ if doc:
                                     st.rerun()
 
     # ==========================================
-    # PESTAÑA 3: CIERRE DE OBRA Y GENERACIÓN PDF (ACTUALIZADA)
+    # PESTAÑA 3: CIERRE DE OBRA Y GENERACIÓN PDF (ACTUALIZADA Y OBLIGATORIA)
     # ==========================================
     with tab3:
         colX, colY = st.columns([1, 2])
@@ -220,11 +220,11 @@ if doc:
             st.subheader("Selección de Obra a Cerrar")
             folio_cierre = st.selectbox("Obra a Finalizar:", ["..."] + obras_activas, key="sel_cierre") if obras_activas else "..."
             
-            # 🚀 NUEVO: Subida de la carta / responsiva firmada
+            # 🚀 NUEVO: Subida de Evidencia (Obligatoria)
             if folio_cierre != "...":
                 st.markdown("---")
-                st.write("📷 **Evidencia de Cierre (Opcional)**")
-                foto_responsiva = st.file_uploader("Sube la foto o escaneo de la responsiva firmada por el cliente:", type=["jpg", "jpeg", "png", "pdf"])
+                st.write("📷 **Evidencia de Cierre (Obligatoria)**")
+                foto_responsiva = st.file_uploader("Suba foto del trabajo entregado (Obligatorio):", type=["jpg", "jpeg", "png", "pdf"])
 
         if folio_cierre != "...":
             obra_a_cerrar = next((item for item in datos_obras if str(item.get(llave_folio_obra, "")) == folio_cierre), None)
@@ -237,51 +237,56 @@ if doc:
                 
                 with colY:
                     st.info(f"Vas a cerrar definitivamente la obra de **{cliente_cierre}**.")
+                    
                     if st.button("🔒 CERRAR OBRA, GUARDAR Y GENERAR CARTA", type="primary"):
-                        with st.spinner("Ensamblando PDF, subiendo a la nube y actualizando Excel..."):
-                            
-                            # 1. Generamos el PDF base (La Carta de Agradecimiento)
-                            pdf = PDF_Carta()
-                            pdf.add_page()
-                            fecha_hoy = datetime.datetime.now().strftime("%d de %B del %Y")
-                            
-                            pdf.set_font('Arial', '', 11)
-                            pdf.cell(0, 5, f"Veracruz, Ver. a {fecha_hoy}", ln=True, align='R')
-                            pdf.ln(15)
-                            pdf.set_font('Arial', 'B', 12)
-                            pdf.set_text_color(15, 60, 140)
-                            pdf.cell(0, 6, f"ATENCIÓN: {str(cliente_cierre).upper()}", ln=True)
-                            pdf.set_font('Arial', 'B', 10)
-                            pdf.set_text_color(100, 100, 100)
-                            pdf.cell(0, 6, f"REF: Cierre de Proyecto - Folio {folio_cierre}", ln=True)
-                            pdf.ln(10)
-                            
-                            pdf.set_font('Arial', '', 11)
-                            pdf.set_text_color(50, 50, 50)
-                            texto_cuerpo = (
-                                f"Por medio de la presente, el equipo directivo y operativo de TARC S.A. de C.V. (Grupo IMAC) "
-                                f"le extiende nuestro más sincero agradecimiento por la confianza depositada en nosotros para la "
-                                f"ejecución de la obra: '{proyecto_cierre}'.\n\n"
-                                f"Hacemos de su conocimiento que los trabajos han sido concluidos satisfactoriamente. "
-                                f"Nuestro compromiso es brindarle la más alta calidad en materiales y mano de obra, esperando que el resultado final cumpla y supere sus expectativas.\n\n"
-                                f"Quedamos a su entera disposición para futuros proyectos y garantías correspondientes.\n\n"
-                                f"Sin más por el momento, le enviamos un cordial saludo."
-                            )
-                            pdf.multi_cell(0, 6, txt=texto_cuerpo)
-                            pdf.ln(25)
-                            pdf.set_font('Arial', 'B', 11)
-                            pdf.set_text_color(15, 60, 140)
-                            pdf.cell(0, 5, "Atentamente,", ln=True, align='C')
-                            pdf.ln(10)
-                            pdf.cell(0, 5, "___________________________________", ln=True, align='C')
-                            pdf.cell(0, 5, "Departamento de Operaciones", ln=True, align='C')
-                            pdf.cell(0, 5, "TARC S.A. DE C.V.", ln=True, align='C')
+                        
+                        # 🛡️ CANDADO: Validar que se haya subido la foto antes de hacer cualquier cosa
+                        if not foto_responsiva:
+                            st.error("⚠️ ACCIÓN DENEGADA: Es estrictamente obligatorio subir la foto del trabajo entregado para poder procesar el cierre de la obra.")
+                        else:
+                            with st.spinner("Ensamblando PDF, subiendo a la nube y actualizando Excel..."):
+                                
+                                # 1. Generamos el PDF base (La Carta de Agradecimiento)
+                                pdf = PDF_Carta()
+                                pdf.add_page()
+                                fecha_hoy = datetime.datetime.now().strftime("%d de %B del %Y")
+                                
+                                pdf.set_font('Arial', '', 11)
+                                pdf.cell(0, 5, f"Veracruz, Ver. a {fecha_hoy}", ln=True, align='R')
+                                pdf.ln(15)
+                                pdf.set_font('Arial', 'B', 12)
+                                pdf.set_text_color(15, 60, 140)
+                                pdf.cell(0, 6, f"ATENCIÓN: {str(cliente_cierre).upper()}", ln=True)
+                                pdf.set_font('Arial', 'B', 10)
+                                pdf.set_text_color(100, 100, 100)
+                                pdf.cell(0, 6, f"REF: Cierre de Proyecto - Folio {folio_cierre}", ln=True)
+                                pdf.ln(10)
+                                
+                                pdf.set_font('Arial', '', 11)
+                                pdf.set_text_color(50, 50, 50)
+                                texto_cuerpo = (
+                                    f"Por medio de la presente, el equipo directivo y operativo de TARC S.A. de C.V. (Grupo IMAC) "
+                                    f"le extiende nuestro más sincero agradecimiento por la confianza depositada en nosotros para la "
+                                    f"ejecución de la obra: '{proyecto_cierre}'.\n\n"
+                                    f"Hacemos de su conocimiento que los trabajos han sido concluidos satisfactoriamente. "
+                                    f"Nuestro compromiso es brindarle la más alta calidad en materiales y mano de obra, esperando que el resultado final cumpla y supere sus expectativas.\n\n"
+                                    f"Quedamos a su entera disposición para futuros proyectos y garantías correspondientes.\n\n"
+                                    f"Sin más por el momento, le enviamos un cordial saludo."
+                                )
+                                pdf.multi_cell(0, 6, txt=texto_cuerpo)
+                                pdf.ln(25)
+                                pdf.set_font('Arial', 'B', 11)
+                                pdf.set_text_color(15, 60, 140)
+                                pdf.cell(0, 5, "Atentamente,", ln=True, align='C')
+                                pdf.ln(10)
+                                pdf.cell(0, 5, "___________________________________", ln=True, align='C')
+                                pdf.cell(0, 5, "Departamento de Operaciones", ln=True, align='C')
+                                pdf.cell(0, 5, "TARC S.A. DE C.V.", ln=True, align='C')
 
-                            pdf_base_bytes = pdf.output(dest='S').encode('latin-1')
-                            pdf_final_bytes = pdf_base_bytes
+                                pdf_base_bytes = pdf.output(dest='S').encode('latin-1')
+                                pdf_final_bytes = pdf_base_bytes
 
-                            # 2. Si el residente subió una foto de la responsiva, la fusionamos
-                            if foto_responsiva:
+                                # 2. Fusionar la foto OBLIGATORIA
                                 fusionador = PdfMerger()
                                 fusionador.append(io.BytesIO(pdf_base_bytes))
                                 
@@ -302,35 +307,35 @@ if doc:
                                 fusionador.close()
                                 pdf_final_bytes = archivo_salida.getvalue()
 
-                            # 3. Subimos el PDF fusionado a Google Drive
-                            link_drive = subir_a_drive_y_obtener_link(pdf_final_bytes, f"Cierre_{folio_cierre}_{cliente_cierre}.pdf")
+                                # 3. Subimos el PDF fusionado a Google Drive
+                                link_drive = subir_a_drive_y_obtener_link(pdf_final_bytes, f"Cierre_{folio_cierre}_{cliente_cierre}.pdf")
 
-                            # 4. Actualizamos el Estatus y pegamos el Link en tu Excel
-                            fila_excel = next((i + 2 for i, f in enumerate(datos_obras) if str(f.get(llave_folio_obra, "")) == folio_cierre), 0)
-                            col_estatus = list(datos_obras[0].keys()).index(llave_estatus) + 1 if datos_obras and llave_estatus in datos_obras[0] else 0
-                            
-                            if fila_excel > 0 and col_estatus > 0:
-                                hoja_obras.update_cell(fila_excel, col_estatus, "CERRADA")
+                                # 4. Actualizamos el Estatus y pegamos el Link en tu Excel
+                                fila_excel = next((i + 2 for i, f in enumerate(datos_obras) if str(f.get(llave_folio_obra, "")) == folio_cierre), 0)
+                                col_estatus = list(datos_obras[0].keys()).index(llave_estatus) + 1 if datos_obras and llave_estatus in datos_obras[0] else 0
                                 
-                                # Buscamos la columna "LINK CARTA" que agregaste en tu Excel
-                                headers_obras = list(datos_obras[0].keys()) if datos_obras else []
-                                col_link = next((i + 1 for i, h in enumerate(headers_obras) if "LINK" in str(h).upper() or "CARTA" in str(h).upper()), None)
-                                
-                                if col_link and link_drive:
-                                    hoja_obras.update_cell(fila_excel, col_link, link_drive)
-                                
-                                registrar_bitacora(doc, "Gestor de Obras", f"Cerró definitivamente la obra {folio_cierre}. Documento guardado en Nube.")
-                                
-                            st.success(f"✅ ¡La obra {folio_cierre} ha sido marcada como CERRADA exitosamente!")
-                            if link_drive:
-                                st.info(f"☁️ Documento guardado de por vida en la nube. Puedes verlo desde tu Excel.")
-                                
-                            st.download_button(
-                                label="📥 DESCARGAR DOCUMENTO FINAL", 
-                                data=pdf_final_bytes, 
-                                file_name=f"Cierre_Oficial_{folio_cierre}.pdf", 
-                                mime="application/pdf"
-                            )
+                                if fila_excel > 0 and col_estatus > 0:
+                                    hoja_obras.update_cell(fila_excel, col_estatus, "CERRADA")
+                                    
+                                    # Buscamos la columna "LINK CARTA" que agregaste en tu Excel
+                                    headers_obras = list(datos_obras[0].keys()) if datos_obras else []
+                                    col_link = next((i + 1 for i, h in enumerate(headers_obras) if "LINK" in str(h).upper() or "CARTA" in str(h).upper()), None)
+                                    
+                                    if col_link and link_drive:
+                                        hoja_obras.update_cell(fila_excel, col_link, link_drive)
+                                    
+                                    registrar_bitacora(doc, "Gestor de Obras", f"Cerró definitivamente la obra {folio_cierre}. Evidencia guardada en Nube.")
+                                    
+                                st.success(f"✅ ¡La obra {folio_cierre} ha sido marcada como CERRADA exitosamente!")
+                                if link_drive:
+                                    st.info(f"☁️ Documento guardado de por vida en la nube. Puedes verlo desde tu Excel.")
+                                    
+                                st.download_button(
+                                    label="📥 DESCARGAR DOCUMENTO FINAL", 
+                                    data=pdf_final_bytes, 
+                                    file_name=f"Cierre_Oficial_{folio_cierre}.pdf", 
+                                    mime="application/pdf"
+                                )
 
     # ==========================================
     # 🚀 PESTAÑA 4: ALTA DE REGISTROS PATRONALES

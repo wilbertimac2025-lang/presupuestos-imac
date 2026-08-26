@@ -386,7 +386,14 @@ if boton:
             pdf.cell(0, 5, "Consideraciones Importantes:", ln=True)
             pdf.set_text_color(80, 80, 80)
             pdf.set_font('Arial', 'I', 8)
-            pdf.multi_cell(0, 4, txt="- Se deberá hacer un levantamiento físico para determinar los alcances exactos.\n- No incluye trabajos no cotizados.")
+            
+            # 🚀 AQUÍ SE APLICAN LAS NUEVAS LEYENDAS PROTECTORAS
+            texto_consideraciones = (
+                "- Se deberá hacer un levantamiento físico para determinar los alcances exactos.\n"
+                "- No incluye trabajos de albañilería no cotizados.\n"
+                "- Trabajos no cotizados."
+            )
+            pdf.multi_cell(0, 4, txt=texto_consideraciones)
             pdf.ln(3)
             
             # 🚀 RASTREADOR MÚLTIPLE DE GARANTÍAS

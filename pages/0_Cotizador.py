@@ -171,7 +171,12 @@ st.title("🍊 Presupuestos Obras Grupo IMAC")
 num_areas = st.number_input("¿Cuántas áreas distintas vas a cotizar?", min_value=1, max_value=10, value=1)
 
 st.write("### 1. Datos de Contacto y Asignación")
-fecha_validez = st.date_input("Presupuesto válido hasta:") 
+
+# 🚀 FECHA DE VALIDEZ AUTOMÁTICA (+15 DÍAS)
+fecha_hoy_obj = datetime.date.today()
+fecha_15_dias = fecha_hoy_obj + datetime.timedelta(days=15)
+fecha_validez = st.date_input("Presupuesto válido hasta:", value=fecha_15_dias)
+
 cliente = st.text_input("Nombre del Cliente", key="in_cliente")
 compania = st.text_input("Compañía / Empresa")
 telefono = st.text_input("Teléfono de Contacto")
@@ -407,7 +412,7 @@ if boton:
                         pdf.cell(0, 5, f"{sis}: {gar}", ln=True)
                         primer_item = False
                     else:
-                        pdf.cell(60, 5, "") # Espacio en blanco para que quede alineado abajo del anterior
+                        pdf.cell(60, 5, "") 
                         pdf.cell(0, 5, f"{sis}: {gar}", ln=True)
             
             pdf.set_font('Arial', 'B', 9)
@@ -417,12 +422,19 @@ if boton:
             pdf.set_text_color(15, 60, 140)
             pdf.cell(0, 5, "70% DE ANTICIPO, 30% CONTRA ENTREGA", ln=True)
             
+            # 🚀 AQUÍ SE APLICA LA FECHA DE VALIDEZ Y LA LEYENDA PROTECTORA EN ROJO
             pdf.set_font('Arial', 'B', 9)
             pdf.set_text_color(50, 50, 50)
             pdf.cell(60, 5, "Presupuesto válido hasta:")
             pdf.set_font('Arial', '', 9)
             pdf.set_text_color(15, 60, 140)
             pdf.cell(0, 5, fecha_validez.strftime("%d/%m/%Y"), ln=True)
+            
+            pdf.set_font('Arial', 'I', 8)
+            pdf.set_text_color(200, 30, 30) # Letra roja
+            pdf.cell(60, 4, "") # Espacio en blanco para empujar el texto a la derecha y alinearlo
+            pdf.cell(0, 4, "* Precio sujeto a cambios sin previo aviso.", ln=True)
+            
             pdf.ln(5)
 
             if anotaciones_asesor:
@@ -498,7 +510,6 @@ if boton:
 
             pdf_base_bytes = pdf.output(dest='S').encode('latin-1')
 
-            # 🚀 FUSIÓN MÚLTIPLE DE FICHAS TÉCNICAS
             archivos_unicos_a_fusionar = []
             sistemas_con_alerta = []
 

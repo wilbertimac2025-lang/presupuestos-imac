@@ -47,7 +47,6 @@ def enviar_cierre_por_correo(pdf_bytes, nombre_archivo, cliente, folio):
         remitente = st.secrets["CORREO_BOT"]
         password = st.secrets["PASS_BOT"]
         
-        # 🚀 AQUÍ ESTÁN LOS 4 CORREOS CONFIGURADOS
         correo_destino = "comercial@grupo-imac.com, direccion@grupo-imac.com, rh@grupo-imac.com, masterventas@grupo-imac.com" 
         
         msg = EmailMessage()
@@ -242,10 +241,14 @@ if doc:
                                 
                                 pdf = PDF_Carta()
                                 pdf.add_page()
-                                fecha_hoy = datetime.datetime.now().strftime("%d de %B del %Y")
+                                
+                                # 🚀 CORRECCIÓN: MESES EN ESPAÑOL
+                                meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+                                hoy = datetime.datetime.now()
+                                fecha_hoy_espanol = f"{hoy.day} de {meses[hoy.month - 1]} del {hoy.year}"
                                 
                                 pdf.set_font('Arial', '', 11)
-                                pdf.cell(0, 5, f"Veracruz, Ver. a {fecha_hoy}", ln=True, align='R')
+                                pdf.cell(0, 5, f"Veracruz, Ver. a {fecha_hoy_espanol}", ln=True, align='R')
                                 pdf.ln(15)
                                 pdf.set_font('Arial', 'B', 12)
                                 pdf.set_text_color(15, 60, 140)
@@ -299,7 +302,6 @@ if doc:
                                     
                                     pdf.image(temp_img_path, x=x_mm, y=40, w=w_mm, h=h_mm)
                                     
-                                    # 🚀 AQUÍ ESTÁ LA LEYENDA CENTRADA ABAJO DE LA FOTO
                                     y_final_foto = 40 + h_mm
                                     pdf.set_xy(10, y_final_foto + 10)
                                     pdf.set_font('Arial', 'I', 11)

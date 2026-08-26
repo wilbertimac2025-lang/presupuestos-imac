@@ -48,7 +48,7 @@ def enviar_cierre_por_correo(pdf_bytes, nombre_archivo, cliente, folio):
         password = st.secrets["PASS_BOT"]
         
         # 🚀 AQUÍ ESTÁN LOS 4 CORREOS CONFIGURADOS
-        correo_destino = "comercial@grupo-imac.com, direccion@grupo-imac.com, pue@grupo-imac.com, mpue@grupo-imac.com" 
+        correo_destino = "comercial@grupo-imac.com, direccion@grupo-imac.com, rh@grupo-imac.com, masterventas@grupo-imac.com" 
         
         msg = EmailMessage()
         msg['Subject'] = f'CIERRE DE OBRA Y EVIDENCIA: {folio} - {cliente}'
@@ -298,6 +298,13 @@ if doc:
                                     x_mm = (210 - w_mm) / 2
                                     
                                     pdf.image(temp_img_path, x=x_mm, y=40, w=w_mm, h=h_mm)
+                                    
+                                    # 🚀 AQUÍ ESTÁ LA LEYENDA CENTRADA ABAJO DE LA FOTO
+                                    y_final_foto = 40 + h_mm
+                                    pdf.set_xy(10, y_final_foto + 10)
+                                    pdf.set_font('Arial', 'I', 11)
+                                    pdf.set_text_color(80, 80, 80)
+                                    pdf.multi_cell(0, 6, txt="Gracias por ser parte, aquí está adjunta la foto del trabajo ejecutado.", align='C')
                                     
                                     pdf_final_bytes = pdf.output(dest='S').encode('latin-1')
                                     if os.path.exists(temp_img_path): os.remove(temp_img_path)

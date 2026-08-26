@@ -387,7 +387,6 @@ if boton:
             pdf.set_text_color(80, 80, 80)
             pdf.set_font('Arial', 'I', 8)
             
-            # 🚀 AQUÍ SE APLICAN LAS NUEVAS LEYENDAS PROTECTORAS
             texto_consideraciones = (
                 "- Se deberá hacer un levantamiento físico para determinar los alcances exactos.\n"
                 "- No incluye trabajos de albañilería no cotizados.\n"
@@ -396,7 +395,6 @@ if boton:
             pdf.multi_cell(0, 4, txt=texto_consideraciones)
             pdf.ln(3)
             
-            # 🚀 RASTREADOR MÚLTIPLE DE GARANTÍAS
             garantias_unicas = {}
             for z in zonas_data:
                 sis = z["sistema"]
@@ -429,7 +427,6 @@ if boton:
             pdf.set_text_color(15, 60, 140)
             pdf.cell(0, 5, "70% DE ANTICIPO, 30% CONTRA ENTREGA", ln=True)
             
-            # 🚀 AQUÍ SE APLICA LA FECHA DE VALIDEZ Y LA LEYENDA PROTECTORA EN ROJO
             pdf.set_font('Arial', 'B', 9)
             pdf.set_text_color(50, 50, 50)
             pdf.cell(60, 5, "Presupuesto válido hasta:")
@@ -438,8 +435,8 @@ if boton:
             pdf.cell(0, 5, fecha_validez.strftime("%d/%m/%Y"), ln=True)
             
             pdf.set_font('Arial', 'I', 8)
-            pdf.set_text_color(200, 30, 30) # Letra roja
-            pdf.cell(60, 4, "") # Espacio en blanco para empujar el texto a la derecha y alinearlo
+            pdf.set_text_color(200, 30, 30)
+            pdf.cell(60, 4, "") 
             pdf.cell(0, 4, "* Precio sujeto a cambios sin previo aviso.", ln=True)
             
             pdf.ln(5)
@@ -467,11 +464,12 @@ if boton:
             pdf.set_text_color(0, 150, 255)
             pdf.cell(0, 5, 'TARC S.A. DE C.V.', ln=True)
             
+            # 🚀 AQUÍ ESTÁ EL NUEVO NÚMERO DE TELÉFONO
             pdf.set_text_color(100, 100, 100)
             pdf.set_font('Arial', '', 8)
             if tipo_obra == "LOCAL":
                 pdf.cell(0, 4, 'BOULEVARD MIGUEL ALEMAN 759, COL. CENTRO. VERACRUZ, VER. C.P. 91700', ln=True)
-                pdf.cell(0, 4, 'Cel. 229 337 1080 | rh@grupo-imac.com | www.grupo-imac.com', ln=True)
+                pdf.cell(0, 4, 'Cel. 229 935 3940 / 229 337 1080 | rh@grupo-imac.com | www.grupo-imac.com', ln=True)
             else:
                 pdf.cell(0, 4, 'DIRECCIÓN DE SUCURSAL FORÁNEA O FISCAL, ESTADO. C.P. 00000', ln=True)
                 pdf.cell(0, 4, 'TEL. (000) 000 00 00 | correo_foraneo@grupo-imac.com | www.grupo-imac.com', ln=True)

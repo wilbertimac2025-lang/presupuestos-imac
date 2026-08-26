@@ -66,7 +66,7 @@ def conectar_sheets():
         return cliente.open_by_key(ID_DEL_EXCEL)
     except Exception: return None
 
-# ☁️ NUEVA FUNCIÓN: GUARDAR EN GOOGLE DRIVE Y OBTENER LINK
+# ☁️ NUEVA FUNCIÓN CORREGIDA CON LA CARPETA DE DRIVE
 def subir_a_drive_y_obtener_link(pdf_bytes, filename):
     try:
         credenciales_dic = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
@@ -74,13 +74,18 @@ def subir_a_drive_y_obtener_link(pdf_bytes, filename):
         creds = Credentials.from_service_account_info(credenciales_dic, scopes=scopes)
         servicio_drive = build('drive', 'v3', credentials=creds)
         
-        file_metadata = {'name': filename}
+        # 🚀 AQUÍ ESTÁ EL ID DE LA CARPETA PARA ELIMINAR EL ERROR
+        folder_id = "19f6IF6JLpdmbiAXNc_XRILmy05llZggY"
+        
+        file_metadata = {
+            'name': filename,
+            'parents': [folder_id] 
+        }
         media = MediaIoBaseUpload(io.BytesIO(pdf_bytes), mimetype='application/pdf')
         
         archivo = servicio_drive.files().create(body=file_metadata, media_body=media, fields='id, webViewLink').execute()
         id_archivo = archivo.get('id')
         
-        # Le damos permiso de lectura para que tú y tu jefe puedan abrir el link sin que les pida contraseña
         servicio_drive.permissions().create(fileId=id_archivo, body={'type': 'anyone', 'role': 'reader'}).execute()
         
         return archivo.get('webViewLink')
@@ -212,7 +217,7 @@ if doc:
                                     st.rerun()
 
     # ==========================================
-    # PESTAÑA 3: CIERRE DE OBRA Y GENERACIÓN PDF (ACTUALIZADA Y OBLIGATORIA)
+    # PESTAÑA 3: CIERRE DE OBRA Y GENERACIÓN PDF
     # ==========================================
     with tab3:
         colX, colY = st.columns([1, 2])
@@ -220,7 +225,6 @@ if doc:
             st.subheader("Selección de Obra a Cerrar")
             folio_cierre = st.selectbox("Obra a Finalizar:", ["..."] + obras_activas, key="sel_cierre") if obras_activas else "..."
             
-            # 🚀 NUEVO: Subida de Evidencia (Obligatoria)
             if folio_cierre != "...":
                 st.markdown("---")
                 st.write("📷 **Evidencia de Cierre (Obligatoria)**")
@@ -240,13 +244,11 @@ if doc:
                     
                     if st.button("🔒 CERRAR OBRA, GUARDAR Y GENERAR CARTA", type="primary"):
                         
-                        # 🛡️ CANDADO: Validar que se haya subido la foto antes de hacer cualquier cosa
                         if not foto_responsiva:
                             st.error("⚠️ ACCIÓN DENEGADA: Es estrictamente obligatorio subir la foto del trabajo entregado para poder procesar el cierre de la obra.")
                         else:
-                            with st.spinner("Ensamblando PDF, subiendo a la nube y actualizando Excel..."):
+                            with st.spinner("Ensamblando PDF cuadrado, subiendo a la nube y actualizando Excel..."):
                                 
-                                # 1. Generamos el PDF base (La Carta de Agradecimiento)
                                 pdf = PDF_Carta()
                                 pdf.add_page()
                                 fecha_hoy = datetime.datetime.now().strftime("%d de %B del %Y")
@@ -283,48 +285,63 @@ if doc:
                                 pdf.cell(0, 5, "Departamento de Operaciones", ln=True, align='C')
                                 pdf.cell(0, 5, "TARC S.A. DE C.V.", ln=True, align='C')
 
-                                pdf_base_bytes = pdf.output(dest='S').encode('latin-1')
-                                pdf_final_bytes = pdf_base_bytes
-
-                                # 2. Fusionar la foto OBLIGATORIA
-                                fusionador = PdfMerger()
-                                fusionador.append(io.BytesIO(pdf_base_bytes))
-                                
+                                # 🚀 NUEVO MOTOR PARA CUADRAR FOTOS A TAMAÑO CARTA
                                 ext = foto_responsiva.name.split('.')[-1].lower()
-                                if ext in ['jpg', 'jpeg', 'png']:
+                                es_pdf = ext == 'pdf'
+                                
+                                if not es_pdf:
+                                    # Agregamos una nueva hoja al reporte
+                                    pdf.add_page()
+                                    pdf.set_font('Arial', 'B', 14)
+                                    pdf.set_text_color(15, 60, 140)
+                                    pdf.cell(0, 10, "EVIDENCIA FOTOGRÁFICA DE CIERRE", ln=True, align='C')
+                                    
+                                    # Limpiamos y procesamos la imagen
+                                    temp_img_path = "temp_cierre.jpg"
                                     img = Image.open(foto_responsiva)
-                                    if img.mode == 'RGBA': 
+                                    if img.mode in ('RGBA', 'P'): 
                                         img = img.convert('RGB')
-                                    img_pdf_io = io.BytesIO()
-                                    img.save(img_pdf_io, format='PDF')
-                                    img_pdf_io.seek(0)
-                                    fusionador.append(img_pdf_io)
-                                elif ext == 'pdf':
+                                    img.save(temp_img_path, format="JPEG")
+                                    
+                                    # Matemáticas para cuadrar la foto en la hoja
+                                    w_px, h_px = img.size
+                                    ratio = min(180 / w_px, 220 / h_px)
+                                    w_mm = w_px * ratio
+                                    h_mm = h_px * ratio
+                                    x_mm = (210 - w_mm) / 2 # Centrado horizontal perfecto
+                                    
+                                    pdf.image(temp_img_path, x=x_mm, y=40, w=w_mm, h=h_mm)
+                                    
+                                    pdf_final_bytes = pdf.output(dest='S').encode('latin-1')
+                                    if os.path.exists(temp_img_path): os.remove(temp_img_path)
+                                else:
+                                    pdf_base_bytes = pdf.output(dest='S').encode('latin-1')
+                                    fusionador = PdfMerger()
+                                    fusionador.append(io.BytesIO(pdf_base_bytes))
                                     fusionador.append(io.BytesIO(foto_responsiva.getvalue()))
                                     
-                                archivo_salida = io.BytesIO()
-                                fusionador.write(archivo_salida)
-                                fusionador.close()
-                                pdf_final_bytes = archivo_salida.getvalue()
+                                    archivo_salida = io.BytesIO()
+                                    fusionador.write(archivo_salida)
+                                    fusionador.close()
+                                    pdf_final_bytes = archivo_salida.getvalue()
 
-                                # 3. Subimos el PDF fusionado a Google Drive
+                                # Subimos a Drive con el ID de la carpeta
                                 link_drive = subir_a_drive_y_obtener_link(pdf_final_bytes, f"Cierre_{folio_cierre}_{cliente_cierre}.pdf")
 
-                                # 4. Actualizamos el Estatus y pegamos el Link en tu Excel
+                                # Actualizamos el Excel
                                 fila_excel = next((i + 2 for i, f in enumerate(datos_obras) if str(f.get(llave_folio_obra, "")) == folio_cierre), 0)
                                 col_estatus = list(datos_obras[0].keys()).index(llave_estatus) + 1 if datos_obras and llave_estatus in datos_obras[0] else 0
                                 
                                 if fila_excel > 0 and col_estatus > 0:
                                     hoja_obras.update_cell(fila_excel, col_estatus, "CERRADA")
                                     
-                                    # Buscamos la columna "LINK CARTA" que agregaste en tu Excel
                                     headers_obras = list(datos_obras[0].keys()) if datos_obras else []
                                     col_link = next((i + 1 for i, h in enumerate(headers_obras) if "LINK" in str(h).upper() or "CARTA" in str(h).upper()), None)
                                     
                                     if col_link and link_drive:
                                         hoja_obras.update_cell(fila_excel, col_link, link_drive)
                                     
-                                    registrar_bitacora(doc, "Gestor de Obras", f"Cerró definitivamente la obra {folio_cierre}. Evidencia guardada en Nube.")
+                                    registrar_bitacora(doc, "Gestor de Obras", f"Cerró definitivamente la obra {folio_cierre}. Evidencia subida.")
                                     
                                 st.success(f"✅ ¡La obra {folio_cierre} ha sido marcada como CERRADA exitosamente!")
                                 if link_drive:

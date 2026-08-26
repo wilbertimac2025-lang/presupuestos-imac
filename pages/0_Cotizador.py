@@ -72,7 +72,7 @@ ESPEC_GENERAL = ("PREPARACION DE SUPERFICIE.\n"
 
 # 🚀 CATÁLOGO MAESTRO INTELIGENTE 
 CATALOGO_SISTEMAS = {
-    "LEVANTAMIENTO": {"precio": 30.00, "garantia": "NO APLICA", "desc": "SERVICIO DE LEVANTAMIENTO FÍSICO Y MEDICIÓN DE ÁREAS EN SITIO.", "espec": "TOMA DE MEDIDAS Y REVISIÓN DE CONDICIONES DE LA SUPERFICIE.", "ficha": "NO APLICA"},
+    "LEVANTAMIENTO": {"precio": 30.00, "garantia": "NO APLICA", "desc": "Preparación de superficie para aplicación de sistema de impermeabilización, incluyendo retiro de impermeabilizante existente en mal estado, levantamiento y recolección de basura, residuos y materiales sueltos; limpieza general de la superficie, desazolve y limpieza de coladeras y puntos de desagüe; retiro de material deteriorado o que pueda afectar la adherencia del nuevo sistema; acarreo, carga y descenso de residuos generados durante los trabajos, así como limpieza final del área, dejando la superficie debidamente preparada y en condiciones adecuadas para la aplicación del nuevo sistema de impermeabilización.", "espec": "TOMA DE MEDIDAS Y REVISIÓN DE CONDICIONES DE LA SUPERFICIE.", "ficha": "NO APLICA"},
     "ACRILTECHO GREEN POWER": {"precio": 244.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_acriltecho.pdf"},
     "IMPAC 3000 FIBRATADO": {"precio": 198.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_impac_3000.pdf"},
     "IMPAC 5000 FIBRATADO": {"precio": 219.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_impac_5000.pdf"},

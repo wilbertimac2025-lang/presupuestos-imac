@@ -3,6 +3,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 import json
 import datetime
+import pandas as pd
 
 st.set_page_config(page_title="Control de Materiales", page_icon="📦", layout="wide")
 
@@ -162,28 +163,61 @@ if doc:
 
         # --- PESTAÑA DE SALIDAS ---
         with tab1:
-            col1, col2 = st.columns([1, 2])
+            col1, col2 = st.columns([1.2, 1.8]) # Hacemos la columna 2 un poco más ancha para el formulario
             
             with col1:
                 folio_seleccionado = st.selectbox("Obra Activa:", ["Selecciona un folio..."] + obras_ejecucion)
 
             if folio_seleccionado != "Selecciona un folio...":
+                
+                # Leemos la base de datos UNA SOLA VEZ para que la página cargue rápido
+                limites_data = hoja_limites.get_all_records()
+                consumos_data = hoja_consumos.get_all_records()
+                
+                # --- NUEVO TABLERO RESUMEN DE INSUMOS ---
+                with col1:
+                    st.markdown("---")
+                    st.markdown("#### 📋 Insumos Autorizados para esta Obra")
+                    
+                    resumen_obra = []
+                    for fila in limites_data:
+                        if str(fila.get("Folio Obra", "")) == folio_seleccionado:
+                            mat = str(fila.get("Material", ""))
+                            max_cant = float(fila.get("Cantidad Maxima", 0))
+                            
+                            # Calcula sumando todo lo que ya se sacó de ese material
+                            consumido = sum(float(c.get("Cantidad Usada", 0)) for c in consumos_data if str(c.get("Folio Obra", "")) == folio_seleccionado and str(c.get("Material / Insumo", "")) == mat)
+                            
+                            disponible = max_cant - consumido
+                            
+                            resumen_obra.append({
+                                "Insumo": mat,
+                                "Autorizado": max_cant,
+                                "Entregado": consumido,
+                                "Restante": disponible
+                            })
+                    
+                    if resumen_obra:
+                        df_resumen = pd.DataFrame(resumen_obra)
+                        st.dataframe(df_resumen, use_container_width=True, hide_index=True)
+                    else:
+                        st.info("No hay materiales autorizados asignados a esta obra aún.")
+
+                # --- FORMULARIO DE SALIDA ---
                 with col2:
                     categoria = st.selectbox("Categoría del Material", ["Impermeabilización", "Sistemas Ligeros", "Otros / Consumibles"])
                     
                     if categoria == "Impermeabilización":
-                        material = st.selectbox("Insumo", CATALOGO_IMPERMEABILIZANTES)
+                        material = st.selectbox("Insumo a Entregar", CATALOGO_IMPERMEABILIZANTES)
                         unidad = "Piezas/Litros"
                     elif categoria == "Sistemas Ligeros":
-                        material = st.selectbox("Insumo", ["Hoja de Tablaroca (Gypsum Board)", "Poste Metálico", "Canal de Amarre", "Reborde J", "Tornillos Bartolos", "Cinta Acústica / Accesorios"])
+                        material = st.selectbox("Insumo a Entregar", ["Hoja de Tablaroca (Gypsum Board)", "Poste Metálico", "Canal de Amarre", "Reborde J", "Tornillos Bartolos", "Cinta Acústica / Accesorios"])
                         unidad = "Piezas/Cajas"
                     else:
                         material = st.text_input("Especificar Insumo:")
                         unidad = "Unidades"
 
-                    limites_data = hoja_limites.get_all_records()
-                    consumos_data = hoja_consumos.get_all_records()
-                    
+                    # Busca los datos del material seleccionado en el formulario
                     limite_actual = 0
                     for fila in limites_data:
                         if str(fila.get("Folio Obra", "")) == folio_seleccionado and str(fila.get("Material", "")) == material:

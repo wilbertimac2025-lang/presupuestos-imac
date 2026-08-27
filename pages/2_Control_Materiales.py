@@ -31,26 +31,37 @@ def registrar_bitacora(doc, modulo, accion):
             rol = st.session_state.get("role", "Desconocido")
             hoja_bitacora.append_row([fecha_hora, usuario, rol, modulo, accion])
     except Exception:
-        pass # Si la pestaña no existe, el sistema sigue funcionando normal
+        pass 
 
-# 📋 LISTA MAESTRA DE MATERIALES (Para que todos los menús sean idénticos)
+# 📋 CATÁLOGO MAESTRO DE IMPERMEABILIZANTES (Sincronizado con Cotizador)
 CATALOGO_IMPERMEABILIZANTES = [
-    "MASTER LASSER 3.0 MM FIBRA POLIESTER LISO ARENADO",
-    "MASTER LASSER 3.5 MM FIBRA POLIESTER BLANCO",
-    "MASTER LASSER 4.0 MM FIBRA POLIESTER BLANCO",
-    "MASTER LASSER 4.5 MM FIBRA POLIESTER ROJO",
-    "MASTER LASSER 3.5 MM FIBRA POLIESTER ROJO",
-    "MASTER LASSER 4.0 MM FIBRA POLIESTER ROJO",
-    "MASTER LASSER 4.5 MM FIBRA POLIESTER BLANCO",
-    "MASTER LASSER 3.5 MM FIBRA VIDRIO ROJO",
-    "MASTER LASSER 3.5 MM FIBRA VIDRIO BLANCO",
-    "MASTER PRIM A",
-    "MASTER PRIM S",
+    "ACRILTECHO GREEN POWER",
+    "IMPAC 3000 FIBRATADO",
+    "IMPAC 5000 FIBRATADO",
+    "KRIPTOFLEX 3 AÑOS CON MALLA",
+    "KRIPTOFLEX 3 AÑOS FIBRATADO",
     "KRIPTOFLEX 5 AÑOS FIBRATADO",
-    "MALLA REFUERZO",
+    "KRIPTOFLEX 5 AÑOS CON MALLA",
+    "IMPAC 7000 FIBRATADO",
+    "IMPAC 7000 FIBRATADO CON MALLA",
+    "SELLOTEX",
+    "JUNTA LINEAL 30 CM MASTER LASSER 3.0 LISO",
+    "JUNTA LINEAL 50 CM MASTER LASSER 3.0 LISO",
+    "JUNTA LINEAL 50 CM MASTER LASSER 4.0 LISO",
+    "JUNTA LINEAL 15 A 50 CM KRIPTOFLEX",
+    "MASTER LASSER 3.5 MM FP",
+    "MASTER LASSER 4.0 MM FP",
+    "MASTER LASSER 4.5 MM FP",
+    "MASTER LASSER 4.0 MM FP (ESCUELAS)",
+    "MASTER LASSER 3.0 MM FP LISO SIN ACABADO",
+    "MASTER LASSER 4.0 MM FP LISO SIN ACABADO",
+    "MASTER LASSER 3.0 MM FV",
+    "MASTER LASSER 3.5 MM FV",
+    "BITUFLEX",
     "Primario Hidroflex",
     "Gas L.P.",
-    "Cemento Plástico"
+    "Cemento Plástico",
+    "MALLA REFUERZO"
 ]
 
 # 💵 DICCIONARIO DE PRECIOS
@@ -58,32 +69,15 @@ PRECIO_BASE = 1200.00
 
 def obtener_precio(nombre_material):
     precios = {
-        # --- MATERIALES DE CONSTRUCCIÓN LIGERA Y EXTRAS ---
         "Hoja de Tablaroca (Gypsum Board)": 1200.00,
         "Poste Metálico": 1200.00,
         "Canal de Amarre": 1200.00,
         "Reborde J": 1200.00,
         "Tornillos Bartolos": 1200.00,
         "Cinta Acústica / Accesorios": 1200.00,
-        
-        # --- EXTRAS DE IMPERMEABILIZACIÓN ---
         "Primario Hidroflex": 1200.00,
         "Gas L.P.": 1200.00,
         "Cemento Plástico": 1200.00,
-        
-        # --- CATÁLOGO DE IMPERMEABILIZANTES PREFABRICADOS ---
-        "MASTER LASSER 3.0 MM FIBRA POLIESTER LISO ARENADO": 1200.00,
-        "MASTER LASSER 3.5 MM FIBRA POLIESTER BLANCO": 1200.00,
-        "MASTER LASSER 4.0 MM FIBRA POLIESTER BLANCO": 1200.00,
-        "MASTER LASSER 4.5 MM FIBRA POLIESTER ROJO": 1200.00,
-        "MASTER LASSER 3.5 MM FIBRA POLIESTER ROJO": 1200.00,
-        "MASTER LASSER 4.0 MM FIBRA POLIESTER ROJO": 1200.00,
-        "MASTER LASSER 4.5 MM FIBRA POLIESTER BLANCO": 1200.00,
-        "MASTER LASSER 3.5 MM FIBRA VIDRIO ROJO": 1200.00,
-        "MASTER LASSER 3.5 MM FIBRA VIDRIO BLANCO": 1200.00,
-        "MASTER PRIM A": 870.00,
-        "MASTER PRIM S": 1200.00,
-        "KRIPTOFLEX 5 AÑOS FIBRATADO": 1200.00,
         "MALLA REFUERZO": 1200.00
     }
     return precios.get(nombre_material, PRECIO_BASE)
@@ -133,7 +127,8 @@ if doc:
         # --- PESTAÑA DE LÍMITES ---
         with tab2:
             st.subheader("Asignación de Presupuesto de Material")
-            clave_ingresada = st.text_input("🔑 Ingresa la clave de Administrador:", type="password")
+            st.info("💡 Los límites de Impermeabilización ya se calculan y asignan automáticamente al momento de generar la cotización.")
+            clave_ingresada = st.text_input("🔑 Ingresa la clave de Administrador para límites manuales:", type="password")
             
             if clave_ingresada == CLAVE_ADMIN:
                 with st.form("form_limites"):
@@ -152,19 +147,16 @@ if doc:
                             
                         cant_maxima = st.number_input("Cantidad Máxima a Autorizar:", min_value=0.0, step=1.0)
                         
-                        # 🚀 NUEVO: CASILLA DE REQUISICIÓN
                         num_requisicion = st.text_input("Número de Requisición:", placeholder="Ej. REQ-1045", key="num_req_lim")
                     
-                    btn_limite = st.form_submit_button("🔒 FIJAR LÍMITE EN SISTEMA")
+                    btn_limite = st.form_submit_button("🔒 FIJAR LÍMITE MANUAL")
                     
                     if btn_limite:
                         if folio_limite != "...":
-                            # Guardamos en Excel incluyendo la requisición al final
                             req_final = num_requisicion.strip().upper() if num_requisicion.strip() else "SIN REQ"
                             hoja_limites.append_row([folio_limite, mat_lim, cant_maxima, req_final])
                             
-                            # 🚀 INYECCIÓN A LA BITÁCORA
-                            registrar_bitacora(doc, "Control de Materiales", f"Autorizó límite de {cant_maxima} de {mat_lim} para la obra {folio_limite}. Req: {req_final}")
+                            registrar_bitacora(doc, "Control de Materiales", f"Autorizó límite manual de {cant_maxima} de {mat_lim} para la obra {folio_limite}. Req: {req_final}")
                             
                             st.success(f"✅ Límite fijado para {folio_limite} bajo la Requisición: {req_final}.")
 
@@ -210,27 +202,26 @@ if doc:
                     st.markdown("---")
                     
                     if limite_actual == 0:
-                        st.warning("⚠️ No se ha definido un límite autorizado para este material.")
+                        st.warning("⚠️ No se ha definido un límite autorizado para este material en esta obra.")
                         bloquear_salida = True
                     else:
                         if disponible > 0:
-                            st.info(f"📊 **DISPONIBLE: {disponible} {unidad}** | 💵 Costo Unitario: **${precio_unitario:,.2f}**")
+                            st.info(f"📊 **DISPONIBLE EN BODEGA PARA ESTA OBRA: {disponible} {unidad}** | 💵 Costo Unitario: **${precio_unitario:,.2f}**")
                             bloquear_salida = False
                         else:
-                            st.error("🛑 **LÍMITE EXCEDIDO**")
+                            st.error("🛑 **LÍMITE EXCEDIDO (Ya sacaron todo el material autorizado)**")
                             bloquear_salida = True
 
                     with st.form("form_materiales"):
                         cantidad = st.number_input(f"Cantidad a retirar ({unidad})", min_value=0.0, step=1.0)
                         
-                        # 🚀 NUEVO: CASILLA DE REMISIÓN
                         num_remision = st.text_input("Número de Remisión de Entrega:", placeholder="Ej. REM-2089")
                         
                         btn_guardar = st.form_submit_button("💾 REGISTRAR SALIDA Y CARGAR COSTO A OBRA")
                         
                         if btn_guardar:
                             if bloquear_salida or cantidad <= 0 or cantidad > disponible:
-                                st.error("❌ OPERACIÓN DENEGADA.")
+                                st.error("❌ OPERACIÓN DENEGADA. No hay material autorizado suficiente.")
                             elif not num_remision.strip():
                                 st.error("⚠️ El número de Remisión es obligatorio para poder autorizar la salida física.")
                             else:
@@ -238,12 +229,10 @@ if doc:
                                 costo_total_movimiento = cantidad * precio_unitario
                                 rem_final = num_remision.strip().upper()
                                 
-                                # 1. Guarda la salida de almacén incluyendo la remisión
                                 hoja_consumos.append_row([
                                     fecha_hoy, folio_seleccionado, categoria, material, cantidad, unidad, rem_final
                                 ])
                                 
-                                # 2. INYECTA EL COSTO DIRECTO A GASTOS FINANCIEROS (Reflejando la remisión en la descripción)
                                 hoja_gastos.append_row([
                                     fecha_hoy, 
                                     folio_seleccionado, 
@@ -252,7 +241,6 @@ if doc:
                                     costo_total_movimiento
                                 ])
                                 
-                                # 🚀 INYECCIÓN A LA BITÁCORA
                                 registrar_bitacora(doc, "Control de Materiales", f"Entregó {cantidad} de {material} a la obra {folio_seleccionado}. Remisión: {rem_final}")
                                 
                                 st.success(f"✅ Se entregaron {cantidad} de {material} bajo la Remisión {rem_final}. Se cargó un costo de ${costo_total_movimiento:,.2f} a la obra.")

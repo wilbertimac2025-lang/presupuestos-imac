@@ -572,4 +572,9 @@ if boton:
             enviar_respaldo_correo(pdf_final_para_descargar, nombre_file, cliente, asesor, folio_actual, tipo_obra, proyecto, ubicacion)
             
         st.success(f"✅ Presupuesto {folio_actual} generado con éxito.")
-        st.download_button(f"📄 DESCARGAR PRESUPUESTO", data=pdf_final_para_descargar, file_name=nombre_file)
+        st.download_button(
+    label="📄 DESCARGAR PRESUPUESTO", 
+    data=pdf_final_para_descargar, 
+    file_name=nombre_file,
+    mime="application/pdf"
+)

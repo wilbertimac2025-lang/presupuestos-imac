@@ -29,15 +29,13 @@ def registrar_bitacora(doc, modulo, accion):
             rol = st.session_state.get("role", "Desconocido")
             hoja_bitacora.append_row([fecha_hora, usuario, rol, modulo, accion])
     except Exception:
-        pass # Si la pestaña no existe, el sistema sigue funcionando normal
+        pass 
 
-# 🛠️ ESTA ES LA FUNCIÓN QUE FALTABA PARA EVITAR EL ERROR
 def limpiar_monto(valor):
     if str(valor).strip() == "" or valor is None: return 0.0
     try: return float(str(valor).replace("$", "").replace(",", "").replace(" ", "").strip())
     except: return 0.0
 
-# 🧠 FUNCIÓN SABUESO (Busca el valor sin importar si la columna se movió)
 def obtener_valor(diccionario, palabras_clave, default=0.0):
     for k, v in diccionario.items():
         if any(p in str(k).upper() for p in palabras_clave):
@@ -53,7 +51,6 @@ def conectar_sheets():
         creds = Credentials.from_service_account_info(credenciales_dic, scopes=scopes)
         cliente = gspread.authorize(creds)
         
-        # ⚠️ REEMPLAZA CON TU ID DE EXCEL AQUÍ
         ID_DEL_EXCEL = "1-grdT2H5dBlGVPvJbZ5wVYDdtVjQEEmUPGpvEm6C0Gc" 
         return cliente.open_by_key(ID_DEL_EXCEL)
     except Exception: return None
@@ -67,7 +64,7 @@ if doc:
     try:
         hoja_obras = doc.worksheet("Obras_Activas")
         hoja_gastos = doc.worksheet("Gastos_Financieros")
-        hoja_presupuestos = doc.worksheet("Presupuestos") # <-- Agregamos conexión directa al origen
+        hoja_presupuestos = doc.worksheet("Presupuestos") 
     except Exception as e:
         st.error("⚠️ Faltan pestañas en tu Excel.")
         st.stop()
@@ -91,21 +88,16 @@ if doc:
 
         if folio_seleccionado != "Selecciona un folio...":
             
-            # 🧠 MAGIA DE CRUCE DE DATOS
             obra_activa = next((f for f in datos_obras if str(f.get(llave_folio, "")) == folio_seleccionado), {})
             obra_presupuesto = next((f for f in datos_presupuestos if str(obtener_valor(f, ["FOLIO"], "")).upper() == folio_seleccionado.upper()), {})
             
-            # Juntamos lo que hay en Obras Activas con lo que hay en Presupuestos
             datos_completos = {**obra_activa, **obra_presupuesto}
             
-            # Buscamos el monto en cualquier columna que se llame Total, Monto, Presupuesto...
             valor_monto = obtener_valor(datos_completos, ["TOTAL", "MONTO", "PRESUPUESTO", "AUTORIZADO"], 0.0)
             presupuesto_total = limpiar_monto(valor_monto)
 
-            # 📊 CÁLCULOS AUTOMÁTICOS GLOBALES
             gasto_financiamiento = presupuesto_total * 0.01
             gasto_administrativo = presupuesto_total * 0.10
-            # 🚀 NUEVA FÓRMULA DE IMSS Y PRESTACIONES
             costo_imss = (presupuesto_total * 0.18) * 0.35
 
             datos_gastos = hoja_gastos.get_all_records()
@@ -119,21 +111,21 @@ if doc:
                 monto = limpiar_monto(g.get("Monto ($)", 0))
                 categoria = str(g.get("Categoría", "")).upper().strip()
                 
-                if categoria == "COSTO DE MATERIAL":
-                    costo_materiales += monto
-                elif categoria == "NÓMINA":
+                if categoria == "NÓMINA":
                     costo_nomina += monto
+                elif categoria == "COSTO DE MATERIAL":
+                    costo_materiales += monto
                 elif categoria == "FSR":
-                    pass # 🛡️ Ignoramos los FSR viejos para no alterar las nuevas cuentas
+                    pass 
                 else:
                     gastos_operativos += monto
             
-            # 🧠 Sumamos los gastos físicos más las cuotas y tarifas fijas de la empresa
             total_gastado = costo_materiales + costo_nomina + costo_imss + gastos_operativos + gasto_financiamiento + gasto_administrativo
 
-            # ==========================================
-            # 📊 ESTADÍSTICAS E INDICADORES FINANCIEROS
-            # ==========================================
+            # 🚀 LECTURA DE LA BOLSA DE MANO DE OBRA
+            bolsa_mano_obra = limpiar_monto(obtener_valor(datos_completos, ["BOLSA MANO DE OBRA", "BOLSA", "DESTAJO"], 0.0))
+            saldo_mano_obra = bolsa_mano_obra - costo_nomina
+
             st.subheader("📊 Estado de Cuenta del Proyecto")
             
             m1, m2, m3 = st.columns(3)
@@ -142,7 +134,7 @@ if doc:
             with m2:
                 st.metric("Costo Material", f"${costo_materiales:,.2f}")
             with m3:
-                st.metric("Nómina Base", f"${costo_nomina:,.2f}")
+                st.metric("Gastos Operativos", f"${gastos_operativos:,.2f}")
 
             st.write("") 
 
@@ -160,14 +152,38 @@ if doc:
                 st.write(f"**Consumo Financiero Global:** {porcentaje_gastado*100:.1f}%")
                 st.progress(porcentaje_gastado)
 
+            # ==========================================
+            # 👷‍♂️ SECCIÓN VIP: AUDITORÍA DE DESTAJO (NÓMINA)
+            # ==========================================
+            st.markdown("---")
+            st.subheader("👷‍♂️ Control de Mano de Obra a Destajo")
+            st.write("Auditoría en tiempo real del dinero autorizado para aplicadores según los m² vs. la nómina real pagada.")
+            
+            c_bolsa1, c_bolsa2, c_bolsa3 = st.columns(3)
+            c_bolsa1.metric("Bolsa Autorizada (Por m²)", f"${bolsa_mano_obra:,.2f}")
+            c_bolsa2.metric("Nómina Pagada (Total)", f"${costo_nomina:,.2f}")
+            
+            if saldo_mano_obra >= 0:
+                c_bolsa3.metric("Saldo Disponible a Favor", f"${saldo_mano_obra:,.2f}", "Rentable")
+            else:
+                c_bolsa3.metric("Sobregiro de Nómina", f"${saldo_mano_obra:,.2f}", "-Pérdida")
+                st.error("⚠️ ALERTA: Se ha pagado más nómina de la que el presupuesto de metros cuadrados permitía.")
+            
+            if bolsa_mano_obra > 0:
+                pct_nomina = min(costo_nomina / bolsa_mano_obra, 1.0)
+                st.progress(pct_nomina)
+
+            # ==========================================
+            # 📥 REGISTRO DE GASTOS
+            # ==========================================
             st.markdown("---")
             c_form, c_tabla = st.columns([1, 2])
             
             with c_form:
                 st.subheader("📥 Registrar Nuevo Gasto")
                 with st.form("form_gastos_fin"):
-                    concepto = st.text_input("Concepto", placeholder="Ej. Compra de tornillería y herramienta menor")
-                    categoria_gasto = st.selectbox("Categoría de Cuenta", ["NÓMINA", "Viáticos y Comidas", "Gasolina y Fletes", "Herramientas y Equipos", "Otros Gastos Extras"])
+                    concepto = st.text_input("Concepto (o Nombre del Trabajador)", placeholder="Ej. Pago a Juan Pérez")
+                    categoria_gasto = st.selectbox("Categoría de Cuenta", ["NÓMINA", "Costo de Material", "Viáticos y Comidas", "Gasolina y Fletes", "Herramientas y Equipos", "Otros Gastos Extras"])
                     monto_gasto = st.number_input("Monto de Gasto / Nómina ($ MXN)", min_value=0.0, step=500.0)
                     
                     btn_gasto = st.form_submit_button("💰 INYECTAR GASTO")
@@ -176,10 +192,9 @@ if doc:
                         if monto_gasto > 0:
                             fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
                             
-                            hoja_gastos.append_row([fecha_actual, folio_seleccionado, concepto.upper(), categoria_gasto, monto_gasto])
-                            st.success(f"✅ Gasto de ${monto_gasto:,.2f} registrado con éxito.")
+                            hoja_gastos.append_row([fecha_actual, folio_seleccionado, concepto.upper(), categoria_gasto.upper(), monto_gasto])
+                            st.success(f"✅ Transacción de ${monto_gasto:,.2f} registrada con éxito.")
                             
-                            # 🚀 INYECCIÓN A LA BITÁCORA
                             registrar_bitacora(doc, "Panel Financiero", f"Inyectó gasto de ${monto_gasto:,.2f} a {folio_seleccionado} ({categoria_gasto}). Concepto: {concepto.upper()}")
                             
                             st.rerun()

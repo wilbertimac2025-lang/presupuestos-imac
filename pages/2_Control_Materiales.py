@@ -149,9 +149,10 @@ if doc:
     if not obras_ejecucion:
         st.info("No hay obras en ejecución en este momento.")
     else:
-        tab1, tab2 = st.tabs(["📦 Registro de Movimientos", "⚙️ Definir Límites Autorizados"])
+        # 🚀 AQUÍ RENOMBRAMOS LA PESTAÑA A "AJUSTES EXCEPCIONALES"
+        tab1, tab2 = st.tabs(["📦 Registro de Movimientos", "🚨 Ajustes Excepcionales"])
         
-        # --- PESTAÑA DE LÍMITES ---
+        # --- PESTAÑA DE LÍMITES / AJUSTES ---
         with tab2:
             st.subheader("Asignación de Presupuesto de Material")
             st.info("💡 Los límites de Impermeabilización ya se calculan y asignan automáticamente al momento de generar la cotización.")
@@ -266,7 +267,7 @@ if doc:
 
                     with st.form("form_materiales"):
                         
-                        # 🚀 NUEVO: SELECTOR MULTIFUNCIONAL DE ORIGEN DE MATERIAL
+                        # 🚀 SELECTOR MULTIFUNCIONAL DE ORIGEN DE MATERIAL
                         tipo_movimiento = st.selectbox("Origen del Movimiento (Tipo de Salida):", [
                             "Salida de Almacén",
                             "Compras Internas",

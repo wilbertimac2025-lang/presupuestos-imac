@@ -65,17 +65,43 @@ CATALOGO_IMPERMEABILIZANTES = [
     "MALLA REFUERZO"
 ]
 
-# 💵 DICCIONARIO DE PRECIOS
+# 💵 DICCIONARIO DE PRECIOS DE COSTO (Para Panel Financiero)
 PRECIO_BASE = 1200.00
 
 def obtener_precio(nombre_material):
     precios = {
-        "Hoja de Tablaroca (Gypsum Board)": 1200.00,
-        "Poste Metálico": 1200.00,
-        "Canal de Amarre": 1200.00,
-        "Reborde J": 1200.00,
-        "Tornillos Bartolos": 1200.00,
-        "Cinta Acústica / Accesorios": 1200.00,
+        # --- ACRÍLICOS E IMPAC ---
+        "ACRILTECHO GREEN POWER": 1200.00,
+        "IMPAC 3000 FIBRATADO": 1200.00,
+        "IMPAC 5000 FIBRATADO": 1200.00,
+        "KRIPTOFLEX 3 AÑOS CON MALLA": 1200.00,
+        "KRIPTOFLEX 3 AÑOS FIBRATADO": 1200.00,
+        "KRIPTOFLEX 5 AÑOS FIBRATADO": 1200.00,
+        "KRIPTOFLEX 5 AÑOS CON MALLA": 1200.00,
+        "IMPAC 7000 FIBRATADO": 1200.00,
+        "IMPAC 7000 FIBRATADO CON MALLA": 1200.00,
+        
+        # --- CEMENTOSOS Y SOLVENTES ---
+        "SELLOTEX": 1200.00,
+        "BITUFLEX": 1200.00,
+        
+        # --- PREFABRICADOS (MASTER LASSER) ---
+        "MASTER LASSER 3.5 MM FP": 1200.00,
+        "MASTER LASSER 4.0 MM FP": 1200.00,
+        "MASTER LASSER 4.5 MM FP": 1200.00,
+        "MASTER LASSER 4.0 MM FP (ESCUELAS)": 1200.00,
+        "MASTER LASSER 3.0 MM FP LISO SIN ACABADO": 1200.00,
+        "MASTER LASSER 4.0 MM FP LISO SIN ACABADO": 1200.00,
+        "MASTER LASSER 3.0 MM FV": 1200.00,
+        "MASTER LASSER 3.5 MM FV": 1200.00,
+        
+        # --- JUNTAS LINEALES ---
+        "JUNTA LINEAL 30 CM MASTER LASSER 3.0 LISO": 1200.00,
+        "JUNTA LINEAL 50 CM MASTER LASSER 3.0 LISO": 1200.00,
+        "JUNTA LINEAL 50 CM MASTER LASSER 4.0 LISO": 1200.00,
+        "JUNTA LINEAL 15 A 50 CM KRIPTOFLEX": 1200.00,
+        
+        # --- CONSUMIBLES Y EXTRAS ---
         "Primario Hidroflex": 1200.00,
         "Gas L.P.": 1200.00,
         "Cemento Plástico": 1200.00,
@@ -136,13 +162,11 @@ if doc:
                     colA, colB = st.columns(2)
                     with colA:
                         folio_limite = st.selectbox("Selecciona la Obra:", ["..."] + obras_ejecucion, key="folio_lim")
-                        categoria_lim = st.selectbox("Categoría", ["Impermeabilización", "Sistemas Ligeros", "Otros / Consumibles"], key="cat_lim")
+                        categoria_lim = st.selectbox("Categoría", ["Impermeabilización", "Otros / Consumibles"], key="cat_lim")
                     
                     with colB:
                         if categoria_lim == "Impermeabilización":
                             mat_lim = st.selectbox("Insumo", CATALOGO_IMPERMEABILIZANTES, key="mat_lim_imp")
-                        elif categoria_lim == "Sistemas Ligeros":
-                            mat_lim = st.selectbox("Insumo", ["Hoja de Tablaroca (Gypsum Board)", "Poste Metálico", "Canal de Amarre", "Reborde J", "Tornillos Bartolos", "Cinta Acústica / Accesorios"], key="mat_lim_sl")
                         else:
                             mat_lim = st.text_input("Especificar Insumo:", key="mat_lim_ot")
                             
@@ -163,18 +187,17 @@ if doc:
 
         # --- PESTAÑA DE SALIDAS ---
         with tab1:
-            col1, col2 = st.columns([1.2, 1.8]) # Hacemos la columna 2 un poco más ancha para el formulario
+            col1, col2 = st.columns([1.2, 1.8])
             
             with col1:
                 folio_seleccionado = st.selectbox("Obra Activa:", ["Selecciona un folio..."] + obras_ejecucion)
 
             if folio_seleccionado != "Selecciona un folio...":
                 
-                # Leemos la base de datos UNA SOLA VEZ para que la página cargue rápido
                 limites_data = hoja_limites.get_all_records()
                 consumos_data = hoja_consumos.get_all_records()
                 
-                # --- NUEVO TABLERO RESUMEN DE INSUMOS ---
+                # --- TABLERO RESUMEN DE INSUMOS ---
                 with col1:
                     st.markdown("---")
                     st.markdown("#### 📋 Insumos Autorizados para esta Obra")
@@ -185,7 +208,6 @@ if doc:
                             mat = str(fila.get("Material", ""))
                             max_cant = float(fila.get("Cantidad Maxima", 0))
                             
-                            # Calcula sumando todo lo que ya se sacó de ese material
                             consumido = sum(float(c.get("Cantidad Usada", 0)) for c in consumos_data if str(c.get("Folio Obra", "")) == folio_seleccionado and str(c.get("Material / Insumo", "")) == mat)
                             
                             disponible = max_cant - consumido
@@ -205,19 +227,15 @@ if doc:
 
                 # --- FORMULARIO DE SALIDA ---
                 with col2:
-                    categoria = st.selectbox("Categoría del Material", ["Impermeabilización", "Sistemas Ligeros", "Otros / Consumibles"])
+                    categoria = st.selectbox("Categoría del Material", ["Impermeabilización", "Otros / Consumibles"])
                     
                     if categoria == "Impermeabilización":
                         material = st.selectbox("Insumo a Entregar", CATALOGO_IMPERMEABILIZANTES)
                         unidad = "Piezas/Litros"
-                    elif categoria == "Sistemas Ligeros":
-                        material = st.selectbox("Insumo a Entregar", ["Hoja de Tablaroca (Gypsum Board)", "Poste Metálico", "Canal de Amarre", "Reborde J", "Tornillos Bartolos", "Cinta Acústica / Accesorios"])
-                        unidad = "Piezas/Cajas"
                     else:
                         material = st.text_input("Especificar Insumo:")
                         unidad = "Unidades"
 
-                    # Busca los datos del material seleccionado en el formulario
                     limite_actual = 0
                     for fila in limites_data:
                         if str(fila.get("Folio Obra", "")) == folio_seleccionado and str(fila.get("Material", "")) == material:

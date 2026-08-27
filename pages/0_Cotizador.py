@@ -172,7 +172,6 @@ num_areas = st.number_input("¿Cuántas áreas distintas vas a cotizar?", min_va
 
 st.write("### 1. Datos de Contacto y Asignación")
 
-# 🚀 FECHA DE VALIDEZ AUTOMÁTICA (+15 DÍAS)
 fecha_hoy_obj = datetime.date.today()
 fecha_15_dias = fecha_hoy_obj + datetime.timedelta(days=15)
 fecha_validez = st.date_input("Presupuesto válido hasta:", value=fecha_15_dias)
@@ -257,6 +256,18 @@ if boton:
             folio_actual = obtener_nuevo_folio(hoja)
 
             subtotal_obras = sum(z["m2"] * CATALOGO_SISTEMAS[z["sistema"]]["precio"] for z in zonas_data)
+            
+            # 🚀 CÁLCULO DE LA BOLSA DE MANO DE OBRA (DESTAJO)
+            bolsa_mano_obra = 0.0
+            for z in zonas_data:
+                sis = z["sistema"]
+                if sis == "LEVANTAMIENTO":
+                    tarifa = 12.0
+                elif sis == "SELLOTEX":
+                    tarifa = 0.0
+                else:
+                    tarifa = 28.0
+                bolsa_mano_obra += z["m2"] * tarifa
             
             pdf = PDF()
             pdf.set_auto_page_break(auto=True, margin=20)
@@ -464,7 +475,6 @@ if boton:
             pdf.set_text_color(0, 150, 255)
             pdf.cell(0, 5, 'TARC S.A. DE C.V.', ln=True)
             
-            # 🚀 AQUÍ ESTÁ EL NUEVO NÚMERO DE TELÉFONO
             pdf.set_text_color(100, 100, 100)
             pdf.set_font('Arial', '', 8)
             if tipo_obra == "LOCAL":
@@ -554,7 +564,8 @@ if boton:
             
             if hoja:
                 resumen = " / ".join([f"{z['area']} ({z['m2']}m2)" for z in zonas_data])
-                hoja.append_row([folio_actual, fecha_hoy, asesor, cliente, compania, telefono, correo_cliente, proyecto, ubicacion.upper(), resumen, total_final, tipo_obra])
+                # 🚀 AQUÍ SE GUARDA LA BOLSA EN LA EXCEL COMO COLUMNA EXTRA
+                hoja.append_row([folio_actual, fecha_hoy, asesor, cliente, compania, telefono, correo_cliente, proyecto, ubicacion.upper(), resumen, total_final, tipo_obra, bolsa_mano_obra])
                 
                 registrar_bitacora(doc, "Cotizador", f"Generó presupuesto {folio_actual} para el cliente {cliente.upper()} por un total de ${total_final:,.2f}")
             

@@ -144,7 +144,7 @@ if doc:
             with m5:
                 st.metric("Financiamiento (1%)", f"${gasto_financiamiento:,.2f}")
             with m6:
-                st.metric("Gasto Adm. (10%)", f"${gasto_administrativo:,.2f}")
+                st.metric("Gasto Indirectos. (10%)", f"${gasto_administrativo:,.2f}")
 
             st.write("")
             if presupuesto_total > 0:

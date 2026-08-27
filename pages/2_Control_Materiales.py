@@ -149,7 +149,7 @@ if doc:
     if not obras_ejecucion:
         st.info("No hay obras en ejecución en este momento.")
     else:
-        tab1, tab2 = st.tabs(["📦 Registro de Salidas", "⚙️ Definir Límites Autorizados"])
+        tab1, tab2 = st.tabs(["📦 Registro de Movimientos", "⚙️ Definir Límites Autorizados"])
         
         # --- PESTAÑA DE LÍMITES ---
         with tab2:
@@ -258,41 +258,54 @@ if doc:
                         bloquear_salida = True
                     else:
                         if disponible > 0:
-                            st.info(f"📊 **DISPONIBLE EN BODEGA PARA ESTA OBRA: {disponible} {unidad}** | 💵 Costo Unitario: **${precio_unitario:,.2f}**")
+                            st.info(f"📊 **DISPONIBLE PARA ESTA OBRA: {disponible} {unidad}** | 💵 Costo Unitario: **${precio_unitario:,.2f}**")
                             bloquear_salida = False
                         else:
                             st.error("🛑 **LÍMITE EXCEDIDO (Ya sacaron todo el material autorizado)**")
                             bloquear_salida = True
 
                     with st.form("form_materiales"):
-                        cantidad = st.number_input(f"Cantidad a retirar ({unidad})", min_value=0.0, step=1.0)
                         
-                        num_remision = st.text_input("Número de Remisión de Entrega:", placeholder="Ej. REM-2089")
+                        # 🚀 NUEVO: SELECTOR MULTIFUNCIONAL DE ORIGEN DE MATERIAL
+                        tipo_movimiento = st.selectbox("Origen del Movimiento (Tipo de Salida):", [
+                            "Salida de Almacén",
+                            "Compras Internas",
+                            "Compras Externas (Factura)",
+                            "Traspaso (Carta Porte)",
+                            "Ajuste de Inventario / Otro"
+                        ])
                         
-                        btn_guardar = st.form_submit_button("💾 REGISTRAR SALIDA Y CARGAR COSTO A OBRA")
+                        cantidad = st.number_input(f"Cantidad a despachar ({unidad})", min_value=0.0, step=1.0)
+                        
+                        # 🚀 CAMPO DINÁMICO DE REFERENCIA
+                        doc_referencia = st.text_input("Documento de Referencia (Remisión / Factura / Carta Porte):", placeholder="Ej. REM-123, FAC-509, CP-44")
+                        
+                        btn_guardar = st.form_submit_button("💾 REGISTRAR MOVIMIENTO Y CARGAR COSTO A OBRA")
                         
                         if btn_guardar:
                             if bloquear_salida or cantidad <= 0 or cantidad > disponible:
                                 st.error("❌ OPERACIÓN DENEGADA. No hay material autorizado suficiente.")
-                            elif not num_remision.strip():
-                                st.error("⚠️ El número de Remisión es obligatorio para poder autorizar la salida física.")
+                            elif not doc_referencia.strip():
+                                st.error("⚠️ El Documento de Referencia es obligatorio para poder rastrear este movimiento.")
                             else:
                                 fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
                                 costo_total_movimiento = cantidad * precio_unitario
-                                rem_final = num_remision.strip().upper()
+                                ref_final = doc_referencia.strip().upper()
                                 
+                                # Guardamos en Consumos (Unimos el tipo de movimiento y el documento)
                                 hoja_consumos.append_row([
-                                    fecha_hoy, folio_seleccionado, categoria, material, cantidad, unidad, rem_final
+                                    fecha_hoy, folio_seleccionado, categoria, material, cantidad, unidad, f"{tipo_movimiento} | {ref_final}"
                                 ])
                                 
+                                # Guardamos en Gastos Financieros para que el contador vea el desglose claro
                                 hoja_gastos.append_row([
                                     fecha_hoy, 
                                     folio_seleccionado, 
-                                    f"Salida Almacén (Rem. {rem_final}): {cantidad} {unidad} de {material}", 
+                                    f"{tipo_movimiento} ({ref_final}): {cantidad} {unidad} de {material}", 
                                     "Costo de Material", 
                                     costo_total_movimiento
                                 ])
                                 
-                                registrar_bitacora(doc, "Control de Materiales", f"Entregó {cantidad} de {material} a la obra {folio_seleccionado}. Remisión: {rem_final}")
+                                registrar_bitacora(doc, "Control de Materiales", f"Registró {tipo_movimiento} de {cantidad} {material} para {folio_seleccionado}. Ref: {ref_final}")
                                 
-                                st.success(f"✅ Se entregaron {cantidad} de {material} bajo la Remisión {rem_final}. Se cargó un costo de ${costo_total_movimiento:,.2f} a la obra.")
+                                st.success(f"✅ Movimiento exitoso: Se asignaron {cantidad} de {material} mediante {tipo_movimiento} (Ref: {ref_final}). Costo cargado: ${costo_total_movimiento:,.2f}")

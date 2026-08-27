@@ -10,6 +10,7 @@ from email.message import EmailMessage
 from PIL import Image
 import io
 from PyPDF2 import PdfMerger
+import math
 
 # --- CONFIGURACIÓN ---
 st.set_page_config(page_title="Cotizador Multizona IMAC", page_icon="📝", layout="centered")
@@ -240,7 +241,7 @@ if boton:
     if not c_valido or not a_valido or not u_valido:
         st.error("⚠️ El nombre del Cliente, el Asesor y la Ubicación son obligatorios.")
     else:
-        with st.spinner("Ensamblando Presupuesto, Fotos, Comentarios y Ficha Técnica..."):
+        with st.spinner("Calculando Rendimientos Matemáticos, Ensamblando Presupuesto y Autorizando Límites..."):
             
             temp_paths = []
             if fotos_subidas:
@@ -257,18 +258,51 @@ if boton:
 
             subtotal_obras = sum(z["m2"] * CATALOGO_SISTEMAS[z["sistema"]]["precio"] for z in zonas_data)
             
-            # 🚀 CÁLCULO DE LA BOLSA DE MANO DE OBRA (DESTAJO)
+            # ========================================================
+            # 🚀 CÁLCULO INTELIGENTE DE DESTAJO Y EXPLOSIÓN DE INSUMOS
+            # ========================================================
             bolsa_mano_obra = 0.0
+            materiales_calculados = {}
+            
             for z in zonas_data:
                 sis = z["sistema"]
+                m2 = float(z["m2"])
+                
+                # 1. CÁLCULO DE NÓMINA (Raya)
+                if sis == "LEVANTAMIENTO": tarifa = 12.0
+                elif sis == "SELLOTEX": tarifa = 0.0
+                else: tarifa = 28.0
+                bolsa_mano_obra += m2 * tarifa
+                
+                # 2. CÁLCULO DE MATERIALES (Rendimientos Redondeados hacia Arriba)
                 if sis == "LEVANTAMIENTO":
-                    tarifa = 12.0
-                elif sis == "SELLOTEX":
-                    tarifa = 0.0
+                    continue # El levantamiento no lleva material de almacén
+                    
+                if "SELLOTEX" in sis:
+                    cant = math.ceil(m2 / 10.0)
+                    unidad = "BULTOS"
+                elif "JUNTA" in sis:
+                    if "30 CM" in sis: cant = math.ceil(m2 / 30.0); unidad = "ROLLOS"
+                    elif "50 CM" in sis and "KRIPTOFLEX" not in sis: cant = math.ceil(m2 / 20.0); unidad = "ROLLOS"
+                    elif "KRIPTOFLEX" in sis: cant = math.ceil(m2 / 19.0); unidad = "CUBETAS"
+                    else: cant = math.ceil(m2 / 20.0); unidad = "ROLLOS"
+                elif "FP" in sis or "FV" in sis or "MASTER LASSER" in sis:
+                    cant = math.ceil(m2 / 8.5)
+                    unidad = "ROLLOS"
+                else: # Acrílicos e Impac
+                    cant = math.ceil(m2 / 19.0)
+                    unidad = "CUBETAS"
+                    
+                if sis in materiales_calculados:
+                    materiales_calculados[sis]["cant"] += cant
                 else:
-                    tarifa = 28.0
-                bolsa_mano_obra += z["m2"] * tarifa
+                    materiales_calculados[sis] = {"cant": cant, "unidad": unidad}
             
+            # Creamos el texto de resumen para la columna del Excel
+            lista_textos_mat = [f"{v['cant']} {v['unidad']} DE {k}" for k, v in materiales_calculados.items()]
+            resumen_insumos_str = " / ".join(lista_textos_mat) if lista_textos_mat else "SIN MATERIAL ASIGNADO"
+            
+            # --- INICIA GENERACIÓN DE PDF ---
             pdf = PDF()
             pdf.set_auto_page_break(auto=True, margin=20)
             pdf.add_page()
@@ -562,19 +596,31 @@ if boton:
 
             nombre_file = f"Presupuesto_{folio_actual}_{cliente.replace(' ', '_')}.pdf"
             
+            # ========================================================
+            # 🚀 INYECCIÓN DE LÍMITES A LA BASE DE DATOS DEL ALMACÉN
+            # ========================================================
+            if doc:
+                try:
+                    hoja_limites = doc.worksheet("Limites_Materiales")
+                    for mat_sis, info in materiales_calculados.items():
+                        # Guarda Folio | Insumo | Cantidad Maxima | Requisicion
+                        hoja_limites.append_row([folio_actual, mat_sis, info["cant"], "AUTORIZADO COTIZADOR"])
+                except Exception as e:
+                    pass # Evitamos que falle si hay error de conexión a la pestaña
+
             if hoja:
                 resumen = " / ".join([f"{z['area']} ({z['m2']}m2)" for z in zonas_data])
-                # 🚀 AQUÍ SE GUARDA LA BOLSA EN LA EXCEL COMO COLUMNA EXTRA
-                hoja.append_row([folio_actual, fecha_hoy, asesor, cliente, compania, telefono, correo_cliente, proyecto, ubicacion.upper(), resumen, total_final, tipo_obra, bolsa_mano_obra])
+                # 🚀 INYECCIÓN FINAL AL EXCEL PRINCIPAL (Columnas M y N)
+                hoja.append_row([folio_actual, fecha_hoy, asesor, cliente, compania, telefono, correo_cliente, proyecto, ubicacion.upper(), resumen, total_final, tipo_obra, bolsa_mano_obra, resumen_insumos_str])
                 
-                registrar_bitacora(doc, "Cotizador", f"Generó presupuesto {folio_actual} para el cliente {cliente.upper()} por un total de ${total_final:,.2f}")
+                registrar_bitacora(doc, "Cotizador", f"Generó presupuesto {folio_actual} y autorizó materiales para {cliente.upper()}")
             
             enviar_respaldo_correo(pdf_final_para_descargar, nombre_file, cliente, asesor, folio_actual, tipo_obra, proyecto, ubicacion)
             
-        st.success(f"✅ Presupuesto {folio_actual} generado con éxito.")
+        st.success(f"✅ Presupuesto {folio_actual} generado y Límites de Almacén autorizados con éxito.")
         st.download_button(
-    label="📄 DESCARGAR PRESUPUESTO", 
-    data=pdf_final_para_descargar, 
-    file_name=nombre_file,
-    mime="application/pdf"
-)
+            label="📄 DESCARGAR PRESUPUESTO", 
+            data=pdf_final_para_descargar, 
+            file_name=nombre_file,
+            mime="application/pdf"
+        )

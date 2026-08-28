@@ -77,7 +77,6 @@ class PDF_ReporteGlobal(FPDF):
         self.set_text_color(80, 80, 80)
         self.cell(0, 5, 'REPORTE GLOBAL DE COBRANZA Y SALDOS PENDIENTES', ln=True, align='C')
         
-        # --- SECCIÓN NUEVA: LA FECHA EXACTA DEL REPORTE ---
         meses = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
         hoy = datetime.datetime.now()
         fecha_espanol = f"{hoy.day:02d} de {meses[hoy.month]} de {hoy.year}"
@@ -85,7 +84,7 @@ class PDF_ReporteGlobal(FPDF):
         self.set_font('Arial', 'I', 9)
         self.set_text_color(100, 100, 100)
         self.cell(0, 5, f'Fecha de Emisión: {fecha_espanol}', ln=True, align='C')
-        self.ln(5) # Espacio antes de la tabla
+        self.ln(5) 
     
     def footer(self):
         self.set_y(-15)
@@ -125,7 +124,6 @@ if doc:
     llave_folio = next((k for k in (datos_obras[0].keys() if datos_obras else []) if "FOLIO" in str(k).upper()), None)
     obras_disponibles = [str(fila[llave_folio]) for fila in datos_obras if str(fila.get(llave_folio, "")) != ""] if llave_folio else []
 
-    # Diccionario para extraer los nombres de las obras para el reporte
     nombres_obras_dict = {}
     if llave_folio:
         for fila in datos_obras:
@@ -209,6 +207,9 @@ if doc:
         st.subheader("📄 Exportar Estado de Cuenta Final (Para el Cliente)")
         st.write("Genera el PDF oficial de Término de Obra optimizado para encajar en una sola hoja.")
         
+        # 🚀 AQUÍ ESTÁ EL NUEVO SELECTOR DE FECHA MANUAL PARA EL CIERRE DE OBRA
+        fecha_termino_obra = st.date_input("Selecciona la fecha real de término de los trabajos:", datetime.date.today())
+        
         if st.button("🖨️ GENERAR AVISO DE TÉRMINO EN UNA HOJA"):
             with st.spinner("Creando documento estilizado en azul..."):
                 
@@ -260,7 +261,10 @@ if doc:
                 pdf.set_font('Arial', 'B', 10)
                 pdf.write(4.2, f"{ubicacion_obra}")
                 pdf.set_font('Arial', '', 10)
-                pdf.write(4.2, f", han sido concluidos en su totalidad el pasado {hoy.strftime('%d/%m/%Y')}, cumpliendo con las especificaciones técnicas y estándares de calidad acordados.\n")
+                
+                # 🚀 AQUÍ SE INYECTA LA FECHA ELEGIDA MANUALMENTE
+                fecha_termino_str = fecha_termino_obra.strftime('%d/%m/%Y')
+                pdf.write(4.2, f", han sido concluidos en su totalidad el pasado {fecha_termino_str}, cumpliendo con las especificaciones técnicas y estándares de calidad acordados.\n")
                 pdf.ln(2)
                 
                 pdf.multi_cell(0, 4.2, "Con el objetivo de proceder a la entrega formal del inmueble y la firma del acta de recepción definitiva, nos permitimos presentarle el desglose del balance financiero final del proyecto:\n")

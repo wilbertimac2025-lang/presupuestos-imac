@@ -6,6 +6,8 @@ import datetime
 import pandas as pd
 from fpdf import FPDF
 import os
+import smtplib
+from email.message import EmailMessage
 
 st.set_page_config(page_title="Facturación y Estados de Cuenta", page_icon="🧾", layout="wide")
 
@@ -18,7 +20,7 @@ if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
 
 ROLES_PERMITIDOS = ["Admin", "Directivo", "RRHH", "Operativo"]
 if st.session_state.get("role") not in ROLES_PERMITIDOS:
-    st.error(f"🚫 ACCESO RESTRINGIDO: Tu perfil no tiene autorización para ver estados de cuenta.")
+    st.error("🚫 ACCESO RESTRINGIDO: Tu perfil no tiene autorización para ver estados de cuenta.")
     st.stop()
 
 # 🕵️ FUNCIÓN DE BITÁCORA SILENCIOSA
@@ -26,12 +28,11 @@ def registrar_bitacora(doc, modulo, accion):
     try:
         hoja_bitacora = doc.worksheet("Bitacora_Movimientos")
         fecha_hora = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-        # Intenta jalar el nombre del usuario, si no hay, usa "Usuario Sistema"
         usuario = st.session_state.get("usuario", st.session_state.get("username", "Usuario Sistema"))
         rol = st.session_state.get("role", "Desconocido")
         hoja_bitacora.append_row([fecha_hora, usuario, rol, modulo, accion])
     except Exception:
-        pass # Si la pestaña no existe, el sistema sigue funcionando normal
+        pass 
 
 def limpiar_monto(valor):
     if str(valor).strip() == "" or valor is None: return 0.0
@@ -49,18 +50,16 @@ def obtener_valor(diccionario, palabras_clave, default="No registrado"):
 # --- CLASE PARA EL PDF REDISEÑADO EN UNA SOLA HOJA ---
 class PDF_EstadoCuenta(FPDF):
     def header(self):
-        # Encabezado Superior Centrado y en Azul Corporativo (Sin imagen)
         self.set_xy(15, 10)
         self.set_font('Arial', 'B', 20)
-        self.set_text_color(15, 60, 140) # Azul Fuerte
+        self.set_text_color(15, 60, 140) 
         self.cell(0, 8, 'TARC, S.A. DE C.V.', ln=True, align='C')
         
         self.set_xy(15, 18)
         self.set_font('Arial', '', 9)
-        self.set_text_color(80, 80, 80) # Gris elegante para subtítulo
+        self.set_text_color(80, 80, 80) 
         self.cell(0, 5, 'BLVD. MIGUEL ALEMAN No. 306 TEL.: 986-35-72 BOCA DEL RIO, VER.', ln=True, align='C')
         
-        # Elegante doble línea separadora en Azul Marítimo
         self.set_draw_color(15, 60, 140)
         self.set_line_width(0.4)
         self.line(15, 25, 195, 25)
@@ -156,7 +155,6 @@ if doc:
                         fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
                         hoja_facturas.append_row([fecha_actual, folio_seleccionado, num_factura.upper(), concepto_factura.upper(), monto_factura])
                         
-                        # 🚀 INYECCIÓN A LA BITÁCORA
                         registrar_bitacora(doc, "Facturación e Impuestos", f"Cobró/Registró pago de ${monto_factura:,.2f} al folio {folio_seleccionado}. Recibo: {num_factura.upper()}")
                         
                         st.success(f"✅ Pago de ${monto_factura:,.2f} registrado con éxito.")
@@ -179,7 +177,6 @@ if doc:
         if st.button("🖨️ GENERAR AVISO DE TÉRMINO EN UNA HOJA"):
             with st.spinner("Creando documento estilizado en azul..."):
                 
-                # 🚀 INYECCIÓN A LA BITÁCORA
                 registrar_bitacora(doc, "Facturación e Impuestos", f"Generó PDF de Estado de Cuenta Final para el folio {folio_seleccionado}")
                 
                 pdf = PDF_EstadoCuenta()
@@ -189,19 +186,16 @@ if doc:
                 hoy = datetime.datetime.now()
                 fecha_espanol = f"{hoy.day:02d} de {meses[hoy.month]} de {hoy.year}"
                 
-                # Título Principal (Azul)
                 pdf.set_font('Arial', 'B', 12)
                 pdf.set_text_color(15, 60, 140)
                 pdf.cell(0, 5, "Aviso de Término de Obra y Saldo Pendiente", ln=True, align='C')
                 pdf.ln(1)
                 
-                # Fecha
                 pdf.set_font('Arial', 'I', 9)
                 pdf.set_text_color(100, 100, 100)
                 pdf.cell(0, 4, f"H. Veracruz, Ver a {fecha_espanol}.", ln=True, align='R')
                 pdf.ln(3)
                 
-                # Destinatario
                 pdf.set_font('Arial', 'B', 10)
                 pdf.set_text_color(0, 0, 0)
                 pdf.cell(0, 4, f"Ing. {nombre_cliente.title()}", ln=True)
@@ -209,24 +203,21 @@ if doc:
                 pdf.cell(0, 4, "Presente.", ln=True)
                 pdf.ln(2)
                 
-                # Asunto (Negrita con resalte Azul sutil)
                 pdf.set_font('Arial', 'B', 10)
                 pdf.write(4, "Asunto: ")
                 pdf.set_font('Arial', '', 10)
                 pdf.write(4, "Aviso de término de obra y estado de cuenta final.\n")
                 pdf.ln(2)
                 
-                # Saludo
                 pdf.set_font('Arial', '', 10)
                 saludo = "Estimado cliente." if not empresa_cliente else f"Estimada {empresa_cliente.title()}."
                 pdf.write(4, saludo + "\n")
                 pdf.ln(2)
                 
-                # Párrafo 1 (Compactado a 4mm de espacio)
                 pdf.set_font('Arial', '', 10)
                 pdf.write(4.2, "Por medio de la presente, nos complace informarle que los trabajos correspondientes al proyecto ")
                 pdf.set_font('Arial', 'B', 10)
-                pdf.set_text_color(15, 60, 140) # Resalte de obra en azul
+                pdf.set_text_color(15, 60, 140) 
                 pdf.write(4.2, f"{nombre_proyecto}")
                 pdf.set_text_color(0, 0, 0)
                 pdf.set_font('Arial', '', 10)
@@ -237,40 +228,34 @@ if doc:
                 pdf.write(4.2, f", han sido concluidos en su totalidad el pasado {hoy.strftime('%d/%m/%Y')}, cumpliendo con las especificaciones técnicas y estándares de calidad acordados.\n")
                 pdf.ln(2)
                 
-                # Párrafo 2
                 pdf.multi_cell(0, 4.2, "Con el objetivo de proceder a la entrega formal del inmueble y la firma del acta de recepción definitiva, nos permitimos presentarle el desglose del balance financiero final del proyecto:\n")
                 pdf.ln(2)
                 
-                # --- TABLA AZUL DISEÑADA ---
                 pdf.set_font('Arial', 'B', 9)
                 pdf.set_text_color(15, 60, 140)
                 pdf.cell(0, 5, "Resumen de Estado de Cuenta Final:", ln=True)
                 
-                # Encabezados de Tabla en Azul Fuerte con texto Blanco
                 pdf.set_fill_color(15, 60, 140)
                 pdf.set_text_color(255, 255, 255)
                 pdf.set_draw_color(15, 60, 140)
                 pdf.cell(140, 6, "Concepto", border=1, align='C', fill=True)
                 pdf.cell(50, 6, "Monto", border=1, align='C', fill=True, ln=True)
                 
-                # Fila 1: Costo Total (Fondo Azul muy tenue)
                 pdf.set_font('Arial', 'B', 9)
                 pdf.set_text_color(0, 0, 0)
                 pdf.set_fill_color(240, 245, 255)
                 pdf.cell(140, 6, "Costo Total del Proyecto:", border=1, align='R', fill=True)
                 pdf.cell(50, 6, f"$ {presupuesto_total:,.2f}", border=1, align='R', fill=True, ln=True)
                 
-                # Fila 2: Anticipos (Fondo Blanco)
                 pdf.set_font('Arial', '', 9)
                 pdf.set_fill_color(255, 255, 255)
                 pdf.cell(140, 6, "Total de Pagos / Anticipos Recibidos:", border=1, align='R', fill=True)
                 pdf.cell(50, 6, f"$ {total_pagos_recibidos:,.2f}", border=1, align='R', fill=True, ln=True)
                 
-                # Fila 3: Saldo deudor (Resaltado en Azul Claro Directivo)
                 pdf.set_font('Arial', 'B', 9)
                 pdf.set_fill_color(200, 220, 255)
                 pdf.cell(140, 6, "Saldo Pendiente por Liquidar:", border=1, align='R', fill=True)
-                pdf.set_text_color(15, 60, 140) # Texto final en azul
+                pdf.set_text_color(15, 60, 140) 
                 pdf.cell(50, 6, f"$ {saldo_pendiente:,.2f}", border=1, align='R', fill=True, ln=True)
                 
                 pdf.set_font('Arial', 'I', 8.5)
@@ -278,7 +263,6 @@ if doc:
                 pdf.cell(0, 4, "(Nota: Los montos anteriores ya incluyen IVA).", ln=True)
                 pdf.ln(3)
                 
-                # Próximos Pasos (Centrado con diseño)
                 pdf.set_font('Arial', 'B', 10)
                 pdf.set_text_color(15, 60, 140)
                 pdf.cell(0, 5, "Próximos Pasos para la Entrega", ln=True, align='C')
@@ -295,7 +279,6 @@ if doc:
                 pdf.write(4.2, "mediante las opciones de pago habituales o transferencia a la siguiente cuenta:\n")
                 pdf.ln(1.5)
                 
-                # Datos Bancarios estilizados de forma segura
                 pdf.set_font('Arial', '', 9.5)
                 pdf.cell(10)
                 pdf.write(4.5, "  -  Banco: ")
@@ -308,7 +291,6 @@ if doc:
                 pdf.set_font('Arial', 'B', 9.5); pdf.write(4.5, "012905004501876903.\n")
                 pdf.ln(2.5)
                 
-                # Párrafo Final
                 pdf.set_font('Arial', '', 10)
                 pdf.write(4.2, "Una vez confirmado el pago, coordinaremos la cita para la inspección final en sitio y la firma del ")
                 pdf.set_font('Arial', 'B', 10)
@@ -318,7 +300,6 @@ if doc:
                 pdf.multi_cell(0, 4.2, "Agradecemos de antemano su confianza en nuestros servicios y quedamos a su entera disposición para cualquier duda o aclaración respecto a este estado de cuenta.")
                 pdf.ln(5)
                 
-                # Firmas y Bloque de Contacto al pie (Todo asegurado en la misma hoja)
                 pdf.set_font('Arial', '', 9.5)
                 pdf.cell(0, 4, "Atentamente,", ln=True)
                 pdf.set_font('Arial', 'B', 10)
@@ -337,3 +318,89 @@ if doc:
                     file_name=f"Estado_Cuenta_{folio_seleccionado}.pdf", 
                     mime="application/pdf"
                 )
+
+# -----------------------------------------------------------------
+# 📬 MÓDULO DE ENVÍO DE REPORTE DE COBRANZA A DIRECCIÓN
+# -----------------------------------------------------------------
+st.markdown("---")
+st.subheader("📬 Reporte Global de Cobranza")
+st.write("Genera y envía el estado de cuenta de todas las obras con saldo pendiente a los correos institucionales.")
+
+if st.button("🚀 Enviar Reporte por Correo Ahora"):
+    with st.spinner("Calculando saldos y armando el correo..."):
+        try:
+            hoja_presup = doc.worksheet("Presupuestos")
+            hoja_fact = doc.worksheet("Facturas_Obras")
+            
+            filas_presup = hoja_presup.get_all_records()
+            filas_fact = hoja_fact.get_all_records()
+            
+            obras_totales = {}
+            for fila in filas_presup:
+                claves = list(fila.keys())
+                if claves:
+                    folio = str(fila.get(claves[0], "")).strip()
+                    total = 0.0
+                    for k, v in fila.items():
+                        if "TOTAL" in str(k).upper() or "INVERSIÓN" in str(k).upper():
+                            try: total = float(str(v).replace("$", "").replace(",", "").strip())
+                            except: pass
+                    if folio: obras_totales[folio] = total
+
+            obras_pagadas = {}
+            for fila in filas_fact:
+                folio_obra = str(fila.get("Folio Obra", "")).strip()
+                monto = 0.0
+                try: monto = float(str(fila.get("Monto Facturado", 0)).replace("$", "").replace(",", "").strip())
+                except: pass
+                if folio_obra: obras_pagadas[folio_obra] = obras_pagadas.get(folio_obra, 0.0) + monto
+
+            reporte_lineas = []
+            gran_total_pendiente = 0.0
+
+            for folio, costo_total in obras_totales.items():
+                pagado = obras_pagadas.get(folio, 0.0)
+                saldo_pendiente = costo_total - pagado
+                
+                if saldo_pendiente > 0: 
+                    gran_total_pendiente += saldo_pendiente
+                    reporte_lineas.append(f"• Obra: {folio} | Costo: ${costo_total:,.2f} | Cobrado: ${pagado:,.2f} | 🔴 Pendiente: ${saldo_pendiente:,.2f}")
+
+            if not reporte_lineas:
+                cuerpo_mensaje = "¡Excelente noticia equipo! No hay saldos pendientes por cobrar en ninguna obra activa."
+            else:
+                cuerpo_mensaje = (
+                    "Estimado equipo directivo y comercial,\n\n"
+                    "A continuación se presenta el estado de cuenta y saldos pendientes de las obras activas:\n\n" +
+                    "\n".join(reporte_lineas) +
+                    f"\n\n💰 SALDO GLOBAL PENDIENTE EN LA CALLE: ${gran_total_pendiente:,.2f} MXN\n\n" +
+                    "Por favor dar seguimiento a la cobranza con los clientes correspondientes.\n\n"
+                    "Atentamente,\nERP Comercial"
+                )
+
+            remitente = st.secrets["CORREO_BOT"] 
+            password = st.secrets["PASS_BOT"]              
+            
+            destinatarios = [
+                "comercial@grupo-imac.com",
+                "ejemplo1@grupo-imac.com",
+                "ejemplo2@grupo-imac.com",
+                "ejemplo3@grupo-imac.com"
+            ]
+
+            msg = EmailMessage()
+            msg['Subject'] = f'📊 REPORTE DE COBRANZA - ({datetime.datetime.now().strftime("%d/%m/%Y")})'
+            msg['From'] = remitente
+            msg['To'] = ", ".join(destinatarios)
+            msg.set_content(cuerpo_mensaje)
+
+            with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
+                smtp.starttls()
+                smtp.login(remitente, password)
+                smtp.send_message(msg)
+                
+            st.success("✅ ¡El reporte fue generado y enviado con éxito a los 4 correos institucionales!")
+            st.balloons() 
+            
+        except Exception as e:
+            st.error(f"❌ Ocurrió un error al enviar el correo: {e}")

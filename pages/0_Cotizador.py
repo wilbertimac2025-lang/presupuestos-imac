@@ -12,8 +12,10 @@ import io
 from PyPDF2 import PdfMerger
 import math
 
-# --- CONFIGURACIÓN ---
-st.set_page_config(page_title="Cotizador Multizona IMAC", page_icon="📝", layout="centered")
+# --- CONFIGURACIÓN CORPORATIVA ---
+# 1. Favicon del navegador
+icono_navegador = "logo_imac_2026.png" if os.path.exists("logo_imac_2026.png") else ("logo_tarc.png" if os.path.exists("logo_tarc.png") else "🏢")
+st.set_page_config(page_title="Cotizador Multizona IMAC", page_icon=icono_navegador, layout="centered")
 
 # -----------------------------------------
 # 🛡️ CANDADO DE SEGURIDAD POR ROLES
@@ -109,7 +111,10 @@ class PDF(FPDF):
         self.rect(5, 5, 200, 287) 
         self.set_line_width(0.2) 
 
-        if os.path.exists("logo_tarc.png"):
+        # 🚀 SE AGREGA EL NUEVO LOGO AL MOTOR DE PDF
+        if os.path.exists("logo_imac_2026.png"):
+            self.image("logo_imac_2026.png", x=10, y=8, w=85) 
+        elif os.path.exists("logo_tarc.png"):
             self.image("logo_tarc.png", x=10, y=8, w=85) 
         elif os.path.exists("logo_tarc.jpg"): 
             self.image("logo_tarc.jpg", x=10, y=8, w=85)
@@ -168,7 +173,19 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio, ti
         return True, "OK"
     except Exception as e: return False, str(e)
 
-st.title("🍊 Presupuestos Obras Grupo IMAC")
+# 2. Encabezado Oficial con Logo (Reemplazando los emojis)
+col_logo, col_tit = st.columns([1, 4])
+with col_logo:
+    if os.path.exists("logo_imac_2026.png"):
+        st.image("logo_imac_2026.png", use_container_width=True)
+    elif os.path.exists("logo_tarc.png"):
+        st.image("logo_tarc.png", use_container_width=True)
+    elif os.path.exists("logo_tarc.jpg"):
+        st.image("logo_tarc.jpg", use_container_width=True)
+with col_tit:
+    st.title("Presupuestos Obras Grupo IMAC")
+st.markdown("---")
+
 num_areas = st.number_input("¿Cuántas áreas distintas vas a cotizar?", min_value=1, max_value=10, value=1)
 
 st.write("### 1. Datos de Contacto y Asignación")
@@ -182,7 +199,6 @@ compania = st.text_input("Compañía / Empresa")
 telefono = st.text_input("Teléfono de Contacto")
 correo_cliente = st.text_input("Correo Electrónico del Cliente")
 
-# 🚀 AQUÍ ESTÁ EL CAMBIO A MENÚ DESPLEGABLE CON LAS DOS OPCIONES
 asesor = st.selectbox("Nombre del Asesor", ["JOSE CARLOS MORALES MORALES", "FRANCISCO JAVIER CARO YAÑEZ"], key="in_asesor")
 
 tipo_obra = st.selectbox("Tipo de Proyecto / Logística:", ["LOCAL", "FORÁNEA"])

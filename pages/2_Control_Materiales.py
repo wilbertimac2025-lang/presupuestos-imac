@@ -5,6 +5,7 @@ import json
 import datetime
 import pandas as pd
 import os
+from PIL import Image
 
 # --- CONFIGURACIÓN CORPORATIVA ---
 icono_navegador = "logo_imac_2026.png" if os.path.exists("logo_imac_2026.png") else ("logo_tarc.png" if os.path.exists("logo_tarc.png") else "🏢")
@@ -125,15 +126,21 @@ def conectar_sheets():
     except Exception:
         return None
 
-# --- ENCABEZADO OFICIAL ---
+# --- ENCABEZADO OFICIAL BLINDADO ---
 col_logo, col_tit = st.columns([1, 5])
 with col_logo:
-    if os.path.exists("logo_imac_2026.png"):
-        st.image("logo_imac_2026.png", use_container_width=True)
-    elif os.path.exists("logo_tarc.png"):
-        st.image("logo_tarc.png", use_container_width=True)
-    elif os.path.exists("logo_tarc.jpg"):
-        st.image("logo_tarc.jpg", use_container_width=True)
+    try:
+        if os.path.exists("logo_imac_2026.png"):
+            img_logo = Image.open("logo_imac_2026.png")
+            st.image(img_logo, use_container_width=True)
+        elif os.path.exists("logo_tarc.png"):
+            img_logo = Image.open("logo_tarc.png")
+            st.image(img_logo, use_container_width=True)
+        elif os.path.exists("logo_tarc.jpg"):
+            img_logo = Image.open("logo_tarc.jpg")
+            st.image(img_logo, use_container_width=True)
+    except Exception:
+        st.write("🏢 GRUPO IMAC")
 with col_tit:
     st.title("Control de Salidas y Materiales")
 st.markdown("---")

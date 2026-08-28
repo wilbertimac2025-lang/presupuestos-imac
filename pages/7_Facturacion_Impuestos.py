@@ -8,6 +8,7 @@ from fpdf import FPDF
 import os
 import smtplib
 from email.message import EmailMessage
+from PIL import Image
 
 # --- CONFIGURACIÓN CORPORATIVA ---
 icono_navegador = "logo_imac_2026.png" if os.path.exists("logo_imac_2026.png") else ("logo_tarc.png" if os.path.exists("logo_tarc.png") else "🏢")
@@ -52,7 +53,7 @@ def obtener_valor(diccionario, palabras_clave, default="No registrado"):
 # --- CLASE PARA EL PDF ESTADO DE CUENTA (UN SOLO CLIENTE) ---
 class PDF_EstadoCuenta(FPDF):
     def header(self):
-        # 🚀 INYECCIÓN DEL LOGO CORPORATIVO
+        # 🚀 INYECCIÓN DEL LOGO CORPORATIVO AL PDF
         if os.path.exists("logo_imac_2026.png"): self.image("logo_imac_2026.png", x=15, y=8, w=45)
         elif os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=15, y=8, w=45)
         elif os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=15, y=8, w=45)
@@ -76,7 +77,7 @@ class PDF_EstadoCuenta(FPDF):
 # --- NUEVA CLASE PARA EL PDF REPORTE GLOBAL DE COBRANZA ---
 class PDF_ReporteGlobal(FPDF):
     def header(self):
-        # 🚀 INYECCIÓN DEL LOGO CORPORATIVO
+        # 🚀 INYECCIÓN DEL LOGO CORPORATIVO AL PDF
         if os.path.exists("logo_imac_2026.png"): self.image("logo_imac_2026.png", x=15, y=8, w=40)
         elif os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=15, y=8, w=40)
         elif os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=15, y=8, w=40)
@@ -116,15 +117,21 @@ def conectar_sheets():
         return cliente.open_by_key(ID_DEL_EXCEL)
     except Exception: return None
 
-# --- ENCABEZADO OFICIAL ---
+# --- ENCABEZADO OFICIAL BLINDADO PARA LA WEB ---
 col_logo, col_tit = st.columns([1, 5])
 with col_logo:
-    if os.path.exists("logo_imac_2026.png"):
-        st.image("logo_imac_2026.png", use_container_width=True)
-    elif os.path.exists("logo_tarc.png"):
-        st.image("logo_tarc.png", use_container_width=True)
-    elif os.path.exists("logo_tarc.jpg"):
-        st.image("logo_tarc.jpg", use_container_width=True)
+    try:
+        if os.path.exists("logo_imac_2026.png"):
+            img_logo = Image.open("logo_imac_2026.png")
+            st.image(img_logo, use_container_width=True)
+        elif os.path.exists("logo_tarc.png"):
+            img_logo = Image.open("logo_tarc.png")
+            st.image(img_logo, use_container_width=True)
+        elif os.path.exists("logo_tarc.jpg"):
+            img_logo = Image.open("logo_tarc.jpg")
+            st.image(img_logo, use_container_width=True)
+    except Exception:
+        st.write("🏢 GRUPO IMAC")
 with col_tit:
     st.title("Cobranza y Estados de Cuenta Finales")
 st.markdown("---")
@@ -229,7 +236,6 @@ if doc:
         st.subheader("📄 Exportar Estado de Cuenta Final (Para el Cliente)")
         st.write("Genera el PDF oficial de Término de Obra optimizado para encajar en una sola hoja.")
         
-        # 🚀 AQUÍ ESTÁ EL NUEVO SELECTOR DE FECHA MANUAL PARA EL CIERRE DE OBRA
         fecha_termino_obra = st.date_input("Selecciona la fecha real de término de los trabajos:", datetime.date.today())
         
         if st.button("🖨️ GENERAR AVISO DE TÉRMINO EN UNA HOJA"):
@@ -284,7 +290,6 @@ if doc:
                 pdf.write(4.2, f"{ubicacion_obra}")
                 pdf.set_font('Arial', '', 10)
                 
-                # 🚀 AQUÍ SE INYECTA LA FECHA ELEGIDA MANUALMENTE
                 fecha_termino_str = fecha_termino_obra.strftime('%d/%m/%Y')
                 pdf.write(4.2, f", han sido concluidos en su totalidad el pasado {fecha_termino_str}, cumpliendo con las especificaciones técnicas y estándares de calidad acordados.\n")
                 pdf.ln(2)
@@ -516,8 +521,8 @@ if st.button("🚀 Generar PDF y Enviar por Correo"):
                 destinatarios = [
                     "comercial@grupo-imac.com",
                     "aco@grupo-imac.com",
-                    "rh@grupo-imac.com",
-                    "act@grupo-imac.com"
+                    "act@grupo-imac.com",
+                    "rh@grupo-imac.com"
                 ]
 
                 msg = EmailMessage()

@@ -11,7 +11,9 @@ import smtplib
 from email.message import EmailMessage
 from PIL import Image
 
-st.set_page_config(page_title="ERP - Gestión de Obras", page_icon="🏗️", layout="wide")
+# --- CONFIGURACIÓN CORPORATIVA ---
+icono_navegador = "logo_imac_2026.png" if os.path.exists("logo_imac_2026.png") else ("logo_tarc.png" if os.path.exists("logo_tarc.png") else "🏢")
+st.set_page_config(page_title="ERP - Gestión de Obras", page_icon=icono_navegador, layout="wide")
 
 # 🛡️ CANDADO DE SEGURIDAD GENERAL POR ROLES
 if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
@@ -66,8 +68,11 @@ def enviar_cierre_por_correo(pdf_bytes, nombre_archivo, cliente, folio):
 # --- CLASES PARA LOS 3 PDFs ---
 class PDF_Base(FPDF):
     def header(self):
-        if os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=15, y=10, w=50)
+        # 🚀 SE AGREGA EL NUEVO LOGO AL MOTOR DE PDF
+        if os.path.exists("logo_imac_2026.png"): self.image("logo_imac_2026.png", x=15, y=10, w=50)
+        elif os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=15, y=10, w=50)
         elif os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=15, y=10, w=50)
+        
         self.set_font('Arial', 'B', 14)
         self.set_text_color(15, 60, 140)
         self.cell(0, 10, 'TARC S.A. DE C.V.', ln=True, align='R')
@@ -253,7 +258,17 @@ def conectar_sheets():
         return cliente.open_by_key(ID_DEL_EXCEL)
     except Exception: return None
 
-st.title("🏗️ Centro de Control de Obras")
+# 2. Encabezado Oficial con Logo
+col_logo, col_tit = st.columns([1, 5])
+with col_logo:
+    if os.path.exists("logo_imac_2026.png"):
+        st.image("logo_imac_2026.png", use_container_width=True)
+    elif os.path.exists("logo_tarc.png"):
+        st.image("logo_tarc.png", use_container_width=True)
+    elif os.path.exists("logo_tarc.jpg"):
+        st.image("logo_tarc.jpg", use_container_width=True)
+with col_tit:
+    st.title("Centro de Control de Obras")
 st.markdown("---")
 
 doc = conectar_sheets()

@@ -4,8 +4,11 @@ from google.oauth2.service_account import Credentials
 import json
 import datetime
 import pandas as pd
+import os
 
-st.set_page_config(page_title="Control de Personal", page_icon="👷", layout="wide")
+# --- CONFIGURACIÓN CORPORATIVA ---
+icono_navegador = "logo_imac_2026.png" if os.path.exists("logo_imac_2026.png") else ("logo_tarc.png" if os.path.exists("logo_tarc.png") else "🏢")
+st.set_page_config(page_title="Control de Personal", page_icon=icono_navegador, layout="wide")
 
 # -----------------------------------------
 # 🛡️ CANDADO DE SEGURIDAD POR ROLES
@@ -29,7 +32,7 @@ def registrar_bitacora(doc, modulo, accion):
             rol = st.session_state.get("role", "Desconocido")
             hoja_bitacora.append_row([fecha_hora, usuario, rol, modulo, accion])
     except Exception:
-        pass # Si la pestaña no existe, el sistema sigue funcionando normal
+        pass 
 
 @st.cache_resource
 def conectar_sheets():
@@ -43,7 +46,17 @@ def conectar_sheets():
         return cliente.open_by_key(ID_DEL_EXCEL)
     except Exception: return None
 
-st.title("👷 Control de Personal y Asignación de Obra")
+# --- ENCABEZADO OFICIAL ---
+col_logo, col_tit = st.columns([1, 5])
+with col_logo:
+    if os.path.exists("logo_imac_2026.png"):
+        st.image("logo_imac_2026.png", use_container_width=True)
+    elif os.path.exists("logo_tarc.png"):
+        st.image("logo_tarc.png", use_container_width=True)
+    elif os.path.exists("logo_tarc.jpg"):
+        st.image("logo_tarc.jpg", use_container_width=True)
+with col_tit:
+    st.title("Control de Personal y Asignación de Obra")
 st.markdown("---")
 
 doc = conectar_sheets()

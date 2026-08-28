@@ -9,7 +9,6 @@ import os
 import io
 import smtplib
 from email.message import EmailMessage
-from PyPDF2 import PdfMerger
 from PIL import Image
 
 st.set_page_config(page_title="ERP - Gestión de Obras", page_icon="🏗️", layout="wide")
@@ -21,7 +20,7 @@ if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
 
 ROLES_PERMITIDOS = ["Admin", "Operativo", "RRHH"]
 if st.session_state.get("role") not in ROLES_PERMITIDOS:
-    st.error(f"🚫 ACCESO RESTRINGIDO: Este módulo es exclusivo para Dirección (Admin).")
+    st.error("🚫 ACCESO RESTRINGIDO: Este módulo es exclusivo para Dirección (Admin).")
     st.stop()
 
 # 🕵️ FUNCIÓN DE BITÁCORA SILENCIOSA
@@ -41,7 +40,7 @@ def limpiar_monto(valor):
     try: return float(str(valor).replace("$", "").replace(",", "").replace(" ", "").strip())
     except: return 0.0
 
-# 📧 NUEVA FUNCIÓN: ENVÍO DE PDF A LOS 4 CORREOS CORPORATIVOS
+# 📧 FUNCIÓN: ENVÍO DE PDF (ACTA) A CORREOS CORPORATIVOS
 def enviar_cierre_por_correo(pdf_bytes, nombre_archivo, cliente, folio):
     try:
         remitente = st.secrets["CORREO_BOT"]
@@ -50,10 +49,10 @@ def enviar_cierre_por_correo(pdf_bytes, nombre_archivo, cliente, folio):
         correo_destino = "comercial@grupo-imac.com, direccion@grupo-imac.com, rh@grupo-imac.com, masterventas@grupo-imac.com" 
         
         msg = EmailMessage()
-        msg['Subject'] = f'CIERRE DE OBRA Y EVIDENCIA: {folio} - {cliente}'
+        msg['Subject'] = f'CIERRE DE OBRA OFICIAL Y ACTA DE ENTREGA: {folio} - {cliente}'
         msg['From'] = remitente
         msg['To'] = correo_destino
-        msg.set_content(f"Se ha registrado el cierre definitivo de la obra en el ERP.\n\nFolio: {folio}\nCliente: {cliente}\n\nSe adjunta la carta de agradecimiento junto con la evidencia fotográfica del trabajo entregado.")
+        msg.set_content(f"Se ha registrado el cierre definitivo de la obra en el ERP.\n\nFolio: {folio}\nCliente: {cliente}\n\nSe adjunta el Acta de Entrega formal con la evidencia fotográfica del trabajo entregado incrustada.")
         msg.add_attachment(pdf_bytes, maintype='application', subtype='pdf', filename=nombre_archivo)
         
         with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
@@ -64,19 +63,184 @@ def enviar_cierre_por_correo(pdf_bytes, nombre_archivo, cliente, folio):
     except Exception as e: 
         return False
 
-# --- CLASE PARA EL PDF DE LA CARTA ---
-class PDF_Carta(FPDF):
+# --- CLASES PARA LOS 3 PDFs ---
+class PDF_Base(FPDF):
     def header(self):
-        if os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=15, y=10, w=70)
-        elif os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=15, y=10, w=70)
-        self.set_font('Arial', 'B', 10)
+        if os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=15, y=10, w=50)
+        elif os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=15, y=10, w=50)
+        self.set_font('Arial', 'B', 14)
         self.set_text_color(15, 60, 140)
         self.cell(0, 10, 'TARC S.A. DE C.V.', ln=True, align='R')
         self.set_font('Arial', '', 8)
         self.set_text_color(100, 100, 100)
-        self.cell(0, 4, 'BOULEVARD MIGUEL ALEMAN 759, COL. CENTRO', ln=True, align='R')
-        self.cell(0, 4, 'VERACRUZ, VER. C.P. 91700', ln=True, align='R')
-        self.set_y(45)
+        self.cell(0, 4, 'BLVD. MIGUEL ALEMAN No. 306, BOCA DEL RIO, VER.', ln=True, align='R')
+        self.cell(0, 4, 'TEL. (229) 935 45 25 / (229) 935 48 40', ln=True, align='R')
+        self.set_y(35)
+
+def generar_carta_agradecimiento(cliente, folio, proyecto, fecha_str):
+    pdf = PDF_Base()
+    pdf.add_page()
+    pdf.set_font('Arial', '', 11)
+    pdf.cell(0, 5, f"Veracruz, Ver. a {fecha_str}", ln=True, align='R')
+    pdf.ln(10)
+    
+    pdf.set_font('Arial', 'B', 12)
+    pdf.set_text_color(15, 60, 140)
+    pdf.cell(0, 6, f"ATENCIÓN: {str(cliente).upper()}", ln=True)
+    pdf.set_font('Arial', 'B', 10)
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(0, 6, f"REF: Cierre de Proyecto - Folio {folio}", ln=True)
+    pdf.ln(10)
+    
+    pdf.set_font('Arial', '', 11)
+    pdf.set_text_color(0, 0, 0)
+    texto = (
+        f"Por medio de la presente, el equipo directivo y operativo de TARC S.A. de C.V. (Grupo IMAC) "
+        f"le extiende nuestro más sincero agradecimiento por la confianza depositada en nosotros para la "
+        f"ejecución de la obra: '{proyecto}'.\n\n"
+        f"Hacemos de su conocimiento que los trabajos han sido concluidos satisfactoriamente. "
+        f"Nuestro compromiso es brindarle la más alta calidad en materiales y mano de obra.\n\n"
+        f"Quedamos a su entera disposición para futuros proyectos y aclaraciones.\n\n"
+        f"Sin más por el momento, le enviamos un cordial saludo."
+    )
+    pdf.multi_cell(0, 6, txt=texto)
+    pdf.ln(25)
+    pdf.set_font('Arial', 'B', 11)
+    pdf.set_text_color(15, 60, 140)
+    pdf.cell(0, 5, "Atentamente,", ln=True, align='C')
+    pdf.ln(10)
+    pdf.cell(0, 5, "___________________________________", ln=True, align='C')
+    pdf.cell(0, 5, "Departamento de Operaciones", ln=True, align='C')
+    pdf.cell(0, 5, "TARC S.A. DE C.V.", ln=True, align='C')
+    return pdf.output(dest='S').encode('latin-1')
+
+def generar_acta_entrega(cliente, folio, ubicacion, sistema, fecha_str, foto_bytes):
+    pdf = PDF_Base()
+    pdf.add_page()
+    
+    pdf.set_font('Arial', 'B', 12)
+    pdf.set_text_color(15, 60, 140)
+    pdf.cell(0, 6, "ACTA DE ENTREGA DE OBRA", ln=True, align='C')
+    pdf.cell(0, 6, "PROCESO DE ENTREGA DE OBRA", ln=True, align='C')
+    pdf.ln(5)
+    
+    pdf.set_font('Arial', 'B', 10)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(0, 5, f"VERACRUZ, VER. A {fecha_str.upper()}", ln=True, align='R')
+    pdf.ln(5)
+    
+    pdf.cell(0, 5, f"DATOS DE LA OBRA: {ubicacion.upper()}", ln=True)
+    pdf.cell(0, 5, "CONTRATISTA: TARC, S.A. DE C.V.", ln=True)
+    pdf.cell(0, 5, f"CLIENTE: {str(cliente).upper()}", ln=True)
+    pdf.ln(5)
+    
+    pdf.set_font('Arial', '', 10)
+    texto_legal = (
+        "LA PRESENTE ACTA FORMALIZA LA ENTREGA FINAL DE LA OBRA POR PARTE DEL CONTRATISTA TARC, S. A. DE C. V., "
+        "REPRESENTADO EN ESTE ACTO POR EL ING. JOSÉ CARLOS MORALES MORALES. SE HACE LA ENTREGA FÍSICA DE LA OBRA "
+        f"CON DOMICILIO EN: {ubicacion.upper()} ESTA FUE EFECTUADA CON MATERIALES DE LA MÁS ALTA CALIDAD, QUE SE RIGEN "
+        "CON NORMAS APROBADAS INTERNACIONALMENTE Y CON MANO DE OBRA ESPECIALIZADA, ASÍ COMO BAJO UNA SUPERVISIÓN ADECUADA. "
+        "POR PARTE DEL CLIENTE, RECIBO SATISFACTORIAMENTE ESTA ACTA DE ENTREGA DE OBRA, CORROBORANDO FÍSICAMENTE QUE EL INMUEBLE "
+        "ME LO ENTREGAN EN PERFECTO ESTADO, SIN NINGÚN PROBLEMA O PERCANCE EN ÉL. ESTOY COMPLETAMENTE CONFORME CON EL TRABAJO "
+        "QUE REALIZO EL CONTRATISTA TARC, S. A. DE C. V. EN EL INMUEBLE."
+    )
+    pdf.multi_cell(0, 5, txt=texto_legal)
+    pdf.ln(3)
+    
+    pdf.set_font('Arial', 'B', 10)
+    pdf.cell(0, 5, f"SISTEMA APLICADO: {sistema.upper()}", ln=True)
+    
+    # Incrustar Foto
+    if foto_bytes:
+        try:
+            temp_img = "temp_acta.jpg"
+            img = Image.open(foto_bytes)
+            if img.mode in ('RGBA', 'P'): img = img.convert('RGB')
+            img.save(temp_img, format="JPEG")
+            
+            w_px, h_px = img.size
+            ratio = min(100 / w_px, 70 / h_px)
+            w_mm, h_mm = w_px * ratio, h_px * ratio
+            x_mm = (210 - w_mm) / 2
+            
+            y_actual = pdf.get_y() + 5
+            if y_actual + h_mm > 230: # Si no cabe, saltar página
+                pdf.add_page()
+                y_actual = 20
+                
+            pdf.image(temp_img, x=x_mm, y=y_actual, w=w_mm, h=h_mm)
+            pdf.set_y(y_actual + h_mm + 5)
+            if os.path.exists(temp_img): os.remove(temp_img)
+        except Exception:
+            pdf.cell(0, 10, "(Error al cargar imagen)", ln=True, align='C')
+            
+    pdf.set_font('Arial', '', 10)
+    pdf.multi_cell(0, 5, txt=f"SIN MÁS POR EL MOMENTO SE EXTIENDE LA PRESENTE ACTA DE ENTREGA DE OBRA EN LA CIUDAD DE VERACRUZ, VER.")
+    pdf.ln(15)
+    
+    # Firmas
+    y_firmas = pdf.get_y()
+    pdf.line(20, y_firmas, 90, y_firmas)
+    pdf.line(120, y_firmas, 190, y_firmas)
+    pdf.set_font('Arial', 'B', 9)
+    pdf.cell(95, 5, "CLIENTE", align='C')
+    pdf.cell(95, 5, "CONTRATISTA", align='C', ln=True)
+    
+    return pdf.output(dest='S').encode('latin-1')
+
+def generar_poliza_garantia(cliente, ubicacion, sistema, fecha_str):
+    pdf = PDF_Base()
+    pdf.add_page()
+    
+    pdf.set_font('Arial', 'B', 14)
+    pdf.set_text_color(15, 60, 140)
+    pdf.cell(0, 6, "POLIZA DE GARANTIA", ln=True, align='C')
+    pdf.set_font('Arial', 'B', 11)
+    pdf.cell(0, 6, "PARA TRABAJOS DE IMPERMEABILIZACION.", ln=True, align='C')
+    pdf.cell(0, 6, "OTORGA TARC S. A. DE C. V.", ln=True, align='C')
+    pdf.ln(5)
+    
+    pdf.set_font('Arial', 'B', 10)
+    pdf.set_text_color(0, 0, 0)
+    pdf.cell(0, 5, f"VERACRUZ, VER., A {fecha_str.upper()}.", ln=True, align='R')
+    pdf.ln(5)
+    
+    pdf.set_font('Arial', '', 10)
+    pdf.multi_cell(0, 5, txt=f"ESTA PÓLIZA DE GARANTÍA ES OTORGADA AL CLIENTE: {str(cliente).upper()} POR LOS TRABAJOS DE IMPERMEABILIZACIÓN EN LOSA DE CONCRETO EN: {ubicacion.upper()}.")
+    pdf.ln(3)
+    
+    pdf.set_font('Arial', 'B', 10)
+    pdf.cell(0, 5, f"SISTEMA APLICADO: {sistema.upper()}", ln=True)
+    pdf.ln(5)
+    
+    pdf.set_font('Arial', 'B', 11)
+    pdf.cell(0, 6, "C  L  A  U  S  U  L  A  S", ln=True, align='C')
+    pdf.ln(3)
+    
+    pdf.set_font('Arial', '', 9)
+    clausulas = [
+        "PRIMERA. - LA OBRA FUE EFECTUADA CON MATERIALES DE LA MÁS ALTA CALIDAD, QUE SE RIGEN CON NORMAS APROBADAS INTERNACIONALMENTE Y CON MANO DE OBRA ESPECIALIZADA, ASÍ COMO BAJO UNA SUPERVISIÓN ADECUADA.",
+        f"SEGUNDA. - ESTA PÓLIZA DE GARANTÍA AMPARA UN PERIODO DE 5 AÑOS EN {sistema.upper()} CONTRATADOS, A PARTIR DE LA FECHA DE ENTREGA DE LA OBRA, TRANSCURRIDO DICHO PLAZO SE EXTINGUE AUTOMÁTICAMENTE Y EL CLIENTE NO PODRÁ HACER NINGUNA RECLAMACIÓN AL CONTRATISTA.",
+        "TERCERA. - EL CONTRATISTA SE COMPROMETE A REPARAR CON SU GESTACIÓN A LAS CLÁUSULAS QUE SIGUEN LAS FALLAS EN LA IMPERMEABILIZACIÓN EFECTUADA, PONIENDO MATERIALES Y MANO DE OBRA SIN CARGO PARA EL CLIENTE.",
+        "CUARTA. - EL CONTRATISTA NO ESTÁ OBLIGADO A DAR SERVICIO REQUERIDO POR EL CLIENTE, SI SE COMPRUEBA QUE LOS DAÑOS OCASIONADOS EN EL TRABAJO DE IMPERMEABILIZACIÓN SE DEBEN A CAUSAS AJENAS A LOS PRODUCTOS EMPLEADOS O SU APLICACIÓN, TALES COMO ASENTAMIENTOS O FALLAS ESTRUCTURALES DEL EDIFICIO, INUNDACIONES, INCENDIOS, GRANIZOS, SISMOS, TERREMOTOS O CUALQUIER CASO FORTUITO O DE FUERZA MAYOR. LA PÓLIZA DE GARANTÍA QUEDARA NULA, SI SE OCASIONAN DAÑOS AL ÁREA TRABAJADA, COMO ARRASTRAR O MOVER OBJETOS QUE PERJUDIQUEN LA IMPERMEABILIZACIÓN. (ROMPAN EL SISTEMA)",
+        "QUINTA. - EL CONTRATISTA NO SE HACE RESPONSABLE DE LOS DAÑOS Y/O PREJUICIOS QUE OCASIONEN LAS FALLAS DE LA IMPERMEABILIZACIÓN EN EL INTERIOR DEL INMUEBLE.",
+        "SEXTA. - EL CLIENTE DEBERÁ DAR AVISO POR ESCRITO AL CONTRATISTA INMEDIATAMENTE DE LAS FALLAS DE LA IMPERMEABILIZACIÓN EFECTUADA.",
+        "SEPTIMA. - LA PÓLIZA DE GARANTÍA NO OPERA SI EL CLIENTE NO EFECTÚA SUS PAGOS EN CANTIDAD Y TIEMPO CONVENIDO.",
+        "OCTAVA. - POR EL HECHO DE RECIBIR EL CLIENTE ESTA PÓLIZA DE GARANTÍA, ACEPTA EN TODAS SUS PARTES LAS CLÁUSULAS QUE ANTECEDEN."
+    ]
+    
+    for c in clausulas:
+        pdf.multi_cell(0, 4.5, txt=c)
+        pdf.ln(2)
+        
+    pdf.ln(15)
+    pdf.cell(0, 5, "___________________________________", ln=True, align='C')
+    pdf.set_font('Arial', 'B', 10)
+    pdf.cell(0, 5, "C. MARIA ISIDRA ALVARADO ACOSTA", ln=True, align='C')
+    pdf.set_font('Arial', '', 10)
+    pdf.cell(0, 5, "CONTROL DE CALIDAD.", ln=True, align='C')
+    
+    return pdf.output(dest='S').encode('latin-1')
 
 @st.cache_resource
 def conectar_sheets():
@@ -100,13 +264,15 @@ if doc:
         hoja_obras = doc.worksheet("Obras_Activas")
         hoja_convenios = doc.worksheet("Convenios_Adicionales")
         hoja_rp = doc.worksheet("Registros_Patronales") 
+        hoja_facturas = doc.worksheet("Facturas_Obras")
     except Exception as e:
-        st.error("⚠️ Faltan pestañas en tu Excel. Asegúrate de tener 'Obras_Activas' y 'Registros_Patronales'.")
+        st.error("⚠️ Faltan pestañas en tu Excel. Asegúrate de tener 'Obras_Activas', 'Presupuestos' y 'Facturas_Obras'.")
         st.stop()
 
     datos_presupuestos = hoja_presupuestos.get_all_records()
     datos_obras = hoja_obras.get_all_records()
     datos_rp = hoja_rp.get_all_records() 
+    datos_facturas = hoja_facturas.get_all_records()
     
     llave_folio_pres = next((k for k in (datos_presupuestos[0].keys() if datos_presupuestos else []) if "FOLIO" in str(k).upper()), None)
     folios_disponibles = [str(fila[llave_folio_pres]) for fila in datos_presupuestos if str(fila.get(llave_folio_pres, "")) != ""] if llave_folio_pres else []
@@ -208,145 +374,92 @@ if doc:
                                     st.rerun()
 
     # ==========================================
-    # PESTAÑA 3: CIERRE DE OBRA Y GENERACIÓN PDF (VÍA CORREO)
+    # 🏁 PESTAÑA 3: CIERRE DE OBRA Y DOCUMENTACIÓN OFICIAL
     # ==========================================
     with tab3:
-        colX, colY = st.columns([1, 2])
-        with colX:
-            st.subheader("Selección de Obra a Cerrar")
-            folio_cierre = st.selectbox("Obra a Finalizar:", ["..."] + obras_activas, key="sel_cierre") if obras_activas else "..."
+        st.subheader("🏁 Panel de Cierre y Documentación")
+        folio_cierre = st.selectbox("Selecciona la Obra a Cerrar:", ["..."] + obras_activas, key="sel_cierre") if obras_activas else "..."
             
-            if folio_cierre != "...":
-                st.markdown("---")
-                st.write("📷 **Evidencia de Cierre (Obligatoria)**")
-                foto_responsiva = st.file_uploader("Suba foto del trabajo entregado (Obligatorio):", type=["jpg", "jpeg", "png", "pdf"])
-
         if folio_cierre != "...":
-            obra_a_cerrar = next((item for item in datos_obras if str(item.get(llave_folio_obra, "")) == folio_cierre), None)
-            if obra_a_cerrar:
-                llave_cliente = next((k for k in obra_a_cerrar.keys() if "CLIENTE" in str(k).upper()), None)
-                cliente_cierre = obra_a_cerrar.get(llave_cliente, "Estimado Cliente") if llave_cliente else "Estimado Cliente"
+            st.markdown("---")
+            # 1. Recuperar datos combinados (Obras + Presupuestos)
+            obra_act = next((item for item in datos_obras if str(item.get(llave_folio_obra, "")) == folio_cierre), {})
+            obra_pres = next((item for item in datos_presupuestos if str(item.get(llave_folio_pres, "")) == folio_cierre), {})
+            obra_completa = {**obra_act, **obra_pres}
+            
+            cliente_cierre = next((obra_completa[k] for k in obra_completa.keys() if "CLIENTE" in str(k).upper()), "Cliente General")
+            proyecto_cierre = next((obra_completa[k] for k in obra_completa.keys() if any(p in str(k).upper() for p in ["PROYECTO", "OBRA", "CONCEPTO"])), "Proyecto Especificado")
+            ubicacion_cierre = next((obra_completa[k] for k in obra_completa.keys() if any(p in str(k).upper() for p in ["UBICACION", "DIRECCION", "LUGAR"])), "Domicilio Conocido")
+            sistema_aplicado = next((obra_completa[k] for k in obra_completa.keys() if "SISTEMA" in str(k).upper()), "Sistema Impermeabilizante Autorizado")
+            
+            # 2. Análisis Financiero en vivo
+            llave_monto = next((k for k in obra_completa.keys() if any(p in str(k).upper() for p in ["TOTAL", "PRESUPUESTO", "MONTO"])), None)
+            presupuesto_total = limpiar_monto(obra_completa.get(llave_monto, 0))
+            
+            facturas_obra = [f for f in datos_facturas if str(f.get("Folio Obra", "")) == folio_cierre]
+            total_pagado = sum(limpiar_monto(f.get("Monto Facturado", 0)) for f in facturas_obra)
+            saldo_pendiente = presupuesto_total - total_pagado
+            
+            # Fecha para los documentos
+            meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+            hoy = datetime.datetime.now()
+            fecha_str = f"{hoy.day:02d} de {meses[hoy.month - 1]} de {hoy.year}"
 
-                llave_proyecto = next((k for k in obra_a_cerrar.keys() if any(p in str(k).upper() for p in ["PROYECTO", "UBICACI", "OBRA", "CONCEPTO"])), None)
-                proyecto_cierre = obra_a_cerrar.get(llave_proyecto, "Proyecto Especificado") if llave_proyecto else "Proyecto Especificado"
-                
-                with colY:
-                    st.info(f"Vas a cerrar definitivamente la obra de **{cliente_cierre}**.")
-                    
-                    if st.button("🔒 CERRAR OBRA, GUARDAR Y ENVIAR CARTA", type="primary"):
-                        if not foto_responsiva:
-                            st.error("⚠️ ACCIÓN DENEGADA: Es estrictamente obligatorio subir la foto del trabajo entregado para procesar el cierre.")
-                        else:
-                            with st.spinner("Ensamblando PDF con foto centrada y enviando a los 4 correos corporativos..."):
-                                
-                                pdf = PDF_Carta()
-                                pdf.add_page()
-                                
-                                # 🚀 CORRECCIÓN: MESES EN ESPAÑOL
-                                meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
-                                hoy = datetime.datetime.now()
-                                fecha_hoy_espanol = f"{hoy.day} de {meses[hoy.month - 1]} del {hoy.year}"
-                                
-                                pdf.set_font('Arial', '', 11)
-                                pdf.cell(0, 5, f"Veracruz, Ver. a {fecha_hoy_espanol}", ln=True, align='R')
-                                pdf.ln(15)
-                                pdf.set_font('Arial', 'B', 12)
-                                pdf.set_text_color(15, 60, 140)
-                                pdf.cell(0, 6, f"ATENCIÓN: {str(cliente_cierre).upper()}", ln=True)
-                                pdf.set_font('Arial', 'B', 10)
-                                pdf.set_text_color(100, 100, 100)
-                                pdf.cell(0, 6, f"REF: Cierre de Proyecto - Folio {folio_cierre}", ln=True)
-                                pdf.ln(10)
-                                
-                                pdf.set_font('Arial', '', 11)
-                                pdf.set_text_color(50, 50, 50)
-                                texto_cuerpo = (
-                                    f"Por medio de la presente, el equipo directivo y operativo de TARC S.A. de C.V. (Grupo IMAC) "
-                                    f"le extiende nuestro más sincero agradecimiento por la confianza depositada en nosotros para la "
-                                    f"ejecución de la obra: '{proyecto_cierre}'.\n\n"
-                                    f"Hacemos de su conocimiento que los trabajos han sido concluidos satisfactoriamente. "
-                                    f"Nuestro compromiso es brindarle la más alta calidad en materiales y mano de obra.\n\n"
-                                    f"Quedamos a su entera disposición para futuros proyectos y garantías correspondientes.\n\n"
-                                    f"Sin más por el momento, le enviamos un cordial saludo."
-                                )
-                                pdf.multi_cell(0, 6, txt=texto_cuerpo)
-                                pdf.ln(25)
-                                pdf.set_font('Arial', 'B', 11)
-                                pdf.set_text_color(15, 60, 140)
-                                pdf.cell(0, 5, "Atentamente,", ln=True, align='C')
-                                pdf.ln(10)
-                                pdf.cell(0, 5, "___________________________________", ln=True, align='C')
-                                pdf.cell(0, 5, "Departamento de Operaciones", ln=True, align='C')
-                                pdf.cell(0, 5, "TARC S.A. DE C.V.", ln=True, align='C')
+            # Panel de información y candado
+            col_info, col_foto = st.columns([1, 1])
+            with col_info:
+                st.info(f"**Cliente:** {cliente_cierre}\n\n**Dirección:** {ubicacion_cierre}\n\n**Sistema:** {sistema_aplicado}")
+                if saldo_pendiente > 0:
+                    st.error(f"🔴 **SALDO PENDIENTE DE COBRO:** ${saldo_pendiente:,.2f} MXN. \n\n*La póliza de garantía permanecerá bloqueada hasta que el cliente liquide el total.*")
+                else:
+                    st.success(f"🟢 **OBRA LIQUIDADA AL 100%.** \n\n*Póliza de garantía desbloqueada y lista para entrega.*")
+            
+            with col_foto:
+                st.write("📷 **Fotografía de Evidencia (Obligatoria para el Acta)**")
+                foto_responsiva = st.file_uploader("Sube la imagen del trabajo terminado (JPG/PNG):", type=["jpg", "jpeg", "png"])
+                if not foto_responsiva:
+                    st.warning("⚠️ Sin la foto, el Acta de Entrega se generará sin evidencia visual.")
 
-                                ext = foto_responsiva.name.split('.')[-1].lower()
-                                es_pdf = ext == 'pdf'
-                                
-                                if not es_pdf:
-                                    pdf.add_page()
-                                    pdf.set_font('Arial', 'B', 14)
-                                    pdf.set_text_color(15, 60, 140)
-                                    pdf.cell(0, 10, "EVIDENCIA FOTOGRÁFICA DE CIERRE", ln=True, align='C')
-                                    
-                                    temp_img_path = "temp_cierre.jpg"
-                                    img = Image.open(foto_responsiva)
-                                    if img.mode in ('RGBA', 'P'): 
-                                        img = img.convert('RGB')
-                                    img.save(temp_img_path, format="JPEG")
-                                    
-                                    w_px, h_px = img.size
-                                    ratio = min(180 / w_px, 220 / h_px)
-                                    w_mm = w_px * ratio
-                                    h_mm = h_px * ratio
-                                    x_mm = (210 - w_mm) / 2
-                                    
-                                    pdf.image(temp_img_path, x=x_mm, y=40, w=w_mm, h=h_mm)
-                                    
-                                    y_final_foto = 40 + h_mm
-                                    pdf.set_xy(10, y_final_foto + 10)
-                                    pdf.set_font('Arial', 'I', 11)
-                                    pdf.set_text_color(80, 80, 80)
-                                    pdf.multi_cell(0, 6, txt="Gracias por ser parte, aquí está adjunta la foto del trabajo ejecutado.", align='C')
-                                    
-                                    pdf_final_bytes = pdf.output(dest='S').encode('latin-1')
-                                    if os.path.exists(temp_img_path): os.remove(temp_img_path)
-                                else:
-                                    pdf_base_bytes = pdf.output(dest='S').encode('latin-1')
-                                    fusionador = PdfMerger()
-                                    fusionador.append(io.BytesIO(pdf_base_bytes))
-                                    fusionador.append(io.BytesIO(foto_responsiva.getvalue()))
-                                    archivo_salida = io.BytesIO()
-                                    fusionador.write(archivo_salida)
-                                    fusionador.close()
-                                    pdf_final_bytes = archivo_salida.getvalue()
+            st.markdown("### 📄 Generación de Documentos")
+            col_doc1, col_doc2, col_doc3 = st.columns(3)
+            
+            # BOTÓN 1: Carta
+            with col_doc1:
+                pdf_carta = generar_carta_agradecimiento(cliente_cierre, folio_cierre, proyecto_cierre, fecha_str)
+                st.download_button("1️⃣ DESCARGAR CARTA DE AGRADECIMIENTO", pdf_carta, f"Carta_{folio_cierre}.pdf", "application/pdf")
+            
+            # BOTÓN 2: Acta
+            with col_doc2:
+                pdf_acta = generar_acta_entrega(cliente_cierre, folio_cierre, ubicacion_cierre, sistema_aplicado, fecha_str, foto_responsiva)
+                st.download_button("2️⃣ DESCARGAR ACTA DE ENTREGA OFICIAL", pdf_acta, f"Acta_Entrega_{folio_cierre}.pdf", "application/pdf")
+            
+            # BOTÓN 3: Póliza
+            with col_doc3:
+                if saldo_pendiente > 0:
+                    st.button("🔒 PÓLIZA DE GARANTÍA BLOQUEADA", disabled=True, help="El cliente aún presenta saldo deudor.")
+                else:
+                    pdf_poliza = generar_poliza_garantia(cliente_cierre, ubicacion_cierre, sistema_aplicado, fecha_str)
+                    st.download_button("3️⃣ DESCARGAR PÓLIZA DE GARANTÍA", pdf_poliza, f"Poliza_Garantia_{folio_cierre}.pdf", "application/pdf")
 
-                                nombre_doc = f"Cierre_{folio_cierre}_{cliente_cierre}.pdf"
-                                envio_exitoso = enviar_cierre_por_correo(pdf_final_bytes, nombre_doc, cliente_cierre, folio_cierre)
-
-                                fila_excel = next((i + 2 for i, f in enumerate(datos_obras) if str(f.get(llave_folio_obra, "")) == folio_cierre), 0)
-                                col_estatus = list(datos_obras[0].keys()).index(llave_estatus) + 1 if datos_obras and llave_estatus in datos_obras[0] else 0
-                                
-                                if fila_excel > 0 and col_estatus > 0:
-                                    hoja_obras.update_cell(fila_excel, col_estatus, "CERRADA")
-                                    
-                                    headers_obras = list(datos_obras[0].keys()) if datos_obras else []
-                                    col_link = next((i + 1 for i, h in enumerate(headers_obras) if "LINK" in str(h).upper() or "CARTA" in str(h).upper()), None)
-                                    
-                                    texto_respaldo = f"ENVIADO POR CORREO ({datetime.datetime.now().strftime('%d/%m/%y')})" if envio_exitoso else "FALLO ENVÍO - DESCARGAR MANUAL"
-                                    if col_link: hoja_obras.update_cell(fila_excel, col_link, texto_respaldo)
-                                    
-                                    registrar_bitacora(doc, "Gestor de Obras", f"Cerró obra {folio_cierre}. Evidencia enviada por correo: {envio_exitoso}")
-                                    
-                                st.success(f"✅ ¡La obra {folio_cierre} ha sido marcada como CERRADA exitosamente!")
-                                if envio_exitoso:
-                                    st.info(f"📧 El documento de cierre y la foto de evidencia han sido enviados automáticamente a los 4 correos directivos de Grupo IMAC.")
-                                    
-                                st.download_button(
-                                    label="📥 DESCARGAR DOCUMENTO FINAL", 
-                                    data=pdf_final_bytes, 
-                                    file_name=nombre_doc, 
-                                    mime="application/pdf"
-                                )
+            # ACCIÓN FINAL DE CIERRE EN EL SISTEMA
+            st.markdown("---")
+            if st.button("🚨 CERRAR PROYECTO EN SISTEMA Y ENVIAR ACTA A DIRECCIÓN", type="primary"):
+                if not foto_responsiva:
+                    st.error("❌ Debes subir la foto de evidencia antes de cerrar la obra en el sistema.")
+                else:
+                    with st.spinner("Actualizando sistema y enviando el Acta a corporativo..."):
+                        # Se envía el acta que contiene la foto
+                        envio_exitoso = enviar_cierre_por_correo(pdf_acta, f"Acta_{folio_cierre}.pdf", cliente_cierre, folio_cierre)
+                        
+                        fila_excel = next((i + 2 for i, f in enumerate(datos_obras) if str(f.get(llave_folio_obra, "")) == folio_cierre), 0)
+                        col_estatus = list(datos_obras[0].keys()).index(llave_estatus) + 1 if datos_obras and llave_estatus in datos_obras[0] else 0
+                        
+                        if fila_excel > 0 and col_estatus > 0:
+                            hoja_obras.update_cell(fila_excel, col_estatus, "CERRADA")
+                            registrar_bitacora(doc, "Gestor de Obras", f"Cerró obra {folio_cierre}. Acta enviada: {envio_exitoso}")
+                            
+                            st.success(f"✅ ¡La obra {folio_cierre} ha sido marcada como CERRADA!")
+                            if envio_exitoso: st.info("📧 El Acta de Entrega con la foto incrustada fue enviada a los directivos.")
 
     # ==========================================
     # 🚀 PESTAÑA 4: ALTA DE REGISTROS PATRONALES

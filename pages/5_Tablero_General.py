@@ -3,8 +3,12 @@ import gspread
 from google.oauth2.service_account import Credentials
 import json
 import pandas as pd
+import os
 
-st.set_page_config(page_title="Tablero General", page_icon="📈", layout="wide")
+# --- CONFIGURACIÓN CORPORATIVA ---
+icono_navegador = "logo_imac_2026.png" if os.path.exists("logo_imac_2026.png") else ("logo_tarc.png" if os.path.exists("logo_tarc.png") else "🏢")
+st.set_page_config(page_title="Tablero General", page_icon=icono_navegador, layout="wide")
+
 # -----------------------------------------
 # 🛡️ CANDADO DE SEGURIDAD POR ROLES
 # -----------------------------------------
@@ -40,7 +44,17 @@ def conectar_sheets():
         return cliente.open_by_key(ID_DEL_EXCEL)
     except Exception: return None
 
-st.title("📈 Tablero de Control Global")
+# --- ENCABEZADO OFICIAL ---
+col_logo, col_tit = st.columns([1, 5])
+with col_logo:
+    if os.path.exists("logo_imac_2026.png"):
+        st.image("logo_imac_2026.png", use_container_width=True)
+    elif os.path.exists("logo_tarc.png"):
+        st.image("logo_tarc.png", use_container_width=True)
+    elif os.path.exists("logo_tarc.jpg"):
+        st.image("logo_tarc.jpg", use_container_width=True)
+with col_tit:
+    st.title("Tablero de Control Global")
 st.markdown("---")
 
 clave_ingresada = st.text_input("🔑 Ingresa la clave de Administrador para acceder al resumen financiero:", type="password")
@@ -91,7 +105,7 @@ if clave_ingresada == CLAVE_ADMIN:
                     "Proyecto": proyecto,
                     "Estatus": estatus,
                     "Presupuesto Cobrado": presupuesto, 
-                    "Egresos Totales": total_gastado, # <--- CAMBIO DE NOMBRE AQUÍ
+                    "Egresos Totales": total_gastado, 
                     "Saldo Disponible": utilidad,
                     "Avance Gasto": avance_financiero
                 })
@@ -112,7 +126,7 @@ if clave_ingresada == CLAVE_ADMIN:
             c1, c2, c3 = st.columns(3)
             
             total_presupuestos = df["Presupuesto Cobrado"].sum()
-            total_gastos = df["Egresos Totales"].sum() # <--- SUMA CORRECTA PARA DIRECCIÓN
+            total_gastos = df["Egresos Totales"].sum() 
             total_utilidad = df["Saldo Disponible"].sum()
             
             c1.metric("Obras en Pantalla", len(df))

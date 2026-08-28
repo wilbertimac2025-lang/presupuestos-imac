@@ -47,7 +47,7 @@ def obtener_valor(diccionario, palabras_clave, default="No registrado"):
                 return str(v)
     return default
 
-# --- CLASE PARA EL PDF REDISEÑADO EN UNA SOLA HOJA ---
+# --- CLASE PARA EL PDF ESTADO DE CUENTA (UN SOLO CLIENTE) ---
 class PDF_EstadoCuenta(FPDF):
     def header(self):
         self.set_xy(15, 10)
@@ -65,6 +65,23 @@ class PDF_EstadoCuenta(FPDF):
         self.line(15, 25, 195, 25)
         self.line(15, 26, 195, 26)
         self.set_y(32)
+
+# --- NUEVA CLASE PARA EL PDF REPORTE GLOBAL DE COBRANZA ---
+class PDF_ReporteGlobal(FPDF):
+    def header(self):
+        self.set_font('Arial', 'B', 16)
+        self.set_text_color(15, 60, 140)
+        self.cell(0, 8, 'TARC, S.A. DE C.V.', ln=True, align='C')
+        self.set_font('Arial', 'B', 10)
+        self.set_text_color(80, 80, 80)
+        self.cell(0, 5, 'REPORTE GLOBAL DE COBRANZA Y SALDOS PENDIENTES', ln=True, align='C')
+        self.ln(5)
+    
+    def footer(self):
+        self.set_y(-15)
+        self.set_font('Arial', 'I', 8)
+        self.set_text_color(128, 128, 128)
+        self.cell(0, 10, f'Página {self.page_no()}', align='C')
 
 @st.cache_resource
 def conectar_sheets():
@@ -97,6 +114,14 @@ if doc:
     
     llave_folio = next((k for k in (datos_obras[0].keys() if datos_obras else []) if "FOLIO" in str(k).upper()), None)
     obras_disponibles = [str(fila[llave_folio]) for fila in datos_obras if str(fila.get(llave_folio, "")) != ""] if llave_folio else []
+
+    # Diccionario para extraer los nombres de las obras para el reporte
+    nombres_obras_dict = {}
+    if llave_folio:
+        for fila in datos_obras:
+            folio_actual = str(fila.get(llave_folio, "")).strip()
+            if folio_actual:
+                nombres_obras_dict[folio_actual] = obtener_valor(fila, ["PROYECTO", "OBRA", "CONCEPTO"], "Proyecto sin nombre")
 
     col_sel, _ = st.columns([1, 2])
     with col_sel:
@@ -169,7 +194,7 @@ if doc:
             else:
                 st.info("Aún no has registrado pagos para este proyecto.")
 
-        # --- GENERACIÓN DE PDF COMPACTO EN COLOR AZUL ---
+        # --- GENERACIÓN DE PDF ESTADO DE CUENTA (CLIENTE) ---
         st.markdown("---")
         st.subheader("📄 Exportar Estado de Cuenta Final (Para el Cliente)")
         st.write("Genera el PDF oficial de Término de Obra optimizado para encajar en una sola hoja.")
@@ -320,14 +345,14 @@ if doc:
                 )
 
 # -----------------------------------------------------------------
-# 📬 MÓDULO DE ENVÍO DE REPORTE DE COBRANZA A DIRECCIÓN
+# 📬 MÓDULO DE ENVÍO DE REPORTE DE COBRANZA (AHORA CON PDF ADJUNTO)
 # -----------------------------------------------------------------
 st.markdown("---")
-st.subheader("📬 Reporte Global de Cobranza")
-st.write("Genera y envía el estado de cuenta de todas las obras con saldo pendiente a los correos institucionales.")
+st.subheader("📬 Reporte Global de Cobranza (Dirección)")
+st.write("Genera el PDF con la tabla oficial de obras y envíalo automáticamente por correo a dirección.")
 
-if st.button("🚀 Enviar Reporte por Correo Ahora"):
-    with st.spinner("Calculando saldos y armando el correo..."):
+if st.button("🚀 Generar PDF y Enviar por Correo"):
+    with st.spinner("Calculando saldos, dibujando tabla PDF y armando el correo..."):
         try:
             hoja_presup = doc.worksheet("Presupuestos")
             hoja_fact = doc.worksheet("Facturas_Obras")
@@ -335,6 +360,7 @@ if st.button("🚀 Enviar Reporte por Correo Ahora"):
             filas_presup = hoja_presup.get_all_records()
             filas_fact = hoja_fact.get_all_records()
             
+            # Extraemos costo total
             obras_totales = {}
             for fila in filas_presup:
                 claves = list(fila.keys())
@@ -347,6 +373,7 @@ if st.button("🚀 Enviar Reporte por Correo Ahora"):
                             except: pass
                     if folio: obras_totales[folio] = total
 
+            # Sumamos lo pagado
             obras_pagadas = {}
             for fila in filas_fact:
                 folio_obra = str(fila.get("Folio Obra", "")).strip()
@@ -355,7 +382,10 @@ if st.button("🚀 Enviar Reporte por Correo Ahora"):
                 except: pass
                 if folio_obra: obras_pagadas[folio_obra] = obras_pagadas.get(folio_obra, 0.0) + monto
 
-            reporte_lineas = []
+            # Filtramos solo las que tienen deuda y preparamos datos para la tabla
+            lista_reporte = []
+            gran_total_costo = 0.0
+            gran_total_pagado = 0.0
             gran_total_pendiente = 0.0
 
             for folio, costo_total in obras_totales.items():
@@ -363,44 +393,115 @@ if st.button("🚀 Enviar Reporte por Correo Ahora"):
                 saldo_pendiente = costo_total - pagado
                 
                 if saldo_pendiente > 0: 
+                    gran_total_costo += costo_total
+                    gran_total_pagado += pagado
                     gran_total_pendiente += saldo_pendiente
-                    reporte_lineas.append(f"• Obra: {folio} | Costo: ${costo_total:,.2f} | Cobrado: ${pagado:,.2f} | 🔴 Pendiente: ${saldo_pendiente:,.2f}")
+                    
+                    nombre_obra = nombres_obras_dict.get(folio, "Proyecto sin nombre")
+                    
+                    lista_reporte.append({
+                        "folio": folio,
+                        "nombre": nombre_obra,
+                        "costo": costo_total,
+                        "pagado": pagado,
+                        "saldo": saldo_pendiente
+                    })
 
-            if not reporte_lineas:
-                cuerpo_mensaje = "¡Excelente noticia equipo! No hay saldos pendientes por cobrar en ninguna obra activa."
+            if not lista_reporte:
+                st.info("¡Excelente noticia equipo! No hay saldos pendientes por cobrar en este momento.")
             else:
+                # --- CREACIÓN DEL PDF ---
+                pdf = PDF_ReporteGlobal()
+                pdf.add_page()
+                
+                # Encabezados de Tabla en Azul Fuerte
+                pdf.set_fill_color(15, 60, 140)
+                pdf.set_text_color(255, 255, 255)
+                pdf.set_draw_color(15, 60, 140)
+                pdf.set_font('Arial', 'B', 8)
+                
+                # Ancho total: 190mm (Encaja perfecto en hoja A4)
+                pdf.cell(25, 8, "FOLIO", border=1, align='C', fill=True)
+                pdf.cell(75, 8, "NOMBRE DE LA OBRA", border=1, align='C', fill=True)
+                pdf.cell(30, 8, "PRESUPUESTO", border=1, align='C', fill=True)
+                pdf.cell(30, 8, "PAGADO", border=1, align='C', fill=True)
+                pdf.cell(30, 8, "POR COBRAR", border=1, align='C', fill=True)
+                pdf.ln()
+                
+                # Filas de la tabla
+                pdf.set_font('Arial', '', 7)
+                fill = False
+                for item in lista_reporte:
+                    pdf.set_fill_color(240, 245, 255) if fill else pdf.set_fill_color(255, 255, 255)
+                    pdf.set_text_color(0, 0, 0)
+                    
+                    pdf.cell(25, 6, str(item['folio']), border=1, align='C', fill=fill)
+                    
+                    # Recortamos el nombre si es muy largo para que no rompa la tabla
+                    nombre_corto = (item['nombre'][:45] + '..') if len(item['nombre']) > 45 else item['nombre']
+                    pdf.cell(75, 6, str(nombre_corto), border=1, align='L', fill=fill)
+                    
+                    pdf.cell(30, 6, f"${item['costo']:,.2f}", border=1, align='R', fill=fill)
+                    pdf.cell(30, 6, f"${item['pagado']:,.2f}", border=1, align='R', fill=fill)
+                    
+                    # Resaltar en rojo el saldo pendiente
+                    pdf.set_text_color(200, 0, 0)
+                    pdf.set_font('Arial', 'B', 7)
+                    pdf.cell(30, 6, f"${item['saldo']:,.2f}", border=1, align='R', fill=fill)
+                    pdf.set_font('Arial', '', 7)
+                    
+                    pdf.ln()
+                    fill = not fill
+                    
+                # Fila de TOTALES GLOBALES
+                pdf.set_font('Arial', 'B', 8)
+                pdf.set_fill_color(15, 60, 140)
+                pdf.set_text_color(255, 255, 255)
+                pdf.cell(100, 8, "TOTALES GLOBALES DE CARTERA", border=1, align='R', fill=True)
+                pdf.cell(30, 8, f"${gran_total_costo:,.2f}", border=1, align='R', fill=True)
+                pdf.cell(30, 8, f"${gran_total_pagado:,.2f}", border=1, align='R', fill=True)
+                pdf.cell(30, 8, f"${gran_total_pendiente:,.2f}", border=1, align='R', fill=True)
+                pdf.ln()
+                
+                # --- PREPARACIÓN DEL CORREO ---
                 cuerpo_mensaje = (
                     "Estimado equipo directivo y comercial,\n\n"
-                    "A continuación se presenta el estado de cuenta y saldos pendientes de las obras activas:\n\n" +
-                    "\n".join(reporte_lineas) +
-                    f"\n\n💰 SALDO GLOBAL PENDIENTE EN LA CALLE: ${gran_total_pendiente:,.2f} MXN\n\n" +
-                    "Por favor dar seguimiento a la cobranza con los clientes correspondientes.\n\n"
-                    "Atentamente,\nERP Comercial"
+                    "Adjunto a este correo encontrarán el reporte oficial de cobranza en formato PDF.\n\n"
+                    "Este documento detalla el estado financiero de cada proyecto activo, "
+                    "indicando el presupuesto total, los anticipos recibidos y los saldos pendientes por liquidar.\n\n"
+                    f"💰 SALDO GLOBAL PENDIENTE EN LA CALLE: ${gran_total_pendiente:,.2f} MXN\n\n"
+                    "Por favor dar seguimiento con los clientes correspondientes.\n\n"
+                    "Atentamente,\nERP Comercial - Grupo IMAC"
                 )
 
-            remitente = st.secrets["CORREO_BOT"] 
-            password = st.secrets["PASS_BOT"]              
-            
-            destinatarios = [
-                "comercial@grupo-imac.com",
-                "ejemplo1@grupo-imac.com",
-                "ejemplo2@grupo-imac.com",
-                "ejemplo3@grupo-imac.com"
-            ]
-
-            msg = EmailMessage()
-            msg['Subject'] = f'📊 REPORTE DE COBRANZA - ({datetime.datetime.now().strftime("%d/%m/%Y")})'
-            msg['From'] = remitente
-            msg['To'] = ", ".join(destinatarios)
-            msg.set_content(cuerpo_mensaje)
-
-            with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
-                smtp.starttls()
-                smtp.login(remitente, password)
-                smtp.send_message(msg)
+                remitente = st.secrets["CORREO_BOT"] 
+                password = st.secrets["PASS_BOT"]              
                 
-            st.success("✅ ¡El reporte fue generado y enviado con éxito a los 4 correos institucionales!")
-            st.balloons() 
-            
+                destinatarios = [
+                    "comercial@grupo-imac.com",
+                    "ejemplo1@grupo-imac.com",
+                    "ejemplo2@grupo-imac.com",
+                    "ejemplo3@grupo-imac.com"
+                ]
+
+                msg = EmailMessage()
+                fecha_str = datetime.datetime.now().strftime("%d/%m/%Y")
+                msg['Subject'] = f'📊 REPORTE GLOBAL DE COBRANZA (PDF) - ({fecha_str})'
+                msg['From'] = remitente
+                msg['To'] = ", ".join(destinatarios)
+                msg.set_content(cuerpo_mensaje)
+                
+                # Generar los bytes del PDF y adjuntarlo
+                pdf_bytes = pdf.output(dest='S').encode('latin-1')
+                msg.add_attachment(pdf_bytes, maintype='application', subtype='pdf', filename=f'Reporte_Cobranza_IMAC.pdf')
+
+                with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
+                    smtp.starttls()
+                    smtp.login(remitente, password)
+                    smtp.send_message(msg)
+                    
+                st.success("✅ ¡El PDF con la tabla oficial fue generado y enviado con éxito a los correos!")
+                st.balloons() 
+                
         except Exception as e:
             st.error(f"❌ Ocurrió un error al enviar el correo: {e}")

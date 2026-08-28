@@ -173,15 +173,21 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio, ti
         return True, "OK"
     except Exception as e: return False, str(e)
 
-# 2. Encabezado Oficial con Logo (Reemplazando los emojis)
+# --- ENCABEZADO OFICIAL BLINDADO ---
 col_logo, col_tit = st.columns([1, 4])
 with col_logo:
-    if os.path.exists("logo_imac_2026.png"):
-        st.image("logo_imac_2026.png", use_container_width=True)
-    elif os.path.exists("logo_tarc.png"):
-        st.image("logo_tarc.png", use_container_width=True)
-    elif os.path.exists("logo_tarc.jpg"):
-        st.image("logo_tarc.jpg", use_container_width=True)
+    try:
+        if os.path.exists("logo_imac_2026.png"):
+            img_logo = Image.open("logo_imac_2026.png")
+            st.image(img_logo, use_container_width=True)
+        elif os.path.exists("logo_tarc.png"):
+            img_logo = Image.open("logo_tarc.png")
+            st.image(img_logo, use_container_width=True)
+        elif os.path.exists("logo_tarc.jpg"):
+            img_logo = Image.open("logo_tarc.jpg")
+            st.image(img_logo, use_container_width=True)
+    except Exception:
+        st.write("🏢 GRUPO IMAC")
 with col_tit:
     st.title("Presupuestos Obras Grupo IMAC")
 st.markdown("---")

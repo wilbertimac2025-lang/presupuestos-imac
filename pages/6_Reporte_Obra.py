@@ -167,8 +167,10 @@ if clave_ingresada == CLAVE_ADMIN:
                 datos_consumos = hoja_consumos.get_all_records()
                 consumos_obra = [c for c in datos_consumos if str(c.get("Folio Obra", "")) == folio_seleccionado]
                 if consumos_obra:
-                    df_consumos = pd.DataFrame(consumos_obra)[["Fecha", "Categoría", "Material / Insumo", "Cantidad Usada", "Unidad"]]
-                    st.dataframe(df_consumos, use_container_width=True, hide_index=True)
+                    df_consumos = pd.DataFrame(consumos_obra)
+                    # 🚀 MODIFICACIÓN: Mostrar todas las columnas excepto el "Folio Obra" y las vacías
+                    cols_a_mostrar = [c for c in df_consumos.columns if "FOLIO" not in str(c).upper() and str(c).strip() != ""]
+                    st.dataframe(df_consumos[cols_a_mostrar], use_container_width=True, hide_index=True)
                 else:
                     st.info("Aún no hay salidas de almacén para esta obra.")
 

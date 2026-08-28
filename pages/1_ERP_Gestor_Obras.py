@@ -48,7 +48,7 @@ def enviar_cierre_por_correo(pdf_bytes, nombre_archivo, cliente, folio):
         remitente = st.secrets["CORREO_BOT"]
         password = st.secrets["PASS_BOT"]
         
-        correo_destino = "comercial@grupo-imac.com, aco@grupo-imac.com, rh@grupo-imac.com, act@grupo-imac.com" 
+        correo_destino = "comercial@grupo-imac.com, direccion@grupo-imac.com, rh@grupo-imac.com, masterventas@grupo-imac.com" 
         
         msg = EmailMessage()
         msg['Subject'] = f'CIERRE DE OBRA OFICIAL Y ACTA DE ENTREGA: {folio} - {cliente}'
@@ -258,15 +258,21 @@ def conectar_sheets():
         return cliente.open_by_key(ID_DEL_EXCEL)
     except Exception: return None
 
-# 2. Encabezado Oficial con Logo
+# --- ENCABEZADO OFICIAL BLINDADO ---
 col_logo, col_tit = st.columns([1, 5])
 with col_logo:
-    if os.path.exists("logo_imac_2026.png"):
-        st.image("logo_imac_2026.png", use_container_width=True)
-    elif os.path.exists("logo_tarc.png"):
-        st.image("logo_tarc.png", use_container_width=True)
-    elif os.path.exists("logo_tarc.jpg"):
-        st.image("logo_tarc.jpg", use_container_width=True)
+    try:
+        if os.path.exists("logo_imac_2026.png"):
+            img_logo = Image.open("logo_imac_2026.png")
+            st.image(img_logo, use_container_width=True)
+        elif os.path.exists("logo_tarc.png"):
+            img_logo = Image.open("logo_tarc.png")
+            st.image(img_logo, use_container_width=True)
+        elif os.path.exists("logo_tarc.jpg"):
+            img_logo = Image.open("logo_tarc.jpg")
+            st.image(img_logo, use_container_width=True)
+    except Exception:
+        st.write("🏢 GRUPO IMAC")
 with col_tit:
     st.title("Centro de Control de Obras")
 st.markdown("---")

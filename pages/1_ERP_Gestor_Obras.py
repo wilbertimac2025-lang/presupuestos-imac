@@ -48,7 +48,7 @@ def enviar_cierre_por_correo(pdf_bytes, nombre_archivo, cliente, folio):
         remitente = st.secrets["CORREO_BOT"]
         password = st.secrets["PASS_BOT"]
         
-        correo_destino = "comercial@grupo-imac.com, direccion@grupo-imac.com, rh@grupo-imac.com, masterventas@grupo-imac.com" 
+        correo_destino = "comercial@grupo-imac.com, aco@grupo-imac.com, rh@grupo-imac.com, act@grupo-imac.com" 
         
         msg = EmailMessage()
         msg['Subject'] = f'CIERRE DE OBRA OFICIAL Y ACTA DE ENTREGA: {folio} - {cliente}'

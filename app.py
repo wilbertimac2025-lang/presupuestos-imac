@@ -11,7 +11,7 @@ USUARIOS_VALIDOS = {
     "aco_dir": {"clave": "ACO2026", "rol": "Directivo", "zona": "Todas"},
     
     # Recursos Humanos (Restringido exclusivamente a zona Local)
-    "rrhh_imac": {"clave": "RRHH2026", "rol": "RRHH", "zona": "Local"},
+    "vane": {"clave": "1234", "rol": "RRHH", "zona": "Local"},
     
     # Auxiliares y Operativos segmentados por territorio
     "jose": {"clave": "local26", "rol": "Auxiliar", "zona": "Local"},

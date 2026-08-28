@@ -181,7 +181,9 @@ cliente = st.text_input("Nombre del Cliente", key="in_cliente")
 compania = st.text_input("Compañía / Empresa")
 telefono = st.text_input("Teléfono de Contacto")
 correo_cliente = st.text_input("Correo Electrónico del Cliente")
-asesor = st.text_input("Nombre del Asesor", key="in_asesor")
+
+# 🚀 AQUÍ ESTÁ EL CAMBIO A MENÚ DESPLEGABLE CON LAS DOS OPCIONES
+asesor = st.selectbox("Nombre del Asesor", ["JOSE CARLOS MORALES MORALES", "FRANCISCO JAVIER CARO YAÑEZ"], key="in_asesor")
 
 tipo_obra = st.selectbox("Tipo de Proyecto / Logística:", ["LOCAL", "FORÁNEA"])
 

@@ -72,10 +72,20 @@ class PDF_ReporteGlobal(FPDF):
         self.set_font('Arial', 'B', 16)
         self.set_text_color(15, 60, 140)
         self.cell(0, 8, 'TARC, S.A. DE C.V.', ln=True, align='C')
+        
         self.set_font('Arial', 'B', 10)
         self.set_text_color(80, 80, 80)
         self.cell(0, 5, 'REPORTE GLOBAL DE COBRANZA Y SALDOS PENDIENTES', ln=True, align='C')
-        self.ln(5)
+        
+        # --- SECCIÓN NUEVA: LA FECHA EXACTA DEL REPORTE ---
+        meses = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+        hoy = datetime.datetime.now()
+        fecha_espanol = f"{hoy.day:02d} de {meses[hoy.month]} de {hoy.year}"
+        
+        self.set_font('Arial', 'I', 9)
+        self.set_text_color(100, 100, 100)
+        self.cell(0, 5, f'Fecha de Emisión: {fecha_espanol}', ln=True, align='C')
+        self.ln(5) # Espacio antes de la tabla
     
     def footer(self):
         self.set_y(-15)
@@ -500,7 +510,7 @@ if st.button("🚀 Generar PDF y Enviar por Correo"):
                     smtp.login(remitente, password)
                     smtp.send_message(msg)
                     
-                st.success("✅ ¡El PDF con la tabla oficial fue generado y enviado con éxito a los correos!")
+                st.success("✅ ¡El PDF con la tabla oficial y la fecha de hoy fue generado y enviado con éxito a los correos!")
                 st.balloons() 
                 
         except Exception as e:

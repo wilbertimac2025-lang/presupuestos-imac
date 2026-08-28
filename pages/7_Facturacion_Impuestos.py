@@ -9,7 +9,9 @@ import os
 import smtplib
 from email.message import EmailMessage
 
-st.set_page_config(page_title="Facturación y Estados de Cuenta", page_icon="🧾", layout="wide")
+# --- CONFIGURACIÓN CORPORATIVA ---
+icono_navegador = "logo_imac_2026.png" if os.path.exists("logo_imac_2026.png") else ("logo_tarc.png" if os.path.exists("logo_tarc.png") else "🏢")
+st.set_page_config(page_title="Facturación y Estados de Cuenta", page_icon=icono_navegador, layout="wide")
 
 # -----------------------------------------
 # 🛡️ CANDADO DE SEGURIDAD POR ROLES
@@ -50,6 +52,11 @@ def obtener_valor(diccionario, palabras_clave, default="No registrado"):
 # --- CLASE PARA EL PDF ESTADO DE CUENTA (UN SOLO CLIENTE) ---
 class PDF_EstadoCuenta(FPDF):
     def header(self):
+        # 🚀 INYECCIÓN DEL LOGO CORPORATIVO
+        if os.path.exists("logo_imac_2026.png"): self.image("logo_imac_2026.png", x=15, y=8, w=45)
+        elif os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=15, y=8, w=45)
+        elif os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=15, y=8, w=45)
+
         self.set_xy(15, 10)
         self.set_font('Arial', 'B', 20)
         self.set_text_color(15, 60, 140) 
@@ -69,6 +76,11 @@ class PDF_EstadoCuenta(FPDF):
 # --- NUEVA CLASE PARA EL PDF REPORTE GLOBAL DE COBRANZA ---
 class PDF_ReporteGlobal(FPDF):
     def header(self):
+        # 🚀 INYECCIÓN DEL LOGO CORPORATIVO
+        if os.path.exists("logo_imac_2026.png"): self.image("logo_imac_2026.png", x=15, y=8, w=40)
+        elif os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=15, y=8, w=40)
+        elif os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=15, y=8, w=40)
+
         self.set_font('Arial', 'B', 16)
         self.set_text_color(15, 60, 140)
         self.cell(0, 8, 'TARC, S.A. DE C.V.', ln=True, align='C')
@@ -104,7 +116,17 @@ def conectar_sheets():
         return cliente.open_by_key(ID_DEL_EXCEL)
     except Exception: return None
 
-st.title("🧾 Cobranza y Estados de Cuenta Finales")
+# --- ENCABEZADO OFICIAL ---
+col_logo, col_tit = st.columns([1, 5])
+with col_logo:
+    if os.path.exists("logo_imac_2026.png"):
+        st.image("logo_imac_2026.png", use_container_width=True)
+    elif os.path.exists("logo_tarc.png"):
+        st.image("logo_tarc.png", use_container_width=True)
+    elif os.path.exists("logo_tarc.jpg"):
+        st.image("logo_tarc.jpg", use_container_width=True)
+with col_tit:
+    st.title("Cobranza y Estados de Cuenta Finales")
 st.markdown("---")
 
 doc = conectar_sheets()

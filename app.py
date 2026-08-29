@@ -11,7 +11,7 @@ USUARIOS_VALIDOS = {
     # Dirección y Directivos (Acceso Global a todo el sistema)
     "wromero": {"clave": "2289", "rol": "Admin", "zona": "Todas"},
     "act_dir": {"clave": "ACT2026", "rol": "Directivo", "zona": "Todas"},
-    "aco_dir": {"clave": "ACO2026", "rol": "Directivo", "zona": "Todas"},
+    "aco": {"clave": "0000", "rol": "Directivo", "zona": "Todas"},
     
     # Recursos Humanos (Restringido exclusivamente a zona Local)
     "vane": {"clave": "1234", "rol": "RRHH", "zona": "Local"},

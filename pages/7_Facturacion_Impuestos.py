@@ -53,9 +53,8 @@ def obtener_valor(diccionario, palabras_clave, default="No registrado"):
 # --- CLASE PARA EL PDF ESTADO DE CUENTA (UN SOLO CLIENTE) ---
 class PDF_EstadoCuenta(FPDF):
     def header(self):
-        # 🚀 INYECCIÓN DEL LOGO CORPORATIVO AL PDF
-        if os.path.exists("logo_imac_2026.png"): self.image("logo_imac_2026.png", x=15, y=8, w=45)
-        elif os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=15, y=8, w=45)
+        # 🚀 SOLO LOGO VIEJO PARA LOS PDF OFICIALES (Evita que tape el texto)
+        if os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=15, y=8, w=45)
         elif os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=15, y=8, w=45)
 
         self.set_xy(15, 10)
@@ -77,9 +76,8 @@ class PDF_EstadoCuenta(FPDF):
 # --- NUEVA CLASE PARA EL PDF REPORTE GLOBAL DE COBRANZA ---
 class PDF_ReporteGlobal(FPDF):
     def header(self):
-        # 🚀 INYECCIÓN DEL LOGO CORPORATIVO AL PDF
-        if os.path.exists("logo_imac_2026.png"): self.image("logo_imac_2026.png", x=15, y=8, w=40)
-        elif os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=15, y=8, w=40)
+        # 🚀 SOLO LOGO VIEJO PARA LOS PDF OFICIALES (Evita que tape el texto)
+        if os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=15, y=8, w=40)
         elif os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=15, y=8, w=40)
 
         self.set_font('Arial', 'B', 16)
@@ -520,9 +518,9 @@ if st.button("🚀 Generar PDF y Enviar por Correo"):
                 
                 destinatarios = [
                     "comercial@grupo-imac.com",
-                    "aco@grupo-imac.com",
-                    "act@grupo-imac.com",
-                    "rh@grupo-imac.com"
+                    "pue@grupo-imac.com",
+                    "pue1@grupo-imac.com",
+                    "pue2@grupo-imac.com"
                 ]
 
                 msg = EmailMessage()

@@ -256,12 +256,14 @@ comentarios_fotos = [c0, c1, c2, c3, c4, c5]
 boton = st.button("GENERAR PRESUPUESTO OFICIAL", type="primary")
 
 if boton:
+    # 🚀 APLICAMOS EL BLINDAJE DE OBLIGATORIEDAD AL CAMPO DE PROYECTO
     c_valido = cliente.strip() if cliente else ""
     a_valido = asesor.strip() if asesor else ""
     u_valido = ubicacion.strip() if ubicacion else ""
+    p_valido = proyecto.strip() if proyecto else ""
     
-    if not c_valido or not a_valido or not u_valido:
-        st.error("⚠️ El nombre del Cliente, el Asesor y la Ubicación son obligatorios.")
+    if not c_valido or not a_valido or not u_valido or not p_valido:
+        st.error("⚠️ El nombre del Cliente, el Asesor, el Nombre del Proyecto y la Ubicación son obligatorios.")
     else:
         with st.spinner("Calculando Rendimientos Matemáticos, Ensamblando Presupuesto y Autorizando Límites..."):
             
@@ -631,7 +633,7 @@ if boton:
 
             if hoja:
                 resumen = " / ".join([f"{z['area']} ({z['m2']}m2)" for z in zonas_data])
-                hoja.append_row([folio_actual, fecha_hoy, asesor, cliente, compania, telefono, correo_cliente, proyecto, ubicacion.upper(), resumen, total_final, tipo_obra, bolsa_mano_obra, resumen_insumos_str])
+                hoja.append_row([folio_actual, fecha_hoy, asesor, cliente, compania, telefono, correo_cliente, proyecto.upper(), ubicacion.upper(), resumen, total_final, tipo_obra, bolsa_mano_obra, resumen_insumos_str])
                 
                 registrar_bitacora(doc, "Cotizador", f"Generó presupuesto {folio_actual} y autorizó materiales para {cliente.upper()}")
             

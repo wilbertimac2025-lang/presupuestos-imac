@@ -69,3 +69,4 @@ else:
     
     mostrar_logo("Panel de Bienvenida IMAC")
     st.write("Selecciona un módulo en el menú de la izquierda para operar tu zona correspondiente.")
+    

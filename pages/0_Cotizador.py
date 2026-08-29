@@ -229,7 +229,10 @@ for i in range(int(num_areas)):
         precio_catalogo = float(CATALOGO_SISTEMAS[s]["precio"])
         st.text_input(f"Precio x m² (Fijo + IVA)", value=f"${precio_catalogo:,.2f}", disabled=True, key=f"precio_{i}_{s}")
         
-    zonas_data.append({"area": n, "sistema": s, "m2": m})
+        # 🚀 NUEVO: DESCUENTO POR ÁREA
+        desc_pct = st.number_input(f"Descuento para esta área (%)", min_value=0.0, max_value=100.0, value=0.0, step=1.0, key=f"desc_{i}")
+        
+    zonas_data.append({"area": n, "sistema": s, "m2": m, "descuento_pct": desc_pct})
 
 st.write("---")
 st.write("### 4. Ajustes y Anexos")
@@ -256,16 +259,16 @@ comentarios_fotos = [c0, c1, c2, c3, c4, c5]
 boton = st.button("GENERAR PRESUPUESTO OFICIAL", type="primary")
 
 if boton:
-    # 🚀 APLICAMOS EL BLINDAJE DE OBLIGATORIEDAD AL CAMPO DE PROYECTO
+    # 🚀 BLINDAJE: Nombre del proyecto y Ubicación obligatorios
     c_valido = cliente.strip() if cliente else ""
     a_valido = asesor.strip() if asesor else ""
     u_valido = ubicacion.strip() if ubicacion else ""
     p_valido = proyecto.strip() if proyecto else ""
     
     if not c_valido or not a_valido or not u_valido or not p_valido:
-        st.error("⚠️ El nombre del Cliente, el Asesor, el Nombre del Proyecto y la Ubicación son obligatorios.")
+        st.error("⚠️ El nombre del Cliente, el Asesor, el Nombre del Proyecto y la Ubicación son datos obligatorios.")
     else:
-        with st.spinner("Calculando Rendimientos Matemáticos, Ensamblando Presupuesto y Autorizando Límites..."):
+        with st.spinner("Calculando Rendimientos, Aplicando Descuentos y Ensamblando PDF..."):
             
             temp_paths = []
             if fotos_subidas:
@@ -280,7 +283,11 @@ if boton:
             hoja = doc.worksheet("Presupuestos") if doc else None
             folio_actual = obtener_nuevo_folio(hoja)
 
+            # Sumatoria del subtotal general (sin descuento)
             subtotal_obras = sum(z["m2"] * CATALOGO_SISTEMAS[z["sistema"]]["precio"] for z in zonas_data)
+            
+            # 🚀 SUMATORIA DEL DESCUENTO APLICADO
+            total_descuento = sum((z["m2"] * CATALOGO_SISTEMAS[z["sistema"]]["precio"]) * (z["descuento_pct"] / 100.0) for z in zonas_data)
             
             # ========================================================
             # 🚀 CÁLCULO INTELIGENTE DE DESTAJO Y EXPLOSIÓN DE INSUMOS
@@ -417,11 +424,24 @@ if boton:
                 pdf.cell(70, 6, f"${subtotal_area_real:,.2f}", 'B', 1, 'C')
                 pdf.ln(8)
 
-            subtotal_final = subtotal_obras + costo_extra
-            iva = subtotal_final * 0.16
-            total_final = round(subtotal_final + iva)
+            # MATEMÁTICAS DEL DESCUENTO Y LOS TOTALES FINALES
+            subtotal_neto = subtotal_obras - total_descuento + costo_extra
+            iva = subtotal_neto * 0.16
+            total_final = round(subtotal_neto + iva)
 
             if pdf.get_y() > 210: pdf.add_page()
+            
+            # 🚀 NUEVO BLOQUE DEL PDF: IMPRESIÓN DEL DESCUENTO
+            if total_descuento > 0:
+                pdf.set_font('Arial', 'B', 10)
+                pdf.set_text_color(50, 50, 50)
+                pdf.cell(120, 6, "IMPORTE SISTEMAS:", border=0, align='R')
+                pdf.cell(70, 6, f"${subtotal_obras:,.2f}", border=0, align='R', ln=True)
+                
+                pdf.set_text_color(200, 30, 30) # ROJO PARA RESALTAR EL DESCUENTO
+                pdf.cell(120, 6, "DESCUENTO APLICADO:", border=0, align='R')
+                pdf.cell(70, 6, f"-${total_descuento:,.2f}", border=0, align='R', ln=True)
+                pdf.set_text_color(50, 50, 50) 
             
             if costo_extra > 0:
                 pdf.set_font('Arial', 'B', 10)
@@ -432,7 +452,7 @@ if boton:
             pdf.set_font('Arial', 'B', 10)
             pdf.set_text_color(50, 50, 50)
             pdf.cell(120, 6, "SUBTOTAL:", border=0, align='R')
-            pdf.cell(70, 6, f"${subtotal_final:,.2f}", border=0, align='R', ln=True)
+            pdf.cell(70, 6, f"${subtotal_neto:,.2f}", border=0, align='R', ln=True)
             pdf.cell(120, 6, "IVA (16%):", border=0, align='R')
             pdf.cell(70, 6, f"${iva:,.2f}", border=0, align='R', ln=True)
             pdf.ln(2)

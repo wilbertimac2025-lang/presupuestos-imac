@@ -80,9 +80,17 @@ class PDF_Base(FPDF):
         self.cell(0, 4, 'BLVD. MIGUEL ALEMAN No. 306, BOCA DEL RIO, VER.', ln=True, align='R')
         self.cell(0, 4, 'TEL. (229) 935 45 25 / (229) 935 48 40', ln=True, align='R')
         self.set_y(35)
+        
+    def footer(self):
+        # 🚀 NUEVO: PIE DE PÁGINA CON NUMERACIÓN (Página 1 de 2, etc.)
+        self.set_y(-15)
+        self.set_font('Arial', 'I', 8)
+        self.set_text_color(128, 128, 128)
+        self.cell(0, 10, f'Página {self.page_no()} de {{nb}}', 0, 0, 'C')
 
 def generar_carta_agradecimiento(cliente, folio, proyecto, fecha_str):
     pdf = PDF_Base()
+    pdf.alias_nb_pages()
     pdf.add_page()
     pdf.set_font('Arial', '', 11)
     pdf.cell(0, 5, f"Veracruz, Ver. a {fecha_str}", ln=True, align='R')
@@ -120,6 +128,7 @@ def generar_carta_agradecimiento(cliente, folio, proyecto, fecha_str):
 
 def generar_acta_entrega(cliente, folio, ubicacion, sistema, fecha_str, foto_bytes):
     pdf = PDF_Base()
+    pdf.alias_nb_pages()
     pdf.add_page()
     
     pdf.set_font('Arial', 'B', 12)
@@ -153,8 +162,21 @@ def generar_acta_entrega(cliente, folio, ubicacion, sistema, fecha_str, foto_byt
     
     pdf.set_font('Arial', 'B', 10)
     pdf.cell(0, 5, f"SISTEMA APLICADO: {sistema.upper()}", ln=True)
+    pdf.ln(10)
     
-    # Incrustar Foto
+    pdf.set_font('Arial', '', 10)
+    pdf.multi_cell(0, 5, txt=f"SIN MÁS POR EL MOMENTO SE EXTIENDE LA PRESENTE ACTA DE ENTREGA DE OBRA EN LA CIUDAD DE VERACRUZ, VER.")
+    pdf.ln(25)
+    
+    # 🚀 LAS FIRMAS SE QUEDAN EN LA HOJA 1
+    y_firmas = pdf.get_y()
+    pdf.line(20, y_firmas, 90, y_firmas)
+    pdf.line(120, y_firmas, 190, y_firmas)
+    pdf.set_font('Arial', 'B', 9)
+    pdf.cell(95, 5, "CLIENTE", align='C')
+    pdf.cell(95, 5, "CONTRATISTA", align='C', ln=True)
+    
+    # 🚀 NUEVO: FOTO GIGANTE EN LA HOJA 2 (ANEXO)
     if foto_bytes:
         try:
             temp_img = "temp_acta.jpg"
@@ -163,37 +185,39 @@ def generar_acta_entrega(cliente, folio, ubicacion, sistema, fecha_str, foto_byt
             img.save(temp_img, format="JPEG")
             
             w_px, h_px = img.size
-            ratio = min(100 / w_px, 70 / h_px)
+            # Aumentamos los límites para que se vea mucho más grande (170x150 mm)
+            ratio = min(170 / w_px, 150 / h_px)
             w_mm, h_mm = w_px * ratio, h_px * ratio
             x_mm = (210 - w_mm) / 2
             
-            y_actual = pdf.get_y() + 5
-            if y_actual + h_mm > 230: # Si no cabe, saltar página
-                pdf.add_page()
-                y_actual = 20
-                
+            # AGREGAMOS LA NUEVA PÁGINA
+            pdf.add_page()
+            
+            pdf.set_font('Arial', 'B', 14)
+            pdf.set_text_color(15, 60, 140)
+            pdf.cell(0, 10, "ANEXO FOTOGRÁFICO", ln=True, align='C')
+            pdf.ln(5)
+
+            y_actual = pdf.get_y()
             pdf.image(temp_img, x=x_mm, y=y_actual, w=w_mm, h=h_mm)
-            pdf.set_y(y_actual + h_mm + 5)
+            
+            # Ponemos el título solicitado debajo de la imagen
+            pdf.set_y(y_actual + h_mm + 10)
+            pdf.set_font('Arial', 'B', 12)
+            pdf.set_text_color(80, 80, 80)
+            pdf.cell(0, 10, "FOTO DEL TRABAJO REALIZADO", ln=True, align='C')
+            
             if os.path.exists(temp_img): os.remove(temp_img)
         except Exception:
+            pdf.add_page()
+            pdf.set_font('Arial', 'B', 12)
             pdf.cell(0, 10, "(Error al cargar imagen)", ln=True, align='C')
             
-    pdf.set_font('Arial', '', 10)
-    pdf.multi_cell(0, 5, txt=f"SIN MÁS POR EL MOMENTO SE EXTIENDE LA PRESENTE ACTA DE ENTREGA DE OBRA EN LA CIUDAD DE VERACRUZ, VER.")
-    pdf.ln(15)
-    
-    # Firmas
-    y_firmas = pdf.get_y()
-    pdf.line(20, y_firmas, 90, y_firmas)
-    pdf.line(120, y_firmas, 190, y_firmas)
-    pdf.set_font('Arial', 'B', 9)
-    pdf.cell(95, 5, "CLIENTE", align='C')
-    pdf.cell(95, 5, "CONTRATISTA", align='C', ln=True)
-    
     return pdf.output(dest='S').encode('latin-1')
 
 def generar_poliza_garantia(cliente, ubicacion, sistema, fecha_str):
     pdf = PDF_Base()
+    pdf.alias_nb_pages()
     pdf.add_page()
     
     pdf.set_font('Arial', 'B', 14)

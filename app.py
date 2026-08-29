@@ -1,8 +1,11 @@
 import streamlit as st
+import os
+from PIL import Image
 
-st.set_page_config(page_title="ERP IMAC - Acceso", page_icon="🔐", layout="centered")
+# --- CONFIGURACIÓN CORPORATIVA ---
+icono_navegador = "logo_imac_2026.png" if os.path.exists("logo_imac_2026.png") else ("logo_tarc.png" if os.path.exists("logo_tarc.png") else "🏢")
+st.set_page_config(page_title="ERP IMAC - Acceso", page_icon=icono_navegador, layout="centered")
 
-# 🏛️ BASE DE DATOS DE USUARIOS CON PERMISOS GEOGRÁFICOS
 # 🏛️ BASE DE DATOS DE USUARIOS CON PERMISOS GEOGRÁFICOS
 USUARIOS_VALIDOS = {
     # Dirección y Directivos (Acceso Global a todo el sistema)
@@ -21,8 +24,29 @@ USUARIOS_VALIDOS = {
     "operativo": {"clave": "OPE2026", "rol": "Operativo", "zona": "Foránea"}
 }
 
+# 🚀 FUNCIÓN PARA EL ENCABEZADO OFICIAL BLINDADO
+def mostrar_logo(titulo):
+    col_logo, col_tit = st.columns([1, 4])
+    with col_logo:
+        try:
+            if os.path.exists("logo_imac_2026.png"):
+                img_logo = Image.open("logo_imac_2026.png")
+                st.image(img_logo, use_container_width=True)
+            elif os.path.exists("logo_tarc.png"):
+                img_logo = Image.open("logo_tarc.png")
+                st.image(img_logo, use_container_width=True)
+            elif os.path.exists("logo_tarc.jpg"):
+                img_logo = Image.open("logo_tarc.jpg")
+                st.image(img_logo, use_container_width=True)
+        except Exception:
+            st.write("🏢 GRUPO IMAC")
+    with col_tit:
+        st.title(titulo)
+    st.markdown("---")
+
 def login():
-    st.title("🔐 Sistema de Gestión IMAC")
+    # Mandamos llamar al encabezado corporativo
+    mostrar_logo("Sistema de Gestión IMAC")
     st.subheader("Acceso Geográfico Autorizado")
 
     with st.form("login_form"):
@@ -55,5 +79,6 @@ else:
         st.session_state["logged_in"] = False
         st.rerun()
     
-    st.title("🏗️ Panel de Bienvenida IMAC")
+    # Encabezado corporativo también en la pantalla de bienvenida
+    mostrar_logo("Panel de Bienvenida IMAC")
     st.write("Selecciona un módulo en el menú de la izquierda para operar tu zona correspondiente.")

@@ -13,69 +13,39 @@ from PyPDF2 import PdfMerger
 import math
 
 # --- CONFIGURACIÓN CORPORATIVA ---
-# 1. Favicon del navegador
 icono_navegador = "logo_imac_2026.png" if os.path.exists("logo_imac_2026.png") else ("logo_tarc.png" if os.path.exists("logo_tarc.png") else "🏢")
 st.set_page_config(page_title="Cotizador Multizona IMAC", page_icon=icono_navegador, layout="centered")
 
-# -----------------------------------------
-# 🛡️ CANDADO DE SEGURIDAD POR ROLES
-# -----------------------------------------
 if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
     st.warning("⚠️ Acceso denegado. Inicia sesión en la página principal.")
     st.stop()
 
-ROLES_PERMITIDOS = ["Admin", "RRHH", "Auxiliar", "Operativo"]
+ROLES_PERMITIDOS = ["Admin", "RRHH", "Auxiliar", "Operativo", "Directivo"]
 if st.session_state.get("role") not in ROLES_PERMITIDOS:
     st.error(f"🚫 ACCESO RESTRINGIDO: Tu perfil de {st.session_state.get('role')} no tiene autorización para este módulo.")
     st.stop()
 
-# 🕵️ FUNCIÓN DE BITÁCORA SILENCIOSA
 def registrar_bitacora(doc, modulo, accion):
     try:
         if doc:
             hoja_bitacora = doc.worksheet("Bitacora_Movimientos")
             fecha_hora = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-            usuario = st.session_state.get("usuario", st.session_state.get("username", "Usuario Sistema"))
+            usuario = st.session_state.get("usuario", st.session_state.get("user", "Usuario Sistema"))
             rol = st.session_state.get("role", "Desconocido")
             hoja_bitacora.append_row([fecha_hora, usuario, rol, modulo, accion])
     except Exception:
         pass 
 
-# 🚀 BLOQUES DE TEXTOS DINÁMICOS
-DESC_ACRILICO = ("RECUBRIMIENTO ELASTICO IMPERMEABLE CON BASE EN RESINAS ACRILICAS DE LARGA VIDA Y EFICIENCIA, IDEAL PARA "
-                 "APLICARSE SOBRE TECHOS Y CUBIERTAS TANTO EN OBRAS NUEVAS, O EN SUPERFICIES QUE YA HABIAN SIDO IMPERMEABILIZADAS.")
-ESPEC_ACRILICO = ("PREPARACION DE LA SUPERFICIE A IMPERMEABILIZAR.\n"
-                  "- SELLADO DE FISURAS CON CEMENTO PLASTICO ACRILICO.\n"
-                  "- LIMPIEZA DEL AREA HASTA QUEDAR LIBRE DE POLVO.\n"
-                  "- APLICACIÓN DE SELLADOR ACRILICO COMO PRIMARIO SELLADOR.\n"
-                  "- COLOCACION DEL IMPERMEABILIZANTE ACRILICO.")
+DESC_ACRILICO = "RECUBRIMIENTO ELASTICO IMPERMEABLE CON BASE EN RESINAS ACRILICAS..."
+ESPEC_ACRILICO = "PREPARACION DE LA SUPERFICIE...\n- LIMPIEZA DEL AREA..."
+DESC_PREFAB_FV = "ES UN SISTEMA DE IMPERMEABILIZACION PREFABRICADO FIBRA DE VIDRIO..."
+DESC_PREFAB_FP = "ES UN SISTEMA DE IMPERMEABILIZACION PREFABRICADO POLIESTER..."
+ESPEC_PREFAB = "PREPARACION DE LA SUPERFICIE...\n- APLICACIÓN DE HIDROFLEX..."
+DESC_GENERAL = "SUMINISTRO Y APLICACIÓN DE MATERIAL DE ACUERDO A REQUERIMIENTOS."
+ESPEC_GENERAL = "PREPARACION DE SUPERFICIE.\n- APLICACIÓN DE MATERIAL."
 
-DESC_PREFAB_FV = ("ES UN SISTEMA DE IMPERMEABILIZACION PREFABRICADO, CONSISTE EN UNA MEMBRANA MULTICAPA ELABORADA A BASE DE ASFALTOS "
-                  "MODIFICADOS UN REFUERZO CENTRAL DE FIBRA DE VIDRIO, ACABADO GRANULAR, SON DE LARGA VIDA, RESISTIENDO MUCHO MAS "
-                  "AL INTEMPERISMO, SON DE FACIL APLICACIÓN, SE ADHIERE POR FUSION TERMICA A CUALQUIER TECHO O SUSTRATO, ES FLEXIBLE POR "
-                  "LO QUE SE PUEDE COLOCAR EN CUALQUIER SUPERFICIE LOGRANDOSE TOTAL SEGURIDAD A LO LARGO DE TODAS SUS UNIONES Y "
-                  "REMATES PUES QUEDAN PRACTICAMENTE SOLDADAS, OBTENIENDOSE ASI UNA TOTAL IMPERMEABILIDAD.")
-                  
-DESC_PREFAB_FP = ("ES UN SISTEMA DE IMPERMEABILIZACION PREFABRICADO, CONSISTE EN UNA MEMBRANA MULTICAPA ELABORADA A BASE DE ASFALTOS "
-                  "MODIFICADOS UN REFUERZO CENTRAL DE FIBRA DE POLIESTER, ACABADO GRANULAR O LISO, SON DE LARGA VIDA, RESISTIENDO MUCHO MAS "
-                  "AL INTEMPERISMO, SON DE FACIL APLICACIÓN, SE ADHIERE POR FUSION TERMICA A CUALQUIER TECHO O SUSTRATO, ES FLEXIBLE POR "
-                  "LO QUE SE PUEDE COLOCAR EN CUALQUIER SUPERFICIE LOGRANDOSE TOTAL SEGURIDAD A LO LARGO DE TODAS SUS UNIONES Y "
-                  "REMATES PUES QUEDAN PRACTICAMENTE SOLDADAS, OBTENIENDOSE ASI UNA TOTAL IMPERMEABILIDAD.")
-
-ESPEC_PREFAB = ("PREPARACION DE LA SUPERFICIE A IMPERMEABILIZAR.\n"
-                "- LIMPIEZA DEL AREA HASTA QUEDAR LIBRE DE POLVO.\n"
-                "- APLICACIÓN DE HIDROFLEX COMO PRIMARIO SELLADOR.\n"
-                "- COLOCACION DEL IMPERMEABILIZANTE PREFABRICADO.\n"
-                "- SELLADO DE ORILLAS Y TRASLAPES POR MEDIO DE FUSION.")
-
-DESC_GENERAL = "SUMINISTRO Y APLICACIÓN DE MATERIAL DE ACUERDO A REQUERIMIENTOS TÉCNICOS EN OBRA."
-ESPEC_GENERAL = ("PREPARACION DE SUPERFICIE.\n"
-                 "- LIMPIEZA DEL AREA HASTA QUEDAR LIBRE DE POLVO.\n"
-                 "- APLICACIÓN DE MATERIAL SEGÚN ESPECIFICACIONES TÉCNICAS.")
-
-# 🚀 CATÁLOGO MAESTRO INTELIGENTE 
 CATALOGO_SISTEMAS = {
-    "LEVANTAMIENTO": {"precio": 30.00, "garantia": "NO APLICA", "desc": "PREPARACIÓN DE SUPERFICIE PARA APLICACIÓN DE SISTEMA DE IMPERMEABILIZACIÓN, INCLUYENDO RETIRO DE IMPERMEABILIZANTE EXISTENTE EN MAL ESTADO, LEVANTAMIENTO Y RECOLECCIÓN DE BASURA, RESIDUOS Y MATERIALES SUELTOS; LIMPIEZA GENERAL DE LA SUPERFICIE, DESAZOLVE Y LIMPIEZA DE COLADERAS Y PUNTOS DE DESAGÜE; RETIRO DE MATERIAL DETERIORADO O QUE PUEDA AFECTAR LA ADHERENCIA DEL NUEVO SISTEMA; ACARREO, CARGA Y DESCENSO DE RESIDUOS GENERADOS DURANTE LOS TRABAJOS, ASÍ COMO LIMPIEZA FINAL DEL ÁREA, DEJANDO LA SUPERFICIE DEBIDAMENTE PREPARADA Y EN CONDICIONES ADECUADAS PARA LA APLICACIÓN DEL NUEVO SISTEMA DE IMPERMEABILIZACIÓN.", "espec": "TOMA DE MEDIDAS Y REVISIÓN DECONDICIONES DE LA SUPERFICIE.", "ficha": "NO APLICA"},
+    "LEVANTAMIENTO": {"precio": 30.00, "garantia": "NO APLICA", "desc": "PREPARACIÓN DE SUPERFICIE...", "espec": "TOMA DE MEDIDAS...", "ficha": "NO APLICA"},
     "ACRILTECHO GREEN POWER": {"precio": 244.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_acriltecho.pdf"},
     "IMPAC 3000 FIBRATADO": {"precio": 198.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_impac_3000.pdf"},
     "IMPAC 5000 FIBRATADO": {"precio": 219.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_impac_5000.pdf"},
@@ -103,35 +73,28 @@ CATALOGO_SISTEMAS = {
 
 class PDF(FPDF):
     def header(self):
-        if os.path.exists("marca_agua.jpg"):
-            self.image("marca_agua.jpg", x=5, y=5, w=200, h=287)
-
+        if os.path.exists("marca_agua.jpg"): self.image("marca_agua.jpg", x=5, y=5, w=200, h=287)
         self.set_draw_color(15, 60, 140) 
         self.set_line_width(0.7) 
         self.rect(5, 5, 200, 287) 
         self.set_line_width(0.2) 
-
-        # 🚀 FORZAMOS A USAR SOLO EL LOGO VIEJO EN EL PDF (CON SU TAMAÑO ORIGINAL w=85)
-        if os.path.exists("logo_tarc.png"):
-            self.image("logo_tarc.png", x=10, y=8, w=85) 
-        elif os.path.exists("logo_tarc.jpg"): 
-            self.image("logo_tarc.jpg", x=10, y=8, w=85)
+        if os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=10, y=8, w=85) 
+        elif os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=10, y=8, w=85)
         else:
             self.set_font('Arial', 'B', 14)
             self.set_text_color(15, 60, 140)
             self.cell(0, 6, 'TARC S.A. DE C.V.', ln=True, align='L')
-            
         self.set_y(38)
 
 @st.cache_resource
 def conectar_sheets():
     try:
-        credenciales_dic = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
+        # 🚀 CAMBIO PARA RENDER: os.environ.get
+        credenciales_dic = json.loads(os.environ.get("GOOGLE_CREDENTIALS"))
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(credenciales_dic, scopes=scopes)
         cliente = gspread.authorize(creds)
-        
-        ID_DEL_EXCEL = st.secrets["ID_EXCEL"] 
+        ID_DEL_EXCEL = os.environ.get("ID_EXCEL")
         return cliente.open_by_key(ID_DEL_EXCEL)
     except Exception: return None
 
@@ -142,23 +105,21 @@ def obtener_nuevo_folio(hoja):
             filas = hoja.get_all_values()
             numero_obra = len(filas) if len(filas) > 0 else 1
             return f"OBRA{numero_obra:02d}-{anio_corto}"
-    except Exception:
-        pass
+    except Exception: pass
     anio_corto = datetime.datetime.now().strftime("%y")
     return f"OBRA-TEMP-{datetime.datetime.now().strftime('%H%M')}-{anio_corto}"
 
 def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio, tipo_obra, proyecto, ubicacion):
     try:
-        remitente = st.secrets["CORREO_BOT"]
-        password = st.secrets["PASS_BOT"]
+        # 🚀 CAMBIO PARA RENDER: os.environ.get
+        remitente = os.environ.get("CORREO_BOT")
+        password = os.environ.get("PASS_BOT")
         
-        if tipo_obra == "LOCAL":
-            correo_destino = "comercial@grupo-imac.com, rh@grupo-imac.com, act@grupo-imac.com, aco@grupo-imac.com"
-        else:
-            correo_destino = "comercial@grupo-imac.com, foraneos@grupo-imac.com, direccion@grupo-imac.com"
+        if tipo_obra == "LOCAL": correo_destino = "comercial@grupo-imac.com, pue@grupo-imac.com, pue2@grupo-imac.com"
+        else: correo_destino = "comercial@grupo-imac.com, foraneos@grupo-imac.com, direccion@grupo-imac.com"
         
         msg = EmailMessage()
-        msg['Subject'] = f'NUEVO FOLIO {folio}: Presupuesto {cliente} (Asesor: {asesor}) - Zona: {tipo_obra}'
+        msg['Subject'] = f'NUEVO FOLIO {folio}: Presupuesto {cliente} - Zona: {tipo_obra}'
         msg['From'] = remitente
         msg['To'] = correo_destino
         msg.set_content(f"Se ha registrado un nuevo presupuesto en el sistema.\n\nFolio Asignado: {folio}\nCliente: {cliente}\nAsesor: {asesor}\nProyecto: {proyecto}\nUbicación: {ubicacion}\nZona Logística: {tipo_obra}\n\nSe adjunta el documento oficial.")
@@ -171,46 +132,31 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio, ti
         return True, "OK"
     except Exception as e: return False, str(e)
 
-# --- ENCABEZADO OFICIAL BLINDADO ---
 col_logo, col_tit = st.columns([1, 4])
 with col_logo:
     try:
         if os.path.exists("logo_imac_2026.png"):
-            img_logo = Image.open("logo_imac_2026.png")
-            st.image(img_logo, use_container_width=True)
+            st.image(Image.open("logo_imac_2026.png"), use_container_width=True)
         elif os.path.exists("logo_tarc.png"):
-            img_logo = Image.open("logo_tarc.png")
-            st.image(img_logo, use_container_width=True)
-        elif os.path.exists("logo_tarc.jpg"):
-            img_logo = Image.open("logo_tarc.jpg")
-            st.image(img_logo, use_container_width=True)
-    except Exception:
-        st.write("🏢 GRUPO IMAC")
-with col_tit:
-    st.title("Presupuestos Obras Grupo IMAC")
+            st.image(Image.open("logo_tarc.png"), use_container_width=True)
+    except Exception: st.write("🏢 GRUPO IMAC")
+with col_tit: st.title("Presupuestos Obras Grupo IMAC")
 st.markdown("---")
 
 num_areas = st.number_input("¿Cuántas áreas distintas vas a cotizar?", min_value=1, max_value=10, value=1)
-
 st.write("### 1. Datos de Contacto y Asignación")
-
-fecha_hoy_obj = datetime.date.today()
-fecha_15_dias = fecha_hoy_obj + datetime.timedelta(days=15)
-fecha_validez = st.date_input("Presupuesto válido hasta:", value=fecha_15_dias)
-
-cliente = st.text_input("Nombre del Cliente", key="in_cliente")
+fecha_validez = st.date_input("Presupuesto válido hasta:", value=datetime.date.today() + datetime.timedelta(days=15))
+cliente = st.text_input("Nombre del Cliente")
 compania = st.text_input("Compañía / Empresa")
 telefono = st.text_input("Teléfono de Contacto")
 correo_cliente = st.text_input("Correo Electrónico del Cliente")
-
-asesor = st.selectbox("Nombre del Asesor", ["JOSE CARLOS MORALES MORALES", "FRANCISCO JAVIER CARO YAÑEZ"], key="in_asesor")
-
+asesor = st.selectbox("Nombre del Asesor", ["JOSE CARLOS MORALES MORALES", "FRANCISCO JAVIER CARO YAÑEZ"])
 tipo_obra = st.selectbox("Tipo de Proyecto / Logística:", ["LOCAL", "FORÁNEA"])
 
 st.write("---")
 st.write("### 2. Información del Proyecto")
 proyecto = st.text_input("Nombre del Proyecto / Obra")
-ubicacion = st.text_input("Ubicación / Dirección de la Obra", placeholder="Ej. Calzada Cuauhtémoc #15-16, Alvarado, Ver.", key="in_ubicacion")
+ubicacion = st.text_input("Ubicación / Dirección de la Obra")
 
 st.write("---")
 st.write("### 3. Desglose de Áreas")
@@ -225,13 +171,9 @@ for i in range(int(num_areas)):
         s = st.selectbox(f"Sistema", opciones_sistemas, key=f"s_{i}")
     with col2:
         m = st.number_input(f"Metros (m²)", min_value=0.0, key=f"m_{i}")
-        
         precio_catalogo = float(CATALOGO_SISTEMAS[s]["precio"])
-        st.text_input(f"Precio x m² (Fijo + IVA)", value=f"${precio_catalogo:,.2f}", disabled=True, key=f"precio_{i}_{s}")
-        
-        # 🚀 NUEVO: DESCUENTO POR ÁREA
+        st.text_input(f"Precio x m² (Fijo + IVA)", value=f"${precio_catalogo:,.2f}", disabled=True, key=f"precio_{i}")
         desc_pct = st.number_input(f"Descuento para esta área (%)", min_value=0.0, max_value=100.0, value=0.0, step=1.0, key=f"desc_{i}")
-        
     zonas_data.append({"area": n, "sistema": s, "m2": m, "descuento_pct": desc_pct})
 
 st.write("---")
@@ -242,362 +184,181 @@ anotaciones_asesor = st.text_area("Anotaciones Especiales para el Cliente")
 
 st.write("**Evidencia Fotográfica de la Obra:**")
 fotos_subidas = st.file_uploader("📸 Subir Evidencia (Opcional)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
-
-st.info("💡 Si subiste fotos, puedes agregarles un comentario a cada una en el orden que las seleccionaste:")
 colA, colB = st.columns(2)
 with colA:
-    c0 = st.text_input("Nota para Foto 1")
-    c2 = st.text_input("Nota para Foto 3")
-    c4 = st.text_input("Nota para Foto 5")
+    c0 = st.text_input("Nota para Foto 1"); c2 = st.text_input("Nota para Foto 3"); c4 = st.text_input("Nota para Foto 5")
 with colB:
-    c1 = st.text_input("Nota para Foto 2")
-    c3 = st.text_input("Nota para Foto 4")
-    c5 = st.text_input("Nota para Foto 6")
-    
+    c1 = st.text_input("Nota para Foto 2"); c3 = st.text_input("Nota para Foto 4"); c5 = st.text_input("Nota para Foto 6")
 comentarios_fotos = [c0, c1, c2, c3, c4, c5]
 
-boton = st.button("GENERAR PRESUPUESTO OFICIAL", type="primary")
-
-if boton:
-    # 🚀 BLINDAJE: Nombre del proyecto y Ubicación obligatorios
-    c_valido = cliente.strip() if cliente else ""
-    a_valido = asesor.strip() if asesor else ""
-    u_valido = ubicacion.strip() if ubicacion else ""
-    p_valido = proyecto.strip() if proyecto else ""
-    
-    if not c_valido or not a_valido or not u_valido or not p_valido:
-        st.error("⚠️ El nombre del Cliente, el Asesor, el Nombre del Proyecto y la Ubicación son datos obligatorios.")
+if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
+    c_valido = cliente.strip(); a_valido = asesor.strip(); u_valido = ubicacion.strip(); p_valido = proyecto.strip()
+    if not c_valido or not a_valido or not u_valido or not p_valido: st.error("⚠️ El Cliente, Asesor, Nombre del Proyecto y Ubicación son obligatorios.")
     else:
         with st.spinner("Calculando Rendimientos, Aplicando Descuentos y Ensamblando PDF..."):
-            
             temp_paths = []
             if fotos_subidas:
                 for idx, foto in enumerate(fotos_subidas):
                     ext = foto.name.split('.')[-1]
                     temp_path = f"temp_img_{idx}.{ext}"
-                    with open(temp_path, "wb") as f:
-                        f.write(foto.getbuffer())
+                    with open(temp_path, "wb") as f: f.write(foto.getbuffer())
                     temp_paths.append(temp_path)
 
             doc = conectar_sheets()
             hoja = doc.worksheet("Presupuestos") if doc else None
             folio_actual = obtener_nuevo_folio(hoja)
 
-            # Sumatoria del subtotal general (sin descuento)
             subtotal_obras = sum(z["m2"] * CATALOGO_SISTEMAS[z["sistema"]]["precio"] for z in zonas_data)
-            
-            # 🚀 SUMATORIA DEL DESCUENTO APLICADO
             total_descuento = sum((z["m2"] * CATALOGO_SISTEMAS[z["sistema"]]["precio"]) * (z["descuento_pct"] / 100.0) for z in zonas_data)
             
-            # ========================================================
-            # 🚀 CÁLCULO INTELIGENTE DE DESTAJO Y EXPLOSIÓN DE INSUMOS
-            # ========================================================
             bolsa_mano_obra = 0.0
             materiales_calculados = {}
             
             for z in zonas_data:
                 sis = z["sistema"]
                 m2 = float(z["m2"])
-                
-                # 1. CÁLCULO DE NÓMINA (Raya)
                 if sis == "LEVANTAMIENTO": tarifa = 12.0
                 elif sis == "SELLOTEX": tarifa = 0.0
                 else: tarifa = 28.0
                 bolsa_mano_obra += m2 * tarifa
                 
-                # 2. CÁLCULO DE MATERIALES (Rendimientos Redondeados hacia Arriba)
-                if sis == "LEVANTAMIENTO":
-                    continue # El levantamiento no lleva material de almacén
-                    
-                if "SELLOTEX" in sis:
-                    cant = math.ceil(m2 / 10.0)
-                    unidad = "BULTOS"
+                if sis == "LEVANTAMIENTO": continue
+                if "SELLOTEX" in sis: cant = math.ceil(m2 / 10.0); unidad = "BULTOS"
                 elif "JUNTA" in sis:
                     if "30 CM" in sis: cant = math.ceil(m2 / 30.0); unidad = "ROLLOS"
-                    elif "50 CM" in sis and "KRIPTOFLEX" not in sis: cant = math.ceil(m2 / 20.0); unidad = "ROLLOS"
                     elif "KRIPTOFLEX" in sis: cant = math.ceil(m2 / 19.0); unidad = "CUBETAS"
                     else: cant = math.ceil(m2 / 20.0); unidad = "ROLLOS"
-                elif "FP" in sis or "FV" in sis or "MASTER LASSER" in sis:
-                    cant = math.ceil(m2 / 8.5)
-                    unidad = "ROLLOS"
-                else: # Acrílicos e Impac
-                    cant = math.ceil(m2 / 19.0)
-                    unidad = "CUBETAS"
+                elif "FP" in sis or "FV" in sis or "MASTER LASSER" in sis: cant = math.ceil(m2 / 8.5); unidad = "ROLLOS"
+                else: cant = math.ceil(m2 / 19.0); unidad = "CUBETAS"
                     
-                if sis in materiales_calculados:
-                    materiales_calculados[sis]["cant"] += cant
-                else:
-                    materiales_calculados[sis] = {"cant": cant, "unidad": unidad}
+                if sis in materiales_calculados: materiales_calculados[sis]["cant"] += cant
+                else: materiales_calculados[sis] = {"cant": cant, "unidad": unidad}
             
-            # Creamos el texto de resumen para la columna del Excel
             lista_textos_mat = [f"{v['cant']} {v['unidad']} DE {k}" for k, v in materiales_calculados.items()]
             resumen_insumos_str = " / ".join(lista_textos_mat) if lista_textos_mat else "SIN MATERIAL ASIGNADO"
             
-            # --- INICIA GENERACIÓN DE PDF ---
             pdf = PDF()
             pdf.set_auto_page_break(auto=True, margin=20)
             pdf.add_page()
             
-            pdf.set_font('Arial', 'B', 12)
-            pdf.set_text_color(200, 30, 30) 
-            pdf.cell(0, 5, f"FOLIO: {folio_actual}", ln=True, align='R')
-
+            pdf.set_font('Arial', 'B', 12); pdf.set_text_color(200, 30, 30); pdf.cell(0, 5, f"FOLIO: {folio_actual}", ln=True, align='R')
             fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
-            pdf.set_font('Arial', 'I', 10)
-            pdf.set_text_color(100, 100, 100) 
-            pdf.cell(0, 5, f'Veracruz, Ver. a {fecha_hoy}', ln=True, align='R')
-            pdf.ln(5)
-
-            pdf.set_font('Arial', 'B', 12)
-            pdf.set_text_color(15, 60, 140) 
-            pdf.cell(0, 5, f"CLIENTE: {cliente.upper()}", ln=True)
-            if compania: 
-                pdf.set_font('Arial', 'B', 10)
-                pdf.set_text_color(0, 150, 255) 
-                pdf.cell(0, 5, f"{compania.upper()}", ln=True)
+            pdf.set_font('Arial', 'I', 10); pdf.set_text_color(100, 100, 100); pdf.cell(0, 5, f'Veracruz, Ver. a {fecha_hoy}', ln=True, align='R'); pdf.ln(5)
             
-            pdf.set_font('Arial', '', 10)
-            pdf.set_text_color(50, 50, 50)
+            pdf.set_font('Arial', 'B', 12); pdf.set_text_color(15, 60, 140); pdf.cell(0, 5, f"CLIENTE: {cliente.upper()}", ln=True)
+            if compania: pdf.set_font('Arial', 'B', 10); pdf.set_text_color(0, 150, 255); pdf.cell(0, 5, f"{compania.upper()}", ln=True)
+            pdf.set_font('Arial', '', 10); pdf.set_text_color(50, 50, 50)
             if telefono: pdf.cell(0, 5, f"Tel: {telefono}", ln=True)
             if correo_cliente: pdf.cell(0, 5, f"Email: {correo_cliente}", ln=True)
+            pdf.ln(2); pdf.set_font('Arial', 'B', 10); pdf.set_text_color(15, 60, 140); pdf.cell(0, 5, f"ASESOR COMERCIAL: {asesor.upper()}", ln=True)
             
-            pdf.ln(2)
-            pdf.set_font('Arial', 'B', 10)
-            pdf.set_text_color(15, 60, 140)
-            pdf.cell(0, 5, f"ASESOR COMERCIAL: {asesor.upper()}", ln=True)
-            
-            pdf.ln(3)
-            if proyecto:
-                pdf.set_font('Arial', 'B', 11)
-                pdf.set_text_color(0, 0, 0)
-                pdf.cell(0, 5, f"PROYECTO: {proyecto.upper()}", ln=True)
-            
-            pdf.set_font('Arial', 'I', 10)
-            pdf.cell(0, 5, f"UBICACIÓN: {ubicacion.upper()}", ln=True)
+            pdf.ln(3); pdf.set_font('Arial', 'B', 11); pdf.set_text_color(0, 0, 0); pdf.cell(0, 5, f"PROYECTO: {proyecto.upper()}", ln=True)
+            pdf.set_font('Arial', 'I', 10); pdf.cell(0, 5, f"UBICACIÓN: {ubicacion.upper()}", ln=True)
 
-            pdf.ln(5)
-            pdf.set_font('Arial', 'I', 10)
-            pdf.set_text_color(80, 80, 80) 
-            pdf.multi_cell(0, 5, txt="Nos permitimos poner a su amable consideración el siguiente presupuesto:")
-            pdf.ln(5)
+            pdf.ln(5); pdf.set_font('Arial', 'I', 10); pdf.set_text_color(80, 80, 80); pdf.multi_cell(0, 5, txt="Nos permitimos poner a su amable consideración el siguiente presupuesto:"); pdf.ln(5)
 
             for z in zonas_data:
                 precio_unitario_real = CATALOGO_SISTEMAS[z["sistema"]]["precio"]
                 subtotal_area_real = z["m2"] * precio_unitario_real
-                
-                desc_real = CATALOGO_SISTEMAS[z["sistema"]]["desc"]
-                espec_real = CATALOGO_SISTEMAS[z["sistema"]]["espec"]
-
-                pdf.set_font('Arial', 'B', 11)
-                pdf.set_text_color(0, 150, 255)
-                pdf.multi_cell(0, 6, txt=f"SUMINISTRO Y APLICACIÓN EN {z['area'].upper()}:")
-                
-                pdf.set_font('Arial', 'B', 11)
-                pdf.set_text_color(15, 60, 140)
-                pdf.cell(0, 6, z["sistema"], ln=True)
-                
-                pdf.set_font('Arial', 'I', 9)
-                pdf.set_text_color(80, 80, 80)
-                pdf.multi_cell(0, 4, txt=desc_real)
-                
-                pdf.ln(3)
-                pdf.set_font('Arial', 'B', 9)
-                pdf.set_text_color(0, 150, 255)
-                pdf.cell(0, 5, "Especificaciones Técnicas:", ln=True)
-                pdf.set_text_color(50, 50, 50)
-                pdf.set_font('Arial', '', 9)
-                pdf.multi_cell(0, 4, txt=espec_real)
+                pdf.set_font('Arial', 'B', 11); pdf.set_text_color(0, 150, 255); pdf.multi_cell(0, 6, txt=f"SUMINISTRO Y APLICACIÓN EN {z['area'].upper()}:")
+                pdf.set_font('Arial', 'B', 11); pdf.set_text_color(15, 60, 140); pdf.cell(0, 6, z["sistema"], ln=True)
+                pdf.set_font('Arial', 'I', 9); pdf.set_text_color(80, 80, 80); pdf.multi_cell(0, 4, txt=CATALOGO_SISTEMAS[z["sistema"]]["desc"])
+                pdf.ln(3); pdf.set_font('Arial', 'B', 9); pdf.set_text_color(0, 150, 255); pdf.cell(0, 5, "Especificaciones Técnicas:", ln=True)
+                pdf.set_text_color(50, 50, 50); pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, txt=CATALOGO_SISTEMAS[z["sistema"]]["espec"])
                 pdf.ln(4)
                 
-                pdf.set_fill_color(240, 248, 255)
-                pdf.set_text_color(15, 60, 140)
-                pdf.set_font('Arial', 'B', 9)
-                pdf.set_draw_color(200, 200, 200) 
-                pdf.cell(60, 6, "AREA (M2)", 'B', 0, 'C', True)
-                pdf.cell(60, 6, "PRECIO UNIT.", 'B', 0, 'C', True)
-                pdf.cell(70, 6, "SUBTOTAL", 'B', 1, 'C', True)
-                pdf.set_text_color(0,0,0)
-                pdf.set_font('Arial', '', 9)
-                
-                pdf.cell(60, 6, f"{z['m2']:,.2f}", 'B', 0, 'C')
-                pdf.cell(60, 6, f"${precio_unitario_real:,.2f}", 'B', 0, 'C')
-                pdf.cell(70, 6, f"${subtotal_area_real:,.2f}", 'B', 1, 'C')
+                pdf.set_fill_color(240, 248, 255); pdf.set_text_color(15, 60, 140); pdf.set_font('Arial', 'B', 9); pdf.set_draw_color(200, 200, 200) 
+                pdf.cell(60, 6, "AREA (M2)", 'B', 0, 'C', True); pdf.cell(60, 6, "PRECIO UNIT.", 'B', 0, 'C', True); pdf.cell(70, 6, "SUBTOTAL", 'B', 1, 'C', True)
+                pdf.set_text_color(0,0,0); pdf.set_font('Arial', '', 9)
+                pdf.cell(60, 6, f"{z['m2']:,.2f}", 'B', 0, 'C'); pdf.cell(60, 6, f"${precio_unitario_real:,.2f}", 'B', 0, 'C'); pdf.cell(70, 6, f"${subtotal_area_real:,.2f}", 'B', 1, 'C')
                 pdf.ln(8)
 
-            # MATEMÁTICAS DEL DESCUENTO Y LOS TOTALES FINALES
             subtotal_neto = subtotal_obras - total_descuento + costo_extra
             iva = subtotal_neto * 0.16
             total_final = round(subtotal_neto + iva)
 
             if pdf.get_y() > 210: pdf.add_page()
             
-            # 🚀 NUEVO BLOQUE DEL PDF: IMPRESIÓN DEL DESCUENTO
             if total_descuento > 0:
-                pdf.set_font('Arial', 'B', 10)
-                pdf.set_text_color(50, 50, 50)
-                pdf.cell(120, 6, "IMPORTE SISTEMAS:", border=0, align='R')
-                pdf.cell(70, 6, f"${subtotal_obras:,.2f}", border=0, align='R', ln=True)
-                
-                pdf.set_text_color(200, 30, 30) # ROJO PARA RESALTAR EL DESCUENTO
-                pdf.cell(120, 6, "DESCUENTO APLICADO:", border=0, align='R')
-                pdf.cell(70, 6, f"-${total_descuento:,.2f}", border=0, align='R', ln=True)
+                pdf.set_font('Arial', 'B', 10); pdf.set_text_color(50, 50, 50); pdf.cell(120, 6, "IMPORTE SISTEMAS:", border=0, align='R'); pdf.cell(70, 6, f"${subtotal_obras:,.2f}", border=0, align='R', ln=True)
+                pdf.set_text_color(200, 30, 30); pdf.cell(120, 6, "DESCUENTO APLICADO:", border=0, align='R'); pdf.cell(70, 6, f"-${total_descuento:,.2f}", border=0, align='R', ln=True)
                 pdf.set_text_color(50, 50, 50) 
             
             if costo_extra > 0:
-                pdf.set_font('Arial', 'B', 10)
-                pdf.set_text_color(15, 60, 140)
-                pdf.cell(120, 6, f"COSTO ADICIONAL: {desc_extra.upper() if desc_extra else 'OTROS'}", border=0, align='R')
-                pdf.cell(70, 6, f"${costo_extra:,.2f}", border=0, align='R', ln=True)
+                pdf.set_font('Arial', 'B', 10); pdf.set_text_color(15, 60, 140)
+                pdf.cell(120, 6, f"COSTO ADICIONAL: {desc_extra.upper() if desc_extra else 'OTROS'}", border=0, align='R'); pdf.cell(70, 6, f"${costo_extra:,.2f}", border=0, align='R', ln=True)
 
-            pdf.set_font('Arial', 'B', 10)
-            pdf.set_text_color(50, 50, 50)
-            pdf.cell(120, 6, "SUBTOTAL:", border=0, align='R')
-            pdf.cell(70, 6, f"${subtotal_neto:,.2f}", border=0, align='R', ln=True)
-            pdf.cell(120, 6, "IVA (16%):", border=0, align='R')
-            pdf.cell(70, 6, f"${iva:,.2f}", border=0, align='R', ln=True)
+            pdf.set_font('Arial', 'B', 10); pdf.set_text_color(50, 50, 50)
+            pdf.cell(120, 6, "SUBTOTAL:", border=0, align='R'); pdf.cell(70, 6, f"${subtotal_neto:,.2f}", border=0, align='R', ln=True)
+            pdf.cell(120, 6, "IVA (16%):", border=0, align='R'); pdf.cell(70, 6, f"${iva:,.2f}", border=0, align='R', ln=True)
             pdf.ln(2)
 
-            x_i = pdf.get_x()
-            y_i = pdf.get_y()
-            pdf.set_fill_color(200, 200, 200)
-            pdf.rect(x_i + 60 + 1.5, y_i + 1.5, 130, 9, 'F')
-            pdf.set_fill_color(15, 60, 140)
-            pdf.set_text_color(255, 255, 255)
-            pdf.set_font('Arial', 'B', 11)
-            pdf.set_xy(x_i + 60, y_i)
-            pdf.cell(60, 9, "INVERSIÓN TOTAL", border=0, fill=True, align='R')
-            pdf.set_fill_color(0, 150, 255)
-            pdf.cell(70, 9, f"${total_final:,.2f} MXN", border=0, fill=True, align='C', ln=True)
+            x_i = pdf.get_x(); y_i = pdf.get_y()
+            pdf.set_fill_color(200, 200, 200); pdf.rect(x_i + 60 + 1.5, y_i + 1.5, 130, 9, 'F')
+            pdf.set_fill_color(15, 60, 140); pdf.set_text_color(255, 255, 255); pdf.set_font('Arial', 'B', 11); pdf.set_xy(x_i + 60, y_i)
+            pdf.cell(60, 9, "INVERSIÓN TOTAL", border=0, fill=True, align='R'); pdf.set_fill_color(0, 150, 255); pdf.cell(70, 9, f"${total_final:,.2f} MXN", border=0, fill=True, align='C', ln=True)
             
-            pdf.ln(8)
-            pdf.set_text_color(15, 60, 140)
-            pdf.set_font('Arial', 'B', 9)
-            pdf.cell(0, 5, "Consideraciones Importantes:", ln=True)
-            pdf.set_text_color(80, 80, 80)
-            pdf.set_font('Arial', 'I', 8)
-            
-            texto_consideraciones = (
-                "- Se deberá hacer un levantamiento físico para determinar los alcances exactos.\n"
-                "- No incluye trabajos de albañilería no cotizados.\n"
-                "- Trabajos no cotizados."
-            )
-            pdf.multi_cell(0, 4, txt=texto_consideraciones)
-            pdf.ln(3)
+            pdf.ln(8); pdf.set_text_color(15, 60, 140); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "Consideraciones Importantes:", ln=True)
+            pdf.set_text_color(80, 80, 80); pdf.set_font('Arial', 'I', 8)
+            pdf.multi_cell(0, 4, txt="- Se deberá hacer un levantamiento físico...\n- No incluye trabajos de albañilería...\n- Trabajos no cotizados."); pdf.ln(3)
             
             garantias_unicas = {}
             for z in zonas_data:
-                sis = z["sistema"]
-                gar = CATALOGO_SISTEMAS[sis]["garantia"]
-                if gar != "NO APLICA" and sis not in garantias_unicas:
-                    garantias_unicas[sis] = gar
+                sis = z["sistema"]; gar = CATALOGO_SISTEMAS[sis]["garantia"]
+                if gar != "NO APLICA" and sis not in garantias_unicas: garantias_unicas[sis] = gar
                     
-            pdf.set_font('Arial', 'B', 9)
-            pdf.set_text_color(50, 50, 50)
-            pdf.cell(60, 5, "Garantías por Sistema:")
-            pdf.set_font('Arial', '', 9)
-            pdf.set_text_color(15, 60, 140)
-            
-            if not garantias_unicas:
-                pdf.cell(0, 5, "NO APLICA", ln=True)
+            pdf.set_font('Arial', 'B', 9); pdf.set_text_color(50, 50, 50); pdf.cell(60, 5, "Garantías por Sistema:")
+            pdf.set_font('Arial', '', 9); pdf.set_text_color(15, 60, 140)
+            if not garantias_unicas: pdf.cell(0, 5, "NO APLICA", ln=True)
             else:
                 primer_item = True
                 for sis, gar in garantias_unicas.items():
-                    if primer_item:
-                        pdf.cell(0, 5, f"{sis}: {gar}", ln=True)
-                        primer_item = False
-                    else:
-                        pdf.cell(60, 5, "") 
-                        pdf.cell(0, 5, f"{sis}: {gar}", ln=True)
+                    if primer_item: pdf.cell(0, 5, f"{sis}: {gar}", ln=True); primer_item = False
+                    else: pdf.cell(60, 5, ""); pdf.cell(0, 5, f"{sis}: {gar}", ln=True)
             
-            pdf.set_font('Arial', 'B', 9)
-            pdf.set_text_color(50, 50, 50)
-            pdf.cell(60, 5, "Condiciones de Pago:")
-            pdf.set_font('Arial', '', 9)
-            pdf.set_text_color(15, 60, 140)
-            pdf.cell(0, 5, "70% DE ANTICIPO, 30% CONTRA ENTREGA", ln=True)
-            
-            pdf.set_font('Arial', 'B', 9)
-            pdf.set_text_color(50, 50, 50)
-            pdf.cell(60, 5, "Presupuesto válido hasta:")
-            pdf.set_font('Arial', '', 9)
-            pdf.set_text_color(15, 60, 140)
-            pdf.cell(0, 5, fecha_validez.strftime("%d/%m/%Y"), ln=True)
-            
-            pdf.set_font('Arial', 'I', 8)
-            pdf.set_text_color(200, 30, 30)
-            pdf.cell(60, 4, "") 
-            pdf.cell(0, 4, "* Precio sujeto a cambios sin previo aviso.", ln=True)
-            
-            pdf.ln(5)
+            pdf.set_font('Arial', 'B', 9); pdf.set_text_color(50, 50, 50); pdf.cell(60, 5, "Condiciones de Pago:"); pdf.set_font('Arial', '', 9); pdf.set_text_color(15, 60, 140); pdf.cell(0, 5, "70% DE ANTICIPO, 30% CONTRA ENTREGA", ln=True)
+            pdf.set_font('Arial', 'B', 9); pdf.set_text_color(50, 50, 50); pdf.cell(60, 5, "Presupuesto válido hasta:"); pdf.set_font('Arial', '', 9); pdf.set_text_color(15, 60, 140); pdf.cell(0, 5, fecha_validez.strftime("%d/%m/%Y"), ln=True)
+            pdf.set_font('Arial', 'I', 8); pdf.set_text_color(200, 30, 30); pdf.cell(60, 4, ""); pdf.cell(0, 4, "* Precio sujeto a cambios sin previo aviso.", ln=True); pdf.ln(5)
 
             if anotaciones_asesor:
-                pdf.set_text_color(0, 150, 255)
-                pdf.set_font('Arial', 'B', 10)
-                pdf.cell(0, 6, "Anotaciones Especiales:", ln=True)
-                pdf.set_text_color(80, 80, 80)
-                pdf.set_font('Arial', 'I', 9)
-                pdf.multi_cell(0, 5, txt=anotaciones_asesor)
-                pdf.ln(5)
+                pdf.set_text_color(0, 150, 255); pdf.set_font('Arial', 'B', 10); pdf.cell(0, 6, "Anotaciones Especiales:", ln=True)
+                pdf.set_text_color(80, 80, 80); pdf.set_font('Arial', 'I', 9); pdf.multi_cell(0, 5, txt=anotaciones_asesor); pdf.ln(5)
 
             if pdf.get_y() > 230: pdf.add_page()
-            
             y_base = pdf.get_y() + 10 
             if os.path.exists("logo_bbva.png"): pdf.image("logo_bbva.png", x=145, y=y_base, w=55)
-            elif os.path.exists("logo_bbva.jpg"): pdf.image("logo_bbva.jpg", x=145, y=y_base, w=55)
             
-            pdf.set_y(y_base)
-            pdf.set_font('Arial', 'B', 10)
-            pdf.set_text_color(15, 60, 140)
-            pdf.cell(0, 5, 'Atentamente,', ln=True)
-            pdf.set_font('Arial', 'B', 12)
-            pdf.set_text_color(0, 150, 255)
-            pdf.cell(0, 5, 'TARC S.A. DE C.V.', ln=True)
-            
-            pdf.set_text_color(100, 100, 100)
-            pdf.set_font('Arial', '', 8)
+            pdf.set_y(y_base); pdf.set_font('Arial', 'B', 10); pdf.set_text_color(15, 60, 140); pdf.cell(0, 5, 'Atentamente,', ln=True)
+            pdf.set_font('Arial', 'B', 12); pdf.set_text_color(0, 150, 255); pdf.cell(0, 5, 'TARC S.A. DE C.V.', ln=True)
+            pdf.set_text_color(100, 100, 100); pdf.set_font('Arial', '', 8)
             if tipo_obra == "LOCAL":
-                pdf.cell(0, 4, 'BOULEVARD MIGUEL ALEMAN 759, COL. CENTRO. VERACRUZ, VER. C.P. 91700', ln=True)
-                pdf.cell(0, 4, 'Cel. 229 935 3940 / 229 337 1080 | rh@grupo-imac.com | www.grupo-imac.com', ln=True)
+                pdf.cell(0, 4, 'BOULEVARD MIGUEL ALEMAN 759, COL. CENTRO. VERACRUZ', ln=True)
+                pdf.cell(0, 4, 'Cel. 229 935 3940 / 229 337 1080 | rh@grupo-imac.com', ln=True)
             else:
-                pdf.cell(0, 4, 'DIRECCIÓN DE SUCURSAL FORÁNEA O FISCAL, ESTADO. C.P. 00000', ln=True)
-                pdf.cell(0, 4, 'TEL. (000) 000 00 00 | correo_foraneo@grupo-imac.com | www.grupo-imac.com', ln=True)
+                pdf.cell(0, 4, 'DIRECCIÓN DE SUCURSAL FORÁNEA O FISCAL, ESTADO', ln=True)
+                pdf.cell(0, 4, 'TEL. (000) 000 00 00 | correo_foraneo@grupo-imac.com', ln=True)
             
             pdf.set_y(y_base + 40)
             if os.path.exists("footer_marcas.png"):
                 if pdf.get_y() > 250: pdf.add_page()
                 pdf.image("footer_marcas.png", x=10, y=pdf.get_y(), w=190)
-            elif os.path.exists("footer_marcas.jpg"):
-                if pdf.get_y() > 250: pdf.add_page()
-                pdf.image("footer_marcas.jpg", x=10, y=pdf.get_y(), w=190)
 
             if temp_paths:
                 for i, temp_img in enumerate(temp_paths):
                     if i % 2 == 0:
-                        pdf.add_page()
-                        pdf.set_font('Arial', 'B', 14)
-                        pdf.set_text_color(15, 60, 140)
-                        pdf.set_xy(0, 35)
+                        pdf.add_page(); pdf.set_font('Arial', 'B', 14); pdf.set_text_color(15, 60, 140); pdf.set_xy(0, 35)
                         pdf.cell(210, 10, "ANEXO FOTOGRÁFICO", ln=True, align='C')
                         y_pos = 50
-                    else:
-                        y_pos = 165
+                    else: y_pos = 165
                     try:
                         img = Image.open(temp_img)
-                        w_px, h_px = img.size
-                        ratio = min(160 / w_px, 95 / h_px)
-                        w_mm = w_px * ratio
-                        h_mm = h_px * ratio
-                        x_mm = (210 - w_mm) / 2 
+                        w_px, h_px = img.size; ratio = min(160 / w_px, 95 / h_px)
+                        w_mm = w_px * ratio; h_mm = h_px * ratio; x_mm = (210 - w_mm) / 2 
                         pdf.image(temp_img, x=x_mm, y=y_pos, w=w_mm, h=h_mm)
-                        
                         if i < len(comentarios_fotos) and comentarios_fotos[i].strip():
-                            pdf.set_xy(25, y_pos + h_mm + 2) 
-                            pdf.set_font('Arial', 'I', 10)
-                            pdf.set_text_color(80, 80, 80)
+                            pdf.set_xy(25, y_pos + h_mm + 2); pdf.set_font('Arial', 'I', 10); pdf.set_text_color(80, 80, 80)
                             pdf.multi_cell(160, 5, txt=f"Nota: {comentarios_fotos[i]}", align='C')
-                            
                     except: pass
-                        
             for temp_img in temp_paths:
                 if os.path.exists(temp_img): os.remove(temp_img)
 
@@ -605,64 +366,36 @@ if boton:
 
             archivos_unicos_a_fusionar = []
             sistemas_con_alerta = []
-
             for z in zonas_data:
-                sis = z["sistema"]
-                ficha_asignada = CATALOGO_SISTEMAS[sis]["ficha"]
-                
-                if ficha_asignada == "DINAMICA_LOCAL_FORANEA":
-                    archivo_ficha = "ficha_tecnica_local.pdf" if tipo_obra == "LOCAL" else "ficha_tecnica_foranea.pdf"
-                else:
-                    archivo_ficha = ficha_asignada
-                    
-                if archivo_ficha != "NO APLICA" and archivo_ficha not in [f[1] for f in archivos_unicos_a_fusionar]:
-                    archivos_unicos_a_fusionar.append((sis, archivo_ficha))
+                sis = z["sistema"]; ficha_asignada = CATALOGO_SISTEMAS[sis]["ficha"]
+                if ficha_asignada == "DINAMICA_LOCAL_FORANEA": archivo_ficha = "ficha_tecnica_local.pdf" if tipo_obra == "LOCAL" else "ficha_tecnica_foranea.pdf"
+                else: archivo_ficha = ficha_asignada
+                if archivo_ficha != "NO APLICA" and archivo_ficha not in [f[1] for f in archivos_unicos_a_fusionar]: archivos_unicos_a_fusionar.append((sis, archivo_ficha))
 
             if archivos_unicos_a_fusionar:
-                fusionador = PdfMerger()
-                fusionador.append(io.BytesIO(pdf_base_bytes))
-                
+                fusionador = PdfMerger(); fusionador.append(io.BytesIO(pdf_base_bytes))
                 for sis, archivo in archivos_unicos_a_fusionar:
-                    if os.path.exists(archivo):
-                        fusionador.append(archivo)
-                    else:
-                        sistemas_con_alerta.append(f"{sis}")
-                        
+                    if os.path.exists(archivo): fusionador.append(archivo)
+                    else: sistemas_con_alerta.append(f"{sis}")
                 archivo_salida = io.BytesIO()
-                fusionador.write(archivo_salida)
-                fusionador.close()
-                pdf_final_para_descargar = archivo_salida.getvalue()
-                
-                if sistemas_con_alerta:
-                    st.warning(f"⚠️ Alerta: Faltan las siguientes fichas técnicas en tu GitHub: {', '.join(sistemas_con_alerta)}")
-            else:
-                pdf_final_para_descargar = pdf_base_bytes
+                fusionador.write(archivo_salida); fusionador.close(); pdf_final_para_descargar = archivo_salida.getvalue()
+                if sistemas_con_alerta: st.warning(f"⚠️ Alerta: Faltan fichas técnicas en GitHub: {', '.join(sistemas_con_alerta)}")
+            else: pdf_final_para_descargar = pdf_base_bytes
 
             nombre_file = f"Presupuesto_{folio_actual}_{cliente.replace(' ', '_')}.pdf"
             
-            # ========================================================
-            # 🚀 INYECCIÓN DE LÍMITES A LA BASE DE DATOS DEL ALMACÉN
-            # ========================================================
             if doc:
                 try:
                     hoja_limites = doc.worksheet("Limites_Materiales")
-                    for mat_sis, info in materiales_calculados.items():
-                        hoja_limites.append_row([folio_actual, mat_sis, info["cant"], "AUTORIZADO COTIZADOR"])
-                except Exception as e:
-                    pass
+                    for mat_sis, info in materiales_calculados.items(): hoja_limites.append_row([folio_actual, mat_sis, info["cant"], "AUTORIZADO COTIZADOR"])
+                except Exception: pass
 
             if hoja:
                 resumen = " / ".join([f"{z['area']} ({z['m2']}m2)" for z in zonas_data])
                 hoja.append_row([folio_actual, fecha_hoy, asesor, cliente, compania, telefono, correo_cliente, proyecto.upper(), ubicacion.upper(), resumen, total_final, tipo_obra, bolsa_mano_obra, resumen_insumos_str])
-                
-                registrar_bitacora(doc, "Cotizador", f"Generó presupuesto {folio_actual} y autorizó materiales para {cliente.upper()}")
+                registrar_bitacora(doc, "Cotizador", f"Generó presupuesto {folio_actual}")
             
             enviar_respaldo_correo(pdf_final_para_descargar, nombre_file, cliente, asesor, folio_actual, tipo_obra, proyecto, ubicacion)
             
-        st.success(f"✅ Presupuesto {folio_actual} generado y Límites de Almacén autorizados con éxito.")
-        st.download_button(
-            label="📄 DESCARGAR PRESUPUESTO", 
-            data=pdf_final_para_descargar, 
-            file_name=nombre_file,
-            mime="application/pdf"
-        )
+        st.success(f"✅ Presupuesto {folio_actual} generado y Límites autorizados con éxito.")
+        st.download_button(label="📄 DESCARGAR PRESUPUESTO", data=pdf_final_para_descargar, file_name=nombre_file, mime="application/pdf")

@@ -6,23 +6,13 @@ from PIL import Image
 icono_navegador = "logo_imac_2026.png" if os.path.exists("logo_imac_2026.png") else ("logo_tarc.png" if os.path.exists("logo_tarc.png") else "🏢")
 st.set_page_config(page_title="ERP IMAC - Acceso", page_icon=icono_navegador, layout="centered")
 
-# 🏛️ BASE DE DATOS DE USUARIOS CON PERMISOS GEOGRÁFICOS
-USUARIOS_VALIDOS = {
-    # Dirección y Directivos (Acceso Global a todo el sistema)
-    "wromero": {"clave": "2289", "rol": "Admin", "zona": "Todas"},
-    "act_dir": {"clave": "ACT2026", "rol": "Directivo", "zona": "Todas"},
-    "aco": {"clave": "0000", "rol": "Directivo", "zona": "Todas"},
-    
-    # Recursos Humanos (Restringido exclusivamente a zona Local)
-    "vane": {"clave": "1234", "rol": "RRHH", "zona": "Local"},
-    
-    # Auxiliares y Operativos segmentados por territorio
-    "jose": {"clave": "local26", "rol": "Auxiliar", "zona": "Local"},
-    "aux_foraneo": {"clave": "FORANEO2026", "rol": "Auxiliar", "zona": "Foránea"},
-    
-    # 🚀 NUEVO: Usuario Operativo (Exclusivo para zona Foránea)
-    "operativo": {"clave": "OPE2026", "rol": "Operativo", "zona": "Foránea"}
-}
+# 🚀 BLINDAJE EXTREMO: Los usuarios y contraseñas ya no viven en el código.
+# Ahora se extraen directamente de la bóveda de seguridad (Secrets).
+try:
+    USUARIOS_VALIDOS = st.secrets["usuarios"]
+except Exception:
+    st.error("⚠️ Error de seguridad: No se encontraron los usuarios en la bóveda secreta.")
+    st.stop()
 
 # 🚀 FUNCIÓN PARA EL ENCABEZADO OFICIAL BLINDADO
 def mostrar_logo(titulo):
@@ -45,7 +35,6 @@ def mostrar_logo(titulo):
     st.markdown("---")
 
 def login():
-    # Mandamos llamar al encabezado corporativo
     mostrar_logo("Sistema de Gestión IMAC")
     st.subheader("Acceso Geográfico Autorizado")
 
@@ -59,7 +48,6 @@ def login():
                 st.session_state["logged_in"] = True
                 st.session_state["user"] = usuario
                 st.session_state["role"] = USUARIOS_VALIDOS[usuario]["rol"]
-                # 🚀 AQUÍ GUARDAMOS EL TERRITORIO DEL USUARIO
                 st.session_state["zona"] = USUARIOS_VALIDOS[usuario]["zona"]
                 st.success(f"Acceso concedido como {st.session_state['role']} - Zona: {st.session_state['zona']}.")
                 st.rerun()
@@ -79,6 +67,5 @@ else:
         st.session_state["logged_in"] = False
         st.rerun()
     
-    # Encabezado corporativo también en la pantalla de bienvenida
     mostrar_logo("Panel de Bienvenida IMAC")
     st.write("Selecciona un módulo en el menú de la izquierda para operar tu zona correspondiente.")

@@ -45,8 +45,9 @@ def limpiar_monto(valor):
 # 📧 FUNCIÓN: ENVÍO DE PDF (ACTA) A CORREOS CORPORATIVOS
 def enviar_cierre_por_correo(pdf_bytes, nombre_archivo, cliente, folio):
     try:
-        remitente = st.secrets["CORREO_BOT"]
-        password = st.secrets["PASS_BOT"]
+        # 🚀 BLINDAJE PARA RENDER
+        remitente = os.environ.get("CORREO_BOT")
+        password = os.environ.get("PASS_BOT")
         
         correo_destino = "comercial@grupo-imac.com, rh@grupo-imac.com, aco@grupo-imac.com, act@grupo-imac.com" 
         
@@ -273,11 +274,12 @@ def generar_poliza_garantia(cliente, ubicacion, sistema, fecha_str):
 @st.cache_resource
 def conectar_sheets():
     try:
-        credenciales_dic = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
+        # 🚀 BLINDAJE PARA RENDER
+        credenciales_dic = json.loads(os.environ.get("GOOGLE_CREDENTIALS"))
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(credenciales_dic, scopes=scopes)
         cliente = gspread.authorize(creds)
-        ID_DEL_EXCEL = st.secrets["ID_EXCEL"] 
+        ID_DEL_EXCEL = os.environ.get("ID_EXCEL") 
         return cliente.open_by_key(ID_DEL_EXCEL)
     except Exception: return None
 

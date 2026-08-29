@@ -277,7 +277,7 @@ def conectar_sheets():
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(credenciales_dic, scopes=scopes)
         cliente = gspread.authorize(creds)
-        ID_DEL_EXCEL = "1-grdT2H5dBlGVPvJbZ5wVYDdtVjQEEmUPGpvEm6C0Gc" 
+        ID_DEL_EXCEL = st.secrets["ID_EXCEL"] 
         return cliente.open_by_key(ID_DEL_EXCEL)
     except Exception: return None
 

@@ -6,13 +6,16 @@ from PIL import Image
 icono_navegador = "logo_imac_2026.png" if os.path.exists("logo_imac_2026.png") else ("logo_tarc.png" if os.path.exists("logo_tarc.png") else "🏢")
 st.set_page_config(page_title="ERP IMAC - Acceso", page_icon=icono_navegador, layout="centered")
 
-# 🚀 BLINDAJE EXTREMO: Los usuarios y contraseñas ya no viven en el código.
-# Ahora se extraen directamente de la bóveda de seguridad (Secrets).
-try:
-    USUARIOS_VALIDOS = st.secrets["usuarios"]
-except Exception:
-    st.error("⚠️ Error de seguridad: No se encontraron los usuarios en la bóveda secreta. Por favor revisa la configuración en Streamlit Cloud.")
-    st.stop()
+# --- BASE DE DATOS DE USUARIOS ---
+USUARIOS_VALIDOS = {
+    "wromero": {"clave": "2289", "rol": "Admin", "zona": "Todas"},
+    "act": {"clave": "0000", "rol": "Directivo", "zona": "Todas"},
+    "aco": {"clave": "0000", "rol": "Directivo", "zona": "Todas"},
+    "vane": {"clave": "1234", "rol": "RRHH", "zona": "Local"},
+    "jose": {"clave": "local26", "rol": "Auxiliar", "zona": "Local"},
+    "aux_foraneo": {"clave": "FORANEO2026", "rol": "Auxiliar", "zona": "Foránea"},
+    "operativo": {"clave": "OPE2026", "rol": "Operativo", "zona": "Foránea"}
+}
 
 # 🚀 FUNCIÓN PARA EL ENCABEZADO OFICIAL BLINDADO
 def mostrar_logo(titulo):

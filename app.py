@@ -10,8 +10,17 @@ st.set_page_config(page_title="ERP IMAC - Acceso", page_icon=icono_navegador, la
 # Ahora se extraen directamente de la bóveda de seguridad (Secrets).
 try:
     USUARIOS_VALIDOS = st.secrets["usuarios"]
-except Exception:
+except Exception as e:
     st.error("⚠️ Error de seguridad: No se encontraron los usuarios en la bóveda secreta.")
+    st.info(f"🔍 Detalle técnico del error: {e}")
+    
+    # Esto nos dirá si Streamlit está logrando leer algo o si el archivo está vacío
+    try:
+        llaves_detectadas = list(st.secrets.keys())
+        st.warning(f"Llaves que el sistema SÍ está leyendo: {llaves_detectadas}")
+    except Exception as e_keys:
+        st.error(f"El servidor ni siquiera puede leer los secrets: {e_keys}")
+        
     st.stop()
 
 # 🚀 FUNCIÓN PARA EL ENCABEZADO OFICIAL BLINDADO

@@ -111,10 +111,8 @@ class PDF(FPDF):
         self.rect(5, 5, 200, 287) 
         self.set_line_width(0.2) 
 
-        # 🚀 SE AGREGA EL NUEVO LOGO AL MOTOR DE PDF
-        if os.path.exists("logo_imac_2026.png"):
-            self.image("logo_imac_2026.png", x=10, y=8, w=85) 
-        elif os.path.exists("logo_tarc.png"):
+        # 🚀 FORZAMOS A USAR SOLO EL LOGO VIEJO EN EL PDF (CON SU TAMAÑO ORIGINAL w=85)
+        if os.path.exists("logo_tarc.png"):
             self.image("logo_tarc.png", x=10, y=8, w=85) 
         elif os.path.exists("logo_tarc.jpg"): 
             self.image("logo_tarc.jpg", x=10, y=8, w=85)
@@ -155,7 +153,7 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio, ti
         password = st.secrets["PASS_BOT"]
         
         if tipo_obra == "LOCAL":
-            correo_destino = "comercial@grupo-imac.com, pue@grupo-imac.com, pue1@grupo-imac.com, pue2@grupo-imac.com"
+            correo_destino = "comercial@grupo-imac.com, pue@grupo-imac.com, pue2@grupo-imac.com, pue@grupo-imac.com"
         else:
             correo_destino = "comercial@grupo-imac.com, foraneos@grupo-imac.com, direccion@grupo-imac.com"
         
@@ -627,14 +625,12 @@ if boton:
                 try:
                     hoja_limites = doc.worksheet("Limites_Materiales")
                     for mat_sis, info in materiales_calculados.items():
-                        # Guarda Folio | Insumo | Cantidad Maxima | Requisicion
                         hoja_limites.append_row([folio_actual, mat_sis, info["cant"], "AUTORIZADO COTIZADOR"])
                 except Exception as e:
-                    pass # Evitamos que falle si hay error de conexión a la pestaña
+                    pass
 
             if hoja:
                 resumen = " / ".join([f"{z['area']} ({z['m2']}m2)" for z in zonas_data])
-                # 🚀 INYECCIÓN FINAL AL EXCEL PRINCIPAL (Columnas M y N)
                 hoja.append_row([folio_actual, fecha_hoy, asesor, cliente, compania, telefono, correo_cliente, proyecto, ubicacion.upper(), resumen, total_final, tipo_obra, bolsa_mano_obra, resumen_insumos_str])
                 
                 registrar_bitacora(doc, "Cotizador", f"Generó presupuesto {folio_actual} y autorizó materiales para {cliente.upper()}")

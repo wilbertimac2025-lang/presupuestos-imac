@@ -68,9 +68,8 @@ def enviar_cierre_por_correo(pdf_bytes, nombre_archivo, cliente, folio):
 # --- CLASES PARA LOS 3 PDFs ---
 class PDF_Base(FPDF):
     def header(self):
-        # 🚀 SE AGREGA EL NUEVO LOGO AL MOTOR DE PDF
-        if os.path.exists("logo_imac_2026.png"): self.image("logo_imac_2026.png", x=15, y=10, w=50)
-        elif os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=15, y=10, w=50)
+        # 🚀 SOLO LOGO VIEJO PARA LOS PDF OFICIALES (Evita que tape el texto)
+        if os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=15, y=10, w=50)
         elif os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=15, y=10, w=50)
         
         self.set_font('Arial', 'B', 14)

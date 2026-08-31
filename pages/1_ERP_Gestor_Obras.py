@@ -45,9 +45,13 @@ def limpiar_monto(valor):
 # 📧 FUNCIÓN: ENVÍO DE PDF (ACTA) A CORREOS CORPORATIVOS
 def enviar_cierre_por_correo(pdf_bytes, nombre_archivo, cliente, folio):
     try:
-        # 🚀 BLINDAJE PARA RENDER
-        remitente = os.environ.get("CORREO_BOT")
-        password = os.environ.get("PASS_BOT")
+        # 🚀 BLINDAJE PARA RENDER Y ANTI-ESPACIOS INVISIBLES
+        remitente = os.environ.get("CORREO_BOT", "").strip()
+        password = os.environ.get("PASS_BOT", "").strip()
+        
+        if not remitente or not password:
+            st.error("🚨 ERROR: Faltan las contraseñas del correo (CORREO_BOT o PASS_BOT) en este archivo.")
+            return False
         
         correo_destino = "comercial@grupo-imac.com, rh@grupo-imac.com, aco@grupo-imac.com, act@grupo-imac.com" 
         
@@ -64,6 +68,8 @@ def enviar_cierre_por_correo(pdf_bytes, nombre_archivo, cliente, folio):
             smtp.send_message(msg)
         return True
     except Exception as e: 
+        # 🚨 LE QUITAMOS LA MORDAZA AL ERROR PARA QUE NOS AVISE EN PANTALLA QUÉ PASA
+        st.error(f"🚨 ERROR TÉCNICO DE CORREO: {e}")
         return False
 
 # --- CLASES PARA LOS 3 PDFs ---

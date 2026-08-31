@@ -170,7 +170,6 @@ if doc:
     if not obras_ejecucion:
         st.info("No hay obras en ejecución en este momento.")
     else:
-        # 🚀 AQUÍ RENOMBRAMOS LA PESTAÑA A "AJUSTES EXCEPCIONALES"
         tab1, tab2 = st.tabs(["📦 Registro de Movimientos", "🚨 Ajustes Excepcionales"])
         
         # --- PESTAÑA DE LÍMITES / AJUSTES ---
@@ -224,22 +223,31 @@ if doc:
                     st.markdown("---")
                     st.markdown("#### 📋 Insumos Autorizados para esta Obra")
                     
-                    resumen_obra = []
+                    # 🚀 NUEVA LÓGICA: Agrupar insumos repetidos y sumarlos
+                    limites_agrupados = {}
                     for fila in limites_data:
                         if str(fila.get("Folio Obra", "")) == folio_seleccionado:
                             mat = str(fila.get("Material", ""))
-                            max_cant = float(fila.get("Cantidad Maxima", 0))
+                            try: cant = float(fila.get("Cantidad Maxima", 0))
+                            except: cant = 0.0
                             
-                            consumido = sum(float(c.get("Cantidad Usada", 0)) for c in consumos_data if str(c.get("Folio Obra", "")) == folio_seleccionado and str(c.get("Material / Insumo", "")) == mat)
-                            
-                            disponible = max_cant - consumido
-                            
-                            resumen_obra.append({
-                                "Insumo": mat,
-                                "Autorizado": max_cant,
-                                "Entregado": consumido,
-                                "Restante": disponible
-                            })
+                            if mat in limites_agrupados:
+                                limites_agrupados[mat] += cant
+                            else:
+                                limites_agrupados[mat] = cant
+                    
+                    resumen_obra = []
+                    for mat, max_cant in limites_agrupados.items():
+                        consumido = sum(float(c.get("Cantidad Usada", 0)) for c in consumos_data if str(c.get("Folio Obra", "")) == folio_seleccionado and str(c.get("Material / Insumo", "")) == mat)
+                        
+                        disponible = max_cant - consumido
+                        
+                        resumen_obra.append({
+                            "Insumo": mat,
+                            "Autorizado": max_cant,
+                            "Entregado": consumido,
+                            "Restante": disponible
+                        })
                     
                     if resumen_obra:
                         df_resumen = pd.DataFrame(resumen_obra)
@@ -258,10 +266,11 @@ if doc:
                         material = st.text_input("Especificar Insumo:")
                         unidad = "Unidades"
 
+                    # 🚀 NUEVA LÓGICA: Sumamos el límite total
                     limite_actual = 0
                     for fila in limites_data:
                         if str(fila.get("Folio Obra", "")) == folio_seleccionado and str(fila.get("Material", "")) == material:
-                            try: limite_actual = float(fila.get("Cantidad Maxima", 0))
+                            try: limite_actual += float(fila.get("Cantidad Maxima", 0))
                             except: pass
                             
                     consumido_actual = 0
@@ -288,7 +297,6 @@ if doc:
 
                     with st.form("form_materiales"):
                         
-                        # 🚀 SELECTOR MULTIFUNCIONAL DE ORIGEN DE MATERIAL
                         tipo_movimiento = st.selectbox("Origen del Movimiento (Tipo de Salida):", [
                             "Salida de Almacén",
                             "Compras Internas",
@@ -299,7 +307,6 @@ if doc:
                         
                         cantidad = st.number_input(f"Cantidad a despachar ({unidad})", min_value=0.0, step=1.0)
                         
-                        # 🚀 CAMPO DINÁMICO DE REFERENCIA
                         doc_referencia = st.text_input("Documento de Referencia (Remisión / Factura / Carta Porte):", placeholder="Ej. REM-123, FAC-509, CP-44")
                         
                         btn_guardar = st.form_submit_button("💾 REGISTRAR MOVIMIENTO Y CARGAR COSTO A OBRA")
@@ -314,12 +321,12 @@ if doc:
                                 costo_total_movimiento = cantidad * precio_unitario
                                 ref_final = doc_referencia.strip().upper()
                                 
-                                # Guardamos en Consumos (Unimos el tipo de movimiento y el documento)
+                                # Guardamos en Consumos
                                 hoja_consumos.append_row([
                                     fecha_hoy, folio_seleccionado, categoria, material, cantidad, unidad, f"{tipo_movimiento} | {ref_final}"
                                 ])
                                 
-                                # Guardamos en Gastos Financieros para que el contador vea el desglose claro
+                                # Guardamos en Gastos Financieros
                                 hoja_gastos.append_row([
                                     fecha_hoy, 
                                     folio_seleccionado, 

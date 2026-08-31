@@ -53,7 +53,7 @@ def enviar_cierre_por_correo(pdf_bytes, nombre_archivo, cliente, folio):
             st.error("🚨 ERROR: Faltan las contraseñas del correo (CORREO_BOT o PASS_BOT) en este archivo.")
             return False
         
-        correo_destino = "comercial@grupo-imac.com, pue@grupo-imac.com, pue1@grupo-imac.com, pue2@grupo-imac.com" 
+        correo_destino = "comercial@grupo-imac.com, aco@grupo-imac.com, act@grupo-imac.com, rh@grupo-imac.com" 
         
         msg = EmailMessage()
         msg['Subject'] = f'CIERRE DE OBRA OFICIAL Y ACTA DE ENTREGA: {folio} - {cliente}'

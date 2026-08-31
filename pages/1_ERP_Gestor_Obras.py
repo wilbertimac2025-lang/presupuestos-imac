@@ -274,14 +274,26 @@ def generar_poliza_garantia(cliente, ubicacion, sistema, fecha_str):
 @st.cache_resource
 def conectar_sheets():
     try:
-        # 🚀 BLINDAJE PARA RENDER
-        credenciales_dic = json.loads(os.environ.get("GOOGLE_CREDENTIALS"))
+        texto_json = os.environ.get("GOOGLE_CREDENTIALS")
+        if not texto_json:
+            st.error("🚨 ERROR: Render no está detectando la llave GOOGLE_CREDENTIALS en el Environment.")
+            return None
+            
+        credenciales_dic = json.loads(texto_json)
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(credenciales_dic, scopes=scopes)
         cliente = gspread.authorize(creds)
+        
         ID_DEL_EXCEL = os.environ.get("ID_EXCEL") 
+        if not ID_DEL_EXCEL:
+            st.error("🚨 ERROR: Render no está detectando la llave ID_EXCEL en el Environment.")
+            return None
+            
         return cliente.open_by_key(ID_DEL_EXCEL)
-    except Exception: return None
+        
+    except Exception as e:
+        st.error(f"🚨 ERROR TÉCNICO DE CONEXIÓN CON GOOGLE: {e}")
+        return None
 
 # --- ENCABEZADO OFICIAL BLINDADO ---
 col_logo, col_tit = st.columns([1, 5])

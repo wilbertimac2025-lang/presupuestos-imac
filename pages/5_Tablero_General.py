@@ -35,13 +35,14 @@ def limpiar_monto(valor):
 @st.cache_resource
 def conectar_sheets():
     try:
-        credenciales_dic = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
+        # 🚀 BLINDAJE PARA RENDER
+        credenciales_dic = json.loads(os.environ.get("GOOGLE_CREDENTIALS"))
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(credenciales_dic, scopes=scopes)
         cliente = gspread.authorize(creds)
         
-        # ⚠️ REEMPLAZA CON TU ID DE EXCEL
-        ID_DEL_EXCEL = st.secrets["ID_EXCEL"] 
+        # ⚠️ CONEXIÓN SEGURA
+        ID_DEL_EXCEL = os.environ.get("ID_EXCEL") 
         return cliente.open_by_key(ID_DEL_EXCEL)
     except Exception: return None
 

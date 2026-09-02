@@ -203,7 +203,8 @@ if clave_ingresada == CLAVE_ADMIN:
                     columnas_mostrar = ["Nombre del Trabajador", "Puesto / Rol", "NSS"]
                     if "Registro Patronal" in df_trabajadores.columns:
                         columnas_mostrar.append("Registro Patronal")
-                    columnas_mostrar.extend(["Estatus IMSS", "Fecha de Asignación"])
+                    # 🚀 AQUÍ SE INYECTA LA VIGENCIA IMSS EN EL REPORTE
+                    columnas_mostrar.extend(["Estatus IMSS", "Vigencia IMSS", "Fecha de Asignación"])
                     
                     columnas_finales = [c for c in columnas_mostrar if c in df_trabajadores.columns]
                     st.dataframe(df_trabajadores[columnas_finales], use_container_width=True, hide_index=True)

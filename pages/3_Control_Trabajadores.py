@@ -5,6 +5,8 @@ import json
 import datetime
 import pandas as pd
 import os
+import smtplib
+from email.message import EmailMessage
 from PIL import Image
 
 # --- CONFIGURACIÓN CORPORATIVA ---
@@ -34,6 +36,68 @@ def registrar_bitacora(doc, modulo, accion):
             hoja_bitacora.append_row([fecha_hora, usuario, rol, modulo, accion])
     except Exception:
         pass 
+
+# 📧 FUNCIÓN DEL ESCÁNER SILENCIOSO (ALERTAS IMSS)
+def checar_alertas_imss(datos_trabajadores):
+    # Usamos session_state para no bombardear a RH con correos cada que recargan la página
+    if "alerta_imss_enviada" in st.session_state:
+        return 
+    
+    hoy = datetime.datetime.now().date()
+    alertas = []
+    
+    # Filtramos para quedarnos solo con la última asignación de cada trabajador
+    ultimas_asignaciones = {}
+    for reg in datos_trabajadores:
+        nombre = str(reg.get("Nombre del Trabajador", "")).strip()
+        if nombre:
+            ultimas_asignaciones[nombre] = reg
+            
+    for nombre, reg in ultimas_asignaciones.items():
+        estatus = str(reg.get("Estatus IMSS", "")).upper()
+        
+        # Solo escaneamos a los que están activos o en trámite
+        if "BAJA" not in estatus:
+            fecha_str = str(reg.get("Vigencia IMSS", ""))
+            if fecha_str:
+                try:
+                    fecha_vigencia = datetime.datetime.strptime(fecha_str, "%d/%m/%Y").date()
+                    diferencia = (fecha_vigencia - hoy).days
+                    
+                    # Si faltan 7 días o menos, o ya caducó, se va a la lista de alertas
+                    if diferencia <= 7:
+                        alertas.append((nombre, reg.get("Folio Obra", ""), fecha_str, diferencia))
+                except Exception:
+                    pass
+                    
+    if alertas:
+        # 🚀 PROCEDIMIENTO DE ENVÍO DE ALERTA
+        try:
+            remitente = os.environ.get("CORREO_BOT", "").strip()
+            password = os.environ.get("PASS_BOT", "").strip()
+            if remitente and password:
+                msg = EmailMessage()
+                msg['Subject'] = '⚠️ ALERTA AUTOMÁTICA: Vencimientos de IMSS Próximos'
+                msg['From'] = remitente
+                msg['To'] = 'rh@grupo-imac.com'
+                
+                cuerpo = "El sistema ERP ha detectado trabajadores cuya vigencia de IMSS está a punto de caducar (7 días o menos) o ya caducó:\n\n"
+                for nombre, obra, fecha, dias in alertas:
+                    estado = "¡VENCIDO!" if dias < 0 else f"Vence en {dias} días"
+                    cuerpo += f"- {nombre} | Obra: {obra} | Vigencia: {fecha} | {estado}\n"
+                
+                cuerpo += "\nPor favor, ingresa al sistema para gestionar las renovaciones o bajas correspondientes.\n\nERP Grupo IMAC"
+                msg.set_content(cuerpo)
+                
+                with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
+                    smtp.starttls()
+                    smtp.login(remitente, password)
+                    smtp.send_message(msg)
+        except Exception:
+            pass # Falla silenciosa para no detener la app
+            
+    st.session_state["alerta_imss_enviada"] = True
+
 
 @st.cache_resource
 def conectar_sheets():
@@ -83,6 +147,10 @@ if doc:
     datos_trabajadores = hoja_trabajadores.get_all_records()
     datos_base = hoja_base.get_all_records()
     
+    # 🔍 INVOCAMOS AL ESCÁNER DE ALERTAS EN EL FONDO
+    if datos_trabajadores:
+        checar_alertas_imss(datos_trabajadores)
+    
     nombres_base = [str(fila.get("Nombre del Trabajador", "")) for fila in datos_base if str(fila.get("Nombre del Trabajador", "")) != ""]
     
     tab1, tab2, tab3 = st.tabs(["🏗️ Asignación a Obras (Operación)", "🗂️ Base de Datos Maestra (RRHH)", "📊 Tablero Maestro de Ocupación"])
@@ -119,15 +187,20 @@ if doc:
                             trabajador_sel = st.selectbox("Selecciona al Trabajador:", nombres_base)
                             estatus_imss = st.selectbox("Estatus IMSS para esta obra:", ["🟢 ACTIVO (Alta confirmada)", "🟡 EN TRÁMITE", "🔴 BAJA (Desvinculado de la obra)"])
                             
+                            # 🚀 NUEVO INPUT DE FECHA OBLIGATORIO
+                            st.markdown("---")
+                            st.markdown("**Vigencia del Seguro:**")
+                            vigencia_imss = st.date_input("Selecciona la fecha límite de vigencia (IMSS):", min_value=datetime.date.today())
+                            
                             btn_asignar = st.form_submit_button("➕ ASIGNAR TRABAJADOR A LA OBRA")
                             
                             if btn_asignar:
-                                # LÓGICA DEL CANDADO
                                 trabajador_info = next((t for t in datos_base if str(t.get("Nombre del Trabajador", "")) == trabajador_sel), None)
                                 historial_trabajador = [t for t in datos_trabajadores if str(t.get("Nombre del Trabajador", "")) == trabajador_sel]
                                 
                                 candado_activado = False
                                 
+                                # 🚀 VALIDACIÓN 1: El Candado de Cruce de Obras
                                 if historial_trabajador:
                                     ultimo_registro = historial_trabajador[-1]
                                     ultimo_estatus = str(ultimo_registro.get("Estatus IMSS", "")).upper()
@@ -136,10 +209,16 @@ if doc:
                                     if "BAJA" not in ultimo_estatus and ultimo_rp != "NO ASIGNADO" and ultimo_rp != registro_patronal_obra:
                                         candado_activado = True
                                         st.error(f"🔒 **CANDADO IMSS ACTIVADO:** {trabajador_sel} está activo en otra obra con el RP: **{ultimo_rp}**.")
-                                        st.error(f"No puedes moverlo a esta obra (RP: **{registro_patronal_obra}**) sin antes registrarle una '🔴 BAJA' en su obra anterior para evitar multas.")
+                                        st.error(f"No puedes moverlo a esta obra (RP: **{registro_patronal_obra}**) sin antes registrarle una '🔴 BAJA' en su obra anterior.")
+
+                                # 🚀 VALIDACIÓN 2: El Candado de Vigencia
+                                if vigencia_imss < datetime.date.today() and "BAJA" not in estatus_imss:
+                                    candado_activado = True
+                                    st.error("⚠️ **CANDADO DE VIGENCIA:** No puedes dar de alta a un trabajador con una fecha del IMSS que ya está vencida en el pasado.")
 
                                 if not candado_activado:
                                     fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
+                                    # 🚀 GUARDANDO EL NUEVO DATO EN LA HOJA
                                     hoja_trabajadores.append_row([
                                         folio_seleccionado, 
                                         trabajador_info.get("Nombre del Trabajador", ""), 
@@ -148,11 +227,11 @@ if doc:
                                         estatus_imss, 
                                         fecha_hoy,
                                         registro_patronal_obra, 
-                                        trabajador_info.get("RFC", "")
+                                        trabajador_info.get("RFC", ""),
+                                        vigencia_imss.strftime("%d/%m/%Y") # <--- AQUI SE INYECTA LA VIGENCIA
                                     ])
                                     
-                                    # 🚀 INYECCIÓN A LA BITÁCORA
-                                    registrar_bitacora(doc, "Control de Trabajadores", f"Asignó a {trabajador_sel} a la obra {folio_seleccionado}. Estatus: {estatus_imss}")
+                                    registrar_bitacora(doc, "Control de Trabajadores", f"Asignó a {trabajador_sel} a la obra {folio_seleccionado}. Vence: {vigencia_imss.strftime('%d/%m/%Y')}")
                                     
                                     st.success(f"✅ ¡Éxito! {trabajador_sel} asignado correctamente a la obra {folio_seleccionado}.")
                                     st.rerun()
@@ -175,6 +254,7 @@ if doc:
                         estatus = trabajador.get("Estatus IMSS", "")
                         rp_trabajador = trabajador.get("Registro Patronal", registro_patronal_obra)
                         rfc_trabajador = trabajador.get("RFC", "NO PROPORCIONADO")
+                        vigencia_txt = trabajador.get("Vigencia IMSS", "No registrada") # 🚀 SE MUESTRA VIGENCIA
                         
                         color_fondo = "#fafafa" if "BAJA" not in estatus.upper() else "#ffebee"
                         
@@ -182,7 +262,7 @@ if doc:
                         <div style='padding: 15px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 12px; background-color: {color_fondo};'>
                             <strong style='font-size: 16px; color: #0f3c8c;'>{nombre}</strong> - <em>{trabajador.get('Puesto / Rol', 'N/A')}</em><br>
                             <span style='color: #555;'>NSS: {trabajador.get('NSS', 'N/A')} | <strong>RFC: {rfc_trabajador}</strong> | RP Vinculado: {rp_trabajador}</span><br>
-                            Estatus Actual: <strong>{estatus}</strong>
+                            Estatus Actual: <strong>{estatus}</strong> | 📅 <strong>Vigencia: {vigencia_txt}</strong>
                         </div>
                         """, unsafe_allow_html=True)
 
@@ -214,10 +294,7 @@ if doc:
                         st.error(f"⚠️ El trabajador {nuevo_nombre.upper()} ya existe en la base de datos.")
                     else:
                         hoja_base.append_row([nuevo_nombre.upper(), nuevo_rol, nuevo_nss, nuevo_rfc.upper()])
-                        
-                        # 🚀 INYECCIÓN A LA BITÁCORA
                         registrar_bitacora(doc, "Control de Trabajadores", f"Registró al nuevo empleado {nuevo_nombre.upper()} ({nuevo_rol}) en el Catálogo Maestro")
-                        
                         st.success(f"✅ ¡Trabajador {nuevo_nombre.upper()} agregado al catálogo general de la empresa!")
                         st.rerun()
             
@@ -262,14 +339,17 @@ if doc:
                         obra_activa = "🟢 DISPONIBLE (SIN OBRA)"
                         estatus_pantalla = "🔴 BAJA"
                         rp_act = "N/A"
+                        vigencia_pantalla = "N/A"
                     else:
                         obra_activa = registro_asig.get("Folio Obra", "N/A")
                         estatus_pantalla = registro_asig.get("Estatus IMSS", "N/A")
                         rp_act = registro_asig.get("Registro Patronal", "N/A")
+                        vigencia_pantalla = registro_asig.get("Vigencia IMSS", "N/A") # 🚀 VISUALIZACIÓN EN TABLERO
                 else:
                     obra_activa = "🟢 DISPONIBLE (SIN OBRA)"
                     estatus_pantalla = "SIN ASIGNACIONES"
                     rp_act = "N/A"
+                    vigencia_pantalla = "N/A"
 
                 tabla_global.append({
                     "Nombre del Trabajador": nombre_emp,
@@ -278,7 +358,8 @@ if doc:
                     "RFC": rfc_emp,
                     "Obra Asignada": obra_activa,
                     "Estatus IMSS": estatus_pantalla,
-                    "RP de Obra": rp_act
+                    "RP de Obra": rp_act,
+                    "Vigencia": vigencia_pantalla # 🚀 SE AGREGA A LA TABLA GLOBAL
                 })
 
             df_master = pd.DataFrame(tabla_global)
@@ -287,9 +368,7 @@ if doc:
             filtro_texto = st.text_input("🔍 Filtrar Tabla (Escribe nombre, obra o puesto):", placeholder="Ej. Oficial, OBRA04, Juan...")
             
             if filtro_texto:
-                # Filtrado inteligente sin importar mayúsculas
                 termino = filtro_texto.upper().strip()
                 df_master = df_master[df_master.astype(str).apply(lambda x: x.str.contains(termino)).any(axis=1)]
 
-            # Desplegamos la tabla corporativa limpia
             st.dataframe(df_master, use_container_width=True, hide_index=True)

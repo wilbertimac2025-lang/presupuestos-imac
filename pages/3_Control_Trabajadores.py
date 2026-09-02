@@ -37,78 +37,87 @@ def registrar_bitacora(doc, modulo, accion):
     except Exception:
         pass 
 
-# 📧 FUNCIÓN DEL ESCÁNER SILENCIOSO (ALERTAS IMSS)
-def checar_alertas_imss(datos_trabajadores):
-    # Usamos session_state para no bombardear a RH con correos cada que recargan la página
-    if "alerta_imss_enviada" in st.session_state:
-        return 
-    
-    hoy = datetime.datetime.now().date()
-    alertas = []
-    
-    # Filtramos para quedarnos solo con la última asignación de cada trabajador
-    ultimas_asignaciones = {}
-    for reg in datos_trabajadores:
-        nombre = str(reg.get("Nombre del Trabajador", "")).strip()
-        if nombre:
-            ultimas_asignaciones[nombre] = reg
-            
-    for nombre, reg in ultimas_asignaciones.items():
-        estatus = str(reg.get("Estatus IMSS", "")).upper()
+# 📧 FUNCIÓN: REPORTE MANUAL DE VIGENCIAS A RRHH
+def enviar_reporte_imss_manual(datos_trabajadores, datos_base):
+    try:
+        remitente = os.environ.get("CORREO_BOT", "").strip()
+        password = os.environ.get("PASS_BOT", "").strip()
         
-        # Solo escaneamos a los que están activos o en trámite
-        if "BAJA" not in estatus:
-            fecha_str = str(reg.get("Vigencia IMSS", ""))
-            if fecha_str:
-                try:
-                    fecha_vigencia = datetime.datetime.strptime(fecha_str, "%d/%m/%Y").date()
-                    diferencia = (fecha_vigencia - hoy).days
-                    
-                    # Si faltan 7 días o menos, o ya caducó, se va a la lista de alertas
-                    if diferencia <= 7:
-                        alertas.append((nombre, reg.get("Folio Obra", ""), fecha_str, diferencia))
-                except Exception:
-                    pass
-                    
-    if alertas:
-        # 🚀 PROCEDIMIENTO DE ENVÍO DE ALERTA
-        try:
-            remitente = os.environ.get("CORREO_BOT", "").strip()
-            password = os.environ.get("PASS_BOT", "").strip()
-            if remitente and password:
-                msg = EmailMessage()
-                msg['Subject'] = '⚠️ ALERTA AUTOMÁTICA: Vencimientos de IMSS Próximos'
-                msg['From'] = remitente
-                msg['To'] = 'rh@grupo-imac.com'
-                
-                cuerpo = "El sistema ERP ha detectado trabajadores cuya vigencia de IMSS está a punto de caducar (7 días o menos) o ya caducó:\n\n"
-                for nombre, obra, fecha, dias in alertas:
-                    estado = "¡VENCIDO!" if dias < 0 else f"Vence en {dias} días"
-                    cuerpo += f"- {nombre} | Obra: {obra} | Vigencia: {fecha} | {estado}\n"
-                
-                cuerpo += "\nPor favor, ingresa al sistema para gestionar las renovaciones o bajas correspondientes.\n\nERP Grupo IMAC"
-                msg.set_content(cuerpo)
-                
-                with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
-                    smtp.starttls()
-                    smtp.login(remitente, password)
-                    smtp.send_message(msg)
-        except Exception:
-            pass # Falla silenciosa para no detener la app
-            
-    st.session_state["alerta_imss_enviada"] = True
+        if not remitente or not password:
+            return False, "Faltan las contraseñas del correo en el servidor."
 
+        hoy = datetime.datetime.now().date()
+        
+        # Agrupamos la última asignación de cada trabajador
+        ultimas_asignaciones = {}
+        for reg in datos_trabajadores:
+            nombre = str(reg.get("Nombre del Trabajador", "")).strip().upper()
+            if nombre:
+                ultimas_asignaciones[nombre] = reg
+        
+        cuerpo = "🏢 REPORTE GENERAL DE VIGENCIAS IMSS Y ASIGNACIONES (GRUPO IMAC)\n"
+        cuerpo += f"Fecha de emisión: {hoy.strftime('%d/%m/%Y')}\n"
+        cuerpo += "-"*50 + "\n\n"
+        
+        activos_txt = "🟢 TRABAJADORES ACTIVOS EN OBRA:\n\n"
+        sin_obra_txt = "⚪ TRABAJADORES SIN OBRA (O DADOS DE BAJA):\n\n"
+        
+        for emp in datos_base:
+            nombre = str(emp.get("Nombre del Trabajador", "")).strip().upper()
+            if not nombre: continue
+            
+            asig = ultimas_asignaciones.get(nombre)
+            if asig:
+                estatus = str(asig.get("Estatus IMSS", "")).upper()
+                obra = asig.get("Folio Obra", "N/A")
+                vigencia = asig.get("Vigencia IMSS", "N/A")
+                
+                if "BAJA" in estatus:
+                    sin_obra_txt += f"• {nombre} | Última Obra: {obra}\n"
+                else:
+                    # Calculamos los días restantes para hacer el reporte más inteligente
+                    estado_vigencia = ""
+                    if vigencia and vigencia != "N/A":
+                        try:
+                            fecha_v = datetime.datetime.strptime(vigencia, "%d/%m/%Y").date()
+                            dias = (fecha_v - hoy).days
+                            if dias < 0:
+                                estado_vigencia = "¡VENCIDO!"
+                            elif dias <= 7:
+                                estado_vigencia = f"¡ALERTA! Vence en {dias} días"
+                            else:
+                                estado_vigencia = f"Vigente ({dias} días restantes)"
+                        except Exception:
+                            estado_vigencia = "Fecha con formato incorrecto"
+                            
+                    activos_txt += f"• {nombre} | Obra: {obra} | Vigencia: {vigencia} [{estado_vigencia}]\n"
+            else:
+                sin_obra_txt += f"• {nombre} | SIN ASIGNACIONES HISTÓRICAS\n"
+                
+        cuerpo_final = cuerpo + activos_txt + "\n" + "-"*50 + "\n\n" + sin_obra_txt
+        
+        msg = EmailMessage()
+        msg['Subject'] = f'📊 REPORTE IMSS: Estatus de Plantilla al {hoy.strftime("%d/%m/%Y")}'
+        msg['From'] = remitente
+        msg['To'] = 'rh@grupo-imac.com, comercial@grupo-imac.com'
+        msg.set_content(cuerpo_final)
+        
+        with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
+            smtp.starttls()
+            smtp.login(remitente, password)
+            smtp.send_message(msg)
+            
+        return True, "El reporte fue enviado exitosamente a Recursos Humanos y Dirección."
+    except Exception as e:
+        return False, f"Ocurrió un error al enviar el correo: {e}"
 
 @st.cache_resource
 def conectar_sheets():
     try:
-        # 🚀 BLINDAJE PARA RENDER
         credenciales_dic = json.loads(os.environ.get("GOOGLE_CREDENTIALS"))
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(credenciales_dic, scopes=scopes)
         cliente = gspread.authorize(creds)
-        
-        # ⚠️ CONEXIÓN SEGURA
         ID_DEL_EXCEL = os.environ.get("ID_EXCEL") 
         return cliente.open_by_key(ID_DEL_EXCEL)
     except Exception: return None
@@ -147,10 +156,6 @@ if doc:
     datos_trabajadores = hoja_trabajadores.get_all_records()
     datos_base = hoja_base.get_all_records()
     
-    # 🔍 INVOCAMOS AL ESCÁNER DE ALERTAS EN EL FONDO
-    if datos_trabajadores:
-        checar_alertas_imss(datos_trabajadores)
-    
     nombres_base = [str(fila.get("Nombre del Trabajador", "")) for fila in datos_base if str(fila.get("Nombre del Trabajador", "")) != ""]
     
     tab1, tab2, tab3 = st.tabs(["🏗️ Asignación a Obras (Operación)", "🗂️ Base de Datos Maestra (RRHH)", "📊 Tablero Maestro de Ocupación"])
@@ -187,7 +192,6 @@ if doc:
                             trabajador_sel = st.selectbox("Selecciona al Trabajador:", nombres_base)
                             estatus_imss = st.selectbox("Estatus IMSS para esta obra:", ["🟢 ACTIVO (Alta confirmada)", "🟡 EN TRÁMITE", "🔴 BAJA (Desvinculado de la obra)"])
                             
-                            # 🚀 NUEVO INPUT DE FECHA OBLIGATORIO
                             st.markdown("---")
                             st.markdown("**Vigencia del Seguro:**")
                             vigencia_imss = st.date_input("Selecciona la fecha límite de vigencia (IMSS):", min_value=datetime.date.today())
@@ -200,7 +204,6 @@ if doc:
                                 
                                 candado_activado = False
                                 
-                                # 🚀 VALIDACIÓN 1: El Candado de Cruce de Obras
                                 if historial_trabajador:
                                     ultimo_registro = historial_trabajador[-1]
                                     ultimo_estatus = str(ultimo_registro.get("Estatus IMSS", "")).upper()
@@ -211,14 +214,12 @@ if doc:
                                         st.error(f"🔒 **CANDADO IMSS ACTIVADO:** {trabajador_sel} está activo en otra obra con el RP: **{ultimo_rp}**.")
                                         st.error(f"No puedes moverlo a esta obra (RP: **{registro_patronal_obra}**) sin antes registrarle una '🔴 BAJA' en su obra anterior.")
 
-                                # 🚀 VALIDACIÓN 2: El Candado de Vigencia
                                 if vigencia_imss < datetime.date.today() and "BAJA" not in estatus_imss:
                                     candado_activado = True
                                     st.error("⚠️ **CANDADO DE VIGENCIA:** No puedes dar de alta a un trabajador con una fecha del IMSS que ya está vencida en el pasado.")
 
                                 if not candado_activado:
                                     fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
-                                    # 🚀 GUARDANDO EL NUEVO DATO EN LA HOJA
                                     hoja_trabajadores.append_row([
                                         folio_seleccionado, 
                                         trabajador_info.get("Nombre del Trabajador", ""), 
@@ -228,15 +229,13 @@ if doc:
                                         fecha_hoy,
                                         registro_patronal_obra, 
                                         trabajador_info.get("RFC", ""),
-                                        vigencia_imss.strftime("%d/%m/%Y") # <--- AQUI SE INYECTA LA VIGENCIA
+                                        vigencia_imss.strftime("%d/%m/%Y") 
                                     ])
                                     
                                     registrar_bitacora(doc, "Control de Trabajadores", f"Asignó a {trabajador_sel} a la obra {folio_seleccionado}. Vence: {vigencia_imss.strftime('%d/%m/%Y')}")
-                                    
                                     st.success(f"✅ ¡Éxito! {trabajador_sel} asignado correctamente a la obra {folio_seleccionado}.")
                                     st.rerun()
 
-                # --- MOSTRAR CUADRILLA ACTUAL ---
                 st.markdown("---")
                 st.subheader(f"📋 Cuadrilla Actual - {folio_seleccionado}")
                 
@@ -254,7 +253,7 @@ if doc:
                         estatus = trabajador.get("Estatus IMSS", "")
                         rp_trabajador = trabajador.get("Registro Patronal", registro_patronal_obra)
                         rfc_trabajador = trabajador.get("RFC", "NO PROPORCIONADO")
-                        vigencia_txt = trabajador.get("Vigencia IMSS", "No registrada") # 🚀 SE MUESTRA VIGENCIA
+                        vigencia_txt = trabajador.get("Vigencia IMSS", "No registrada") 
                         
                         color_fondo = "#fafafa" if "BAJA" not in estatus.upper() else "#ffebee"
                         
@@ -307,20 +306,33 @@ if doc:
     # 🚀 PESTAÑA 3: NUEVO TABLERO MAESTRO DE OCUPACIÓN (SÁBANA GLOBAL)
     # ==================================================
     with tab3:
-        st.subheader("📊 Estatus de Ocupación General de Plantilla")
-        st.write("Control total de asignaciones. Muestra de forma unificada dónde está parado cada elemento del catálogo maestro.")
+        # 🚀 BOTÓN MANUAL PARA ENVIAR REPORTE A RRHH
+        col_tit_tablero, col_btn_reporte = st.columns([2, 1])
+        with col_tit_tablero:
+            st.subheader("📊 Estatus de Ocupación General de Plantilla")
+            st.write("Control total de asignaciones. Muestra de forma unificada dónde está parado cada elemento del catálogo maestro.")
+        with col_btn_reporte:
+            st.write("") # Espaciador
+            if st.button("📧 ENVIAR REPORTE IMSS POR CORREO", type="primary", use_container_width=True):
+                with st.spinner("Generando y enviando el reporte a RRHH..."):
+                    exito, mensaje = enviar_reporte_imss_manual(datos_trabajadores, datos_base)
+                    if exito:
+                        st.success(mensaje)
+                        registrar_bitacora(doc, "Control de Trabajadores", "Envió reporte manual de vigencias IMSS")
+                    else:
+                        st.error(mensaje)
+        
+        st.markdown("---")
         
         if not datos_base:
             st.info("No hay personal registrado en el Catálogo Maestro.")
         else:
-            # 1. Mapeamos la última asignación cronológica de cada persona
             ultimas_asignaciones = {}
             for reg in datos_trabajadores:
                 nombre_t = str(reg.get("Nombre del Trabajador", "")).strip().upper()
                 if nombre_t:
                     ultimas_asignaciones[nombre_t] = reg
 
-            # 2. Construimos la Sábana Cruzando el histórico con el estatus
             tabla_global = []
             for emp in datos_base:
                 nombre_emp = str(emp.get("Nombre del Trabajador", "")).strip().upper()
@@ -331,7 +343,6 @@ if doc:
                 nss_emp = emp.get("NSS", "N/A")
                 rfc_emp = emp.get("RFC", "N/A")
 
-                # Analizamos su situación IMSS / Obra
                 registro_asig = ultimas_asignaciones.get(nombre_emp)
                 if registro_asig:
                     estatus_imss_act = str(registro_asig.get("Estatus IMSS", "")).upper()
@@ -344,7 +355,7 @@ if doc:
                         obra_activa = registro_asig.get("Folio Obra", "N/A")
                         estatus_pantalla = registro_asig.get("Estatus IMSS", "N/A")
                         rp_act = registro_asig.get("Registro Patronal", "N/A")
-                        vigencia_pantalla = registro_asig.get("Vigencia IMSS", "N/A") # 🚀 VISUALIZACIÓN EN TABLERO
+                        vigencia_pantalla = registro_asig.get("Vigencia IMSS", "N/A")
                 else:
                     obra_activa = "🟢 DISPONIBLE (SIN OBRA)"
                     estatus_pantalla = "SIN ASIGNACIONES"
@@ -359,12 +370,11 @@ if doc:
                     "Obra Asignada": obra_activa,
                     "Estatus IMSS": estatus_pantalla,
                     "RP de Obra": rp_act,
-                    "Vigencia": vigencia_pantalla # 🚀 SE AGREGA A LA TABLA GLOBAL
+                    "Vigencia": vigencia_pantalla
                 })
 
             df_master = pd.DataFrame(tabla_global)
 
-            # 🔍 Buscador interactivo integrado
             filtro_texto = st.text_input("🔍 Filtrar Tabla (Escribe nombre, obra o puesto):", placeholder="Ej. Oficial, OBRA04, Juan...")
             
             if filtro_texto:

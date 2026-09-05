@@ -99,7 +99,7 @@ def enviar_reporte_imss_manual(datos_trabajadores, datos_base):
         msg = EmailMessage()
         msg['Subject'] = f'📊 REPORTE IMSS: Estatus de Plantilla al {hoy.strftime("%d/%m/%Y")}'
         msg['From'] = remitente
-        msg['To'] = 'rh@grupo-imac.com, comercial@grupo-imac.com'
+        msg['To'] = 'act@grupo-imac.com, comercial@grupo-imac.com'
         msg.set_content(cuerpo_final)
         
         with smtplib.SMTP('smtp.gmail.com', 587) as smtp:

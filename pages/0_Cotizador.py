@@ -133,7 +133,7 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio, ti
         remitente = os.environ.get("CORREO_BOT")
         password = os.environ.get("PASS_BOT")
         
-        if tipo_obra == "LOCAL": correo_destino = "comercial@grupo-imac.com, pue@grupo-imac.com, ña@grupo-imac.com, pue1@grupo-imac.com"
+        if tipo_obra == "LOCAL": correo_destino = "comercial@grupo-imac.com, pue@grupo-imac.com, pue3@grupo-imac.com, pue1@grupo-imac.com"
         else: correo_destino = "comercial@grupo-imac.com, foraneos@grupo-imac.com, direccion@grupo-imac.com"
         
         msg = EmailMessage()

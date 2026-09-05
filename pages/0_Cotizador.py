@@ -36,16 +36,36 @@ def registrar_bitacora(doc, modulo, accion):
     except Exception:
         pass 
 
-DESC_ACRILICO = "RECUBRIMIENTO ELASTICO IMPERMEABLE CON BASE EN RESINAS ACRILICAS..."
-ESPEC_ACRILICO = "PREPARACION DE LA SUPERFICIE...\n- LIMPIEZA DEL AREA..."
-DESC_PREFAB_FV = "ES UN SISTEMA DE IMPERMEABILIZACION PREFABRICADO FIBRA DE VIDRIO..."
-DESC_PREFAB_FP = "ES UN SISTEMA DE IMPERMEABILIZACION PREFABRICADO POLIESTER..."
-ESPEC_PREFAB = "PREPARACION DE LA SUPERFICIE...\n- APLICACIÓN DE HIDROFLEX..."
-DESC_GENERAL = "SUMINISTRO Y APLICACIÓN DE MATERIAL DE ACUERDO A REQUERIMIENTOS."
-ESPEC_GENERAL = "PREPARACION DE SUPERFICIE.\n- APLICACIÓN DE MATERIAL."
+# --- DESCRIPCIONES Y ESPECIFICACIONES TÉCNICAS COMPLETAS ---
+
+DESC_ACRILICO = """RECUBRIMIENTO ELÁSTICO IMPERMEABLE CON BASE EN RESINAS ACRÍLICAS, REFORZADO Y DE EXCELENTE CALIDAD.
+FORMA UNA PELÍCULA 100% IMPERMEABLE DE ALTA ELONGACIÓN QUE PROTEGE LA SUPERFICIE CONTRA LA HUMEDAD Y LA INTEMPERIE."""
+
+ESPEC_ACRILICO = """- PREPARACIÓN DE LA SUPERFICIE, BARRIDO Y LIMPIEZA DEL ÁREA PARA RETIRAR POLVO Y FALSAS ADHERENCIAS.
+- SELLADO DE GRIETAS Y FISURAS (HASTA 3MM) CON CEMENTO PLÁSTICO.
+- APLICACIÓN DE UNA CAPA DE PRIMARIO SELLADOR.
+- APLICACIÓN DE PRIMERA CAPA DE IMPERMEABILIZANTE ACRÍLICO.
+- APLICACIÓN DE SEGUNDA CAPA DE IMPERMEABILIZANTE EN SENTIDO CRUZADO."""
+
+DESC_PREFAB_FV = """SISTEMA DE IMPERMEABILIZACIÓN PREFABRICADO CON REFUERZO DE FIBRA DE VIDRIO.
+DISEÑADO CON ASFALTO MODIFICADO PARA OFRECER ALTA RESISTENCIA A LA TENSIÓN Y DURABILIDAD EN LOSAS CON POCO MOVIMIENTO ESTRUCTURAL."""
+
+DESC_PREFAB_FP = """SISTEMA DE IMPERMEABILIZACIÓN PREFABRICADO CON REFUERZO DE POLIÉSTER (FP).
+DISEÑADO CON ASFALTO MODIFICADO QUE PROPORCIONA MÁXIMA ELASTICIDAD Y RESISTENCIA AL DESGARRE. IDEAL PARA AZOTEAS CON ALTOS MOVIMIENTOS ESTRUCTURALES."""
+
+ESPEC_PREFAB = """- PREPARACIÓN DE LA SUPERFICIE, BARRIDO Y LIMPIEZA DEL ÁREA.
+- TRATAMIENTO DE PUNTOS CRÍTICOS (BAJADAS PLUVIALES, CHAFLANES Y BASES).
+- APLICACIÓN DE PRIMARIO ASFÁLTICO (HIDROFLEX O SIMILAR) PARA ADHERENCIA.
+- TERMOFUSIÓN DEL MANTO PREFABRICADO MEDIANTE SOPLETE DE GAS BUTANO.
+- REMATE Y SELLADO DE TRASLAPES A FUEGO DIRECTO PARA HERMETICIDAD TOTAL."""
+
+DESC_GENERAL = """SUMINISTRO Y APLICACIÓN DE MATERIAL DE ACUERDO A LOS REQUERIMIENTOS TÉCNICOS SOLICITADOS EN OBRA."""
+
+ESPEC_GENERAL = """- PREPARACIÓN DE SUPERFICIE Y ACONDICIONAMIENTO DEL ÁREA.
+- APLICACIÓN DE MATERIAL SIGUIENDO LOS ESTÁNDARES DEL FABRICANTE."""
 
 CATALOGO_SISTEMAS = {
-    "LEVANTAMIENTO": {"precio": 30.00, "garantia": "NO APLICA", "desc": "PREPARACIÓN DE SUPERFICIE...", "espec": "TOMA DE MEDIDAS...", "ficha": "NO APLICA"},
+    "LEVANTAMIENTO": {"precio": 30.00, "garantia": "NO APLICA", "desc": "PREPARACIÓN DE SUPERFICIE, TOMA DE MEDIDAS Y REVISIÓN ESTRUCTURAL PARA DIAGNÓSTICO.", "espec": "LEVANTAMIENTO FÍSICO EN SITIO.", "ficha": "NO APLICA"},
     "ACRILTECHO GREEN POWER": {"precio": 244.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_acriltecho.pdf"},
     "IMPAC 3000 FIBRATADO": {"precio": 198.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_impac_3000.pdf"},
     "IMPAC 5000 FIBRATADO": {"precio": 219.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_impac_5000.pdf"},
@@ -89,7 +109,6 @@ class PDF(FPDF):
 @st.cache_resource
 def conectar_sheets():
     try:
-        # 🚀 CAMBIO PARA RENDER: os.environ.get
         credenciales_dic = json.loads(os.environ.get("GOOGLE_CREDENTIALS"))
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(credenciales_dic, scopes=scopes)
@@ -111,11 +130,10 @@ def obtener_nuevo_folio(hoja):
 
 def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio, tipo_obra, proyecto, ubicacion):
     try:
-        # 🚀 CAMBIO PARA RENDER: os.environ.get
         remitente = os.environ.get("CORREO_BOT")
         password = os.environ.get("PASS_BOT")
         
-        if tipo_obra == "LOCAL": correo_destino = "comercial@grupo-imac.com, pue@grupo-imac.com, act@grupo-imac.com, pue1@grupo-imac.com"
+        if tipo_obra == "LOCAL": correo_destino = "comercial@grupo-imac.com, pue@grupo-imac.com, ña@grupo-imac.com, pue1@grupo-imac.com"
         else: correo_destino = "comercial@grupo-imac.com, foraneos@grupo-imac.com, direccion@grupo-imac.com"
         
         msg = EmailMessage()
@@ -163,19 +181,16 @@ st.write("### 3. Desglose de Áreas")
 zonas_data = []
 opciones_sistemas = list(CATALOGO_SISTEMAS.keys()) 
 
-# 🚀 LÓGICA DE ACTUALIZACIÓN DINÁMICA DE PRECIOS
 for i in range(int(num_areas)):
     st.markdown(f"**Área {i+1}**")
     col1, col2 = st.columns(2)
     
     with col1:
         n = st.text_input(f"Nombre de la zona", key=f"n_{i}")
-        # Usamos el key s_i para que Streamlit sepa que cambió, y mostramos el valor actualizado en la variable
         s = st.selectbox(f"Sistema", opciones_sistemas, key=f"s_{i}")
         
     with col2:
         m = st.number_input(f"Metros (m²)", min_value=0.0, key=f"m_{i}")
-        # Aquí forzamos a que siempre lea el precio del diccionario basado en la selección actual 's'
         precio_dinamico = float(CATALOGO_SISTEMAS[s]["precio"])
         
         st.info(f"**Precio x m² (Fijo + IVA):** ${precio_dinamico:,.2f}")

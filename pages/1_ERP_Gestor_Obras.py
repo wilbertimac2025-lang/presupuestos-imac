@@ -429,13 +429,20 @@ if doc:
                                 fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
                                 hoja_convenios.append_row([fecha_hoy, folio_convenio, concepto_conv.upper(), monto_conv])
                                 nuevo_presupuesto = presupuesto_actual + monto_conv
-                                fila_excel = next((i + 2 for i, f in enumerate(datos_obras) if str(f.get(llave_folio_obra, "")) == folio_convenio), 0)
-                                col_excel = list(datos_obras[0].keys()).index(llave_monto) + 1 if datos_obras and llave_monto in datos_obras[0] else 0
                                 
-                                if fila_excel > 0 and col_excel > 0:
-                                    hoja_obras.update_cell(fila_excel, col_excel, nuevo_presupuesto)
-                                    st.success(f"✅ Presupuesto elevado a ${nuevo_presupuesto:,.2f}")
-                                    st.rerun()
+                                # 🚀 NUEVO MÉTODO LÁSER .FIND() PARA CONVENIOS
+                                try:
+                                    celda_folio = hoja_obras.find(folio_convenio)
+                                    celda_monto = hoja_obras.find(llave_monto, in_row=1)
+                                    
+                                    if celda_folio and celda_monto:
+                                        hoja_obras.update_cell(celda_folio.row, celda_monto.col, nuevo_presupuesto)
+                                        st.success(f"✅ Presupuesto elevado a ${nuevo_presupuesto:,.2f}")
+                                        st.rerun()
+                                    else:
+                                        st.error("⚠️ No se encontró la columna de Presupuesto o el Folio en Excel.")
+                                except Exception as error_celda:
+                                    st.error(f"❌ Error al actualizar Excel: {error_celda}")
 
     # ==========================================
     # 🏁 PESTAÑA 3: CIERRE DE OBRA Y DOCUMENTACIÓN OFICIAL
@@ -494,6 +501,7 @@ if doc:
             
             # BOTÓN 2: Acta
             with col_doc2:
+                if foto_responsiva: foto_responsiva.seek(0)
                 pdf_acta = generar_acta_entrega(cliente_cierre, folio_cierre, ubicacion_cierre, sistema_aplicado, fecha_str, foto_responsiva)
                 st.download_button("2️⃣ DESCARGAR ACTA DE ENTREGA OFICIAL", pdf_acta, f"Acta_Entrega_{folio_cierre}.pdf", "application/pdf")
             
@@ -512,18 +520,30 @@ if doc:
                     st.error("❌ Debes subir la foto de evidencia antes de cerrar la obra en el sistema.")
                 else:
                     with st.spinner("Actualizando sistema y enviando el Acta a corporativo..."):
-                        # Se envía el acta que contiene la foto
-                        envio_exitoso = enviar_cierre_por_correo(pdf_acta, f"Acta_{folio_cierre}.pdf", cliente_cierre, folio_cierre)
+                        # 🚀 REBOBINAMOS LA FOTO Y GENERAMOS EL ACTA FINAL PARA EL CORREO
+                        foto_responsiva.seek(0)
+                        pdf_acta_final = generar_acta_entrega(cliente_cierre, folio_cierre, ubicacion_cierre, sistema_aplicado, fecha_str, foto_responsiva)
                         
-                        fila_excel = next((i + 2 for i, f in enumerate(datos_obras) if str(f.get(llave_folio_obra, "")) == folio_cierre), 0)
-                        col_estatus = list(datos_obras[0].keys()).index(llave_estatus) + 1 if datos_obras and llave_estatus in datos_obras[0] else 0
+                        envio_exitoso = enviar_cierre_por_correo(pdf_acta_final, f"Acta_{folio_cierre}.pdf", cliente_cierre, folio_cierre)
                         
-                        if fila_excel > 0 and col_estatus > 0:
-                            hoja_obras.update_cell(fila_excel, col_estatus, "CERRADA")
-                            registrar_bitacora(doc, "Gestor de Obras", f"Cerró obra {folio_cierre}. Acta enviada: {envio_exitoso}")
+                        # 🚀 NUEVO MÉTODO LÁSER .FIND() PARA EL CIERRE DE OBRA
+                        try:
+                            celda_folio = hoja_obras.find(folio_cierre)
+                            celda_estatus = hoja_obras.find(llave_estatus, in_row=1)
                             
-                            st.success(f"✅ ¡La obra {folio_cierre} ha sido marcada como CERRADA!")
-                            if envio_exitoso: st.info("📧 El Acta de Entrega con la foto incrustada fue enviada a los directivos.")
+                            if celda_folio and celda_estatus:
+                                hoja_obras.update_cell(celda_folio.row, celda_estatus.col, "CERRADA")
+                                registrar_bitacora(doc, "Gestor de Obras", f"Cerró obra {folio_cierre}. Acta enviada: {envio_exitoso}")
+                                
+                                st.success(f"✅ ¡La obra {folio_cierre} ha sido marcada como CERRADA!")
+                                if envio_exitoso: 
+                                    st.info("📧 El Acta de Entrega con la foto incrustada fue enviada a los directivos.")
+                                else:
+                                    st.warning("⚠️ La obra se cerró en sistema, pero hubo un problema enviando el correo (revisa el error rojo).")
+                            else:
+                                st.error("❌ Error en Excel: No se encontró la columna de Estatus o el Folio en la hoja.")
+                        except Exception as error_celda:
+                            st.error(f"❌ Error técnico al actualizar Excel: {error_celda}")
 
     # ==========================================
     # 🚀 PESTAÑA 4: ALTA DE REGISTROS PATRONALES

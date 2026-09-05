@@ -163,17 +163,25 @@ st.write("### 3. Desglose de Áreas")
 zonas_data = []
 opciones_sistemas = list(CATALOGO_SISTEMAS.keys()) 
 
+# 🚀 LÓGICA DE ACTUALIZACIÓN DINÁMICA DE PRECIOS
 for i in range(int(num_areas)):
     st.markdown(f"**Área {i+1}**")
     col1, col2 = st.columns(2)
+    
     with col1:
         n = st.text_input(f"Nombre de la zona", key=f"n_{i}")
+        # Usamos el key s_i para que Streamlit sepa que cambió, y mostramos el valor actualizado en la variable
         s = st.selectbox(f"Sistema", opciones_sistemas, key=f"s_{i}")
+        
     with col2:
         m = st.number_input(f"Metros (m²)", min_value=0.0, key=f"m_{i}")
-        precio_catalogo = float(CATALOGO_SISTEMAS[s]["precio"])
-        st.text_input(f"Precio x m² (Fijo + IVA)", value=f"${precio_catalogo:,.2f}", disabled=True, key=f"precio_{i}")
+        # Aquí forzamos a que siempre lea el precio del diccionario basado en la selección actual 's'
+        precio_dinamico = float(CATALOGO_SISTEMAS[s]["precio"])
+        
+        st.info(f"**Precio x m² (Fijo + IVA):** ${precio_dinamico:,.2f}")
+        
         desc_pct = st.number_input(f"Descuento para esta área (%)", min_value=0.0, max_value=100.0, value=0.0, step=1.0, key=f"desc_{i}")
+        
     zonas_data.append({"area": n, "sistema": s, "m2": m, "descuento_pct": desc_pct})
 
 st.write("---")

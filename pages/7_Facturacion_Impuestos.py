@@ -520,9 +520,9 @@ if st.button("🚀 Generar PDF y Enviar por Correo"):
                 
                 destinatarios = [
                     "comercial@grupo-imac.com",
-                    "aco@grupo-imac.com",
+                    "pue@grupo-imac.com",
                     "act@grupo-imac.com",
-                    "rh@grupo-imac.com"
+                    "pue1@grupo-imac.com"
                 ]
 
                 msg = EmailMessage()

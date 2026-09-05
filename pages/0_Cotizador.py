@@ -48,11 +48,14 @@ ESPEC_ACRILICO = """- PREPARACIÓN DE LA SUPERFICIE, BARRIDO Y LIMPIEZA DEL ÁRE
 - APLICACIÓN DE PRIMERA CAPA DE IMPERMEABILIZANTE ACRÍLICO.
 - APLICACIÓN DE SEGUNDA CAPA DE IMPERMEABILIZANTE EN SENTIDO CRUZADO."""
 
-DESC_PREFAB = """ES UN SISTEMA DE IMPERMEABILIZACION PREFABRICADO, CONSISTE EN UNA MEMBRANA MULTICAPA ELABORADA A BASE DE ASFALTOS MODIFICADOS UN REFUERZO CENTRAL DE FIBRA DE POLIESTER, ACABADO GRANULAR, SON DE LARGA VIDA, RESISTIENDO MUCHO MAS AL INTERPERISMO, SON DE FACIL APLICACIÓN, SE ADHIERE POR FUSION TERMICA A CUALQUIER TECHO O SUSTRATO, ES FLEXIBLE POR LO QUE SE PUEDE COLOCAR EN CUALQUIER SUPERFICIE LOGRANDOSE TOTAL SEGURIDAD A LO LARGO DE TODAS SUS UNIONES Y REMATES PUES QUEDAN PRACTICAMENTE SOLDADAS, OBTENIENDOSE ASI UNA TOTAL IMPERMEABILIDAD"""
+# 🚀 SEPARACIÓN DE ROLLOS: FP (Poliéster) y FV (Fibra de Vidrio)
+DESC_PREFAB_FP = """ES UN SISTEMA DE IMPERMEABILIZACION PREFABRICADO, CONSISTE EN UNA MEMBRANA MULTICAPA ELABORADA A BASE DE ASFALTOS MODIFICADOS UN REFUERZO CENTRAL DE FIBRA DE POLIESTER, ACABADO GRANULAR, SON DE LARGA VIDA, RESISTIENDO MUCHO MAS AL INTERPERISMO, SON DE FACIL APLICACIÓN, SE ADHIERE POR FUSION TERMICA A CUALQUIER TECHO O SUSTRATO, ES FLEXIBLE POR LO QUE SE PUEDE COLOCAR EN CUALQUIER SUPERFICIE LOGRANDOSE TOTAL SEGURIDAD A LO LARGO DE TODAS SUS UNIONES Y REMATES PUES QUEDAN PRACTICAMENTE SOLDADAS, OBTENIENDOSE ASI UNA TOTAL IMPERMEABILIDAD"""
+
+DESC_PREFAB_FV = """ES UN SISTEMA DE IMPERMEABILIZACION PREFABRICADO, CONSISTE EN UNA MEMBRANA MULTICAPA ELABORADA A BASE DE ASFALTOS MODIFICADOS UN REFUERZO CENTRAL DE FIBRA DE VIDRIO, ACABADO GRANULAR, SON DE LARGA VIDA, RESISTIENDO MUCHO MAS AL INTERPERISMO, SON DE FACIL APLICACIÓN, SE ADHIERE POR FUSION TERMICA A CUALQUIER TECHO O SUSTRATO, ES FLEXIBLE POR LO QUE SE PUEDE COLOCAR EN CUALQUIER SUPERFICIE LOGRANDOSE TOTAL SEGURIDAD A LO LARGO DE TODAS SUS UNIONES Y REMATES PUES QUEDAN PRACTICAMENTE SOLDADAS, OBTENIENDOSE ASI UNA TOTAL IMPERMEABILIDAD"""
 
 ESPEC_PREFAB = """- PREPARACIÓN DE LA SUPERFICIE, BARRIDO Y LIMPIEZA DEL ÁREA.
 - TRATAMIENTO DE PUNTOS CRÍTICOS (BAJADAS PLUVIALES, CHAFLANES Y BASES).
-- APLICACIÓN DE PRIMARIO ASFÁLTICO (HIDROFLEX O SIMILAR) PARA ADHERENCIA.
+- APLICACIÓN DE PRIMARIO ASFÁLTICO PARA ADHERENCIA.
 - TERMOFUSIÓN DEL MANTO PREFABRICADO MEDIANTE SOPLETE DE GAS BUTANO.
 - REMATE Y SELLADO DE TRASLAPES A FUEGO DIRECTO PARA HERMETICIDAD TOTAL."""
 
@@ -62,30 +65,30 @@ ESPEC_GENERAL = """- PREPARACIÓN DE SUPERFICIE Y ACONDICIONAMIENTO DEL ÁREA.
 - APLICACIÓN DE MATERIAL SIGUIENDO LOS ESTÁNDARES DEL FABRICANTE."""
 
 CATALOGO_SISTEMAS = {
-    "LEVANTAMIENTO": {"precio": 30.00, "garantia": "NO APLICA", "desc": DESC_LEVANTAMIENTO, "espec": "LEVANTAMIENTO FÍSICO EN SITIO.", "ficha": "NO APLICA"},
-    "ACRILTECHO GREEN POWER": {"precio": 244.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_acriltecho.pdf"},
-    "IMPAC 3000 FIBRATADO": {"precio": 198.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_impac_3000.pdf"},
-    "IMPAC 5000 FIBRATADO": {"precio": 219.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_impac_5000.pdf"},
-    "KRIPTOFLEX 3 AÑOS CON MALLA": {"precio": 189.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_kriptoflex.pdf"},
-    "KRIPTOFLEX 3 AÑOS FIBRATADO": {"precio": 171.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_kriptoflex.pdf"},
-    "KRIPTOFLEX 5 AÑOS FIBRATADO": {"precio": 209.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_kriptoflex.pdf"},
-    "KRIPTOFLEX 5 AÑOS CON MALLA": {"precio": 219.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_kriptoflex.pdf"},
-    "IMPAC 7000 FIBRATADO": {"precio": 239.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_impac_7000.pdf"},
-    "IMPAC 7000 FIBRATADO CON MALLA": {"precio": 265.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_impac_7000.pdf"},
-    "SELLOTEX": {"precio": 334.00, "garantia": "NO APLICA", "desc": DESC_GENERAL, "espec": ESPEC_GENERAL, "ficha": "ficha_sellotex.pdf"},
-    "JUNTA LINEAL 30 CM MASTER LASSER 3.0 LISO": {"precio": 148.00, "garantia": "NO APLICA", "desc": DESC_PREFAB, "espec": ESPEC_PREFAB, "ficha": "NO APLICA"},
-    "JUNTA LINEAL 50 CM MASTER LASSER 3.0 LISO": {"precio": 184.00, "garantia": "NO APLICA", "desc": DESC_PREFAB, "espec": ESPEC_PREFAB, "ficha": "NO APLICA"},
-    "JUNTA LINEAL 50 CM MASTER LASSER 4.0 LISO": {"precio": 203.00, "garantia": "NO APLICA", "desc": DESC_PREFAB, "espec": ESPEC_PREFAB, "ficha": "NO APLICA"},
-    "JUNTA LINEAL 15 A 50 CM KRIPTOFLEX": {"precio": 125.00, "garantia": "NO APLICA", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "NO APLICA"},
-    "MASTER LASSER 3.5 MM FP": {"precio": 250.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA"},
-    "MASTER LASSER 4.0 MM FP": {"precio": 294.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA"},
-    "MASTER LASSER 4.5 MM FP": {"precio": 325.00, "garantia": "10 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA"},
-    "MASTER LASSER 4.0 MM FP (ESCUELAS)": {"precio": 238.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA"},
-    "MASTER LASSER 3.0 MM FP LISO SIN ACABADO": {"precio": 230.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA"},
-    "MASTER LASSER 4.0 MM FP LISO SIN ACABADO": {"precio": 280.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA"},
-    "MASTER LASSER 3.0 MM FV": {"precio": 169.00, "garantia": "NO APLICA", "desc": DESC_PREFAB, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA"},
-    "MASTER LASSER 3.5 MM FV": {"precio": 211.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA"},
-    "BITUFLEX": {"precio": 252.00, "garantia": "NO APLICA", "desc": "SUMINISTRO DE SOLVENTE Y/O MATERIAL BASE.", "espec": "APLICACIÓN SEGÚN REQUERIMIENTOS EN OBRA.", "ficha": "ficha_bituflex.pdf"}
+    "LEVANTAMIENTO": {"precio": 30.00, "garantia": "NO APLICA", "desc": DESC_LEVANTAMIENTO, "espec": "LEVANTAMIENTO FÍSICO EN SITIO.", "ficha": "NO APLICA", "color": "NO APLICA"},
+    "ACRILTECHO GREEN POWER": {"precio": 244.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_acriltecho.pdf", "color": "BLANCO / ROJO"},
+    "IMPAC 3000 FIBRATADO": {"precio": 198.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_impac_3000.pdf", "color": "BLANCO / ROJO"},
+    "IMPAC 5000 FIBRATADO": {"precio": 219.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_impac_5000.pdf", "color": "BLANCO / ROJO"},
+    "KRIPTOFLEX 3 AÑOS CON MALLA": {"precio": 189.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_kriptoflex.pdf", "color": "BLANCO"},
+    "KRIPTOFLEX 3 AÑOS FIBRATADO": {"precio": 171.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_kriptoflex.pdf", "color": "BLANCO"},
+    "KRIPTOFLEX 5 AÑOS FIBRATADO": {"precio": 209.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_kriptoflex.pdf", "color": "BLANCO"},
+    "KRIPTOFLEX 5 AÑOS CON MALLA": {"precio": 219.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_kriptoflex.pdf", "color": "BLANCO"},
+    "IMPAC 7000 FIBRATADO": {"precio": 239.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_impac_7000.pdf", "color": "BLANCO / ROJO"},
+    "IMPAC 7000 FIBRATADO CON MALLA": {"precio": 265.00, "garantia": "12 MESES CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "ficha_impac_7000.pdf", "color": "BLANCO / ROJO"},
+    "SELLOTEX": {"precio": 334.00, "garantia": "NO APLICA", "desc": DESC_GENERAL, "espec": ESPEC_GENERAL, "ficha": "ficha_sellotex.pdf", "color": "GRIS"},
+    "JUNTA LINEAL 30 CM MASTER LASSER 3.0 LISO": {"precio": 148.00, "garantia": "NO APLICA", "desc": DESC_PREFAB_FP.replace("ACABADO GRANULAR", "ACABADO LISO"), "espec": ESPEC_PREFAB, "ficha": "NO APLICA", "color": "NEGRO"},
+    "JUNTA LINEAL 50 CM MASTER LASSER 3.0 LISO": {"precio": 184.00, "garantia": "NO APLICA", "desc": DESC_PREFAB_FP.replace("ACABADO GRANULAR", "ACABADO LISO"), "espec": ESPEC_PREFAB, "ficha": "NO APLICA", "color": "NEGRO"},
+    "JUNTA LINEAL 50 CM MASTER LASSER 4.0 LISO": {"precio": 203.00, "garantia": "NO APLICA", "desc": DESC_PREFAB_FP.replace("ACABADO GRANULAR", "ACABADO LISO"), "espec": ESPEC_PREFAB, "ficha": "NO APLICA", "color": "NEGRO"},
+    "JUNTA LINEAL 15 A 50 CM KRIPTOFLEX": {"precio": 125.00, "garantia": "NO APLICA", "desc": DESC_ACRILICO, "espec": ESPEC_ACRILICO, "ficha": "NO APLICA", "color": "BLANCO"},
+    "MASTER LASSER 3.5 MM FP": {"precio": 250.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA", "color": "BLANCO / ROJO"},
+    "MASTER LASSER 4.0 MM FP": {"precio": 294.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA", "color": "BLANCO / ROJO"},
+    "MASTER LASSER 4.5 MM FP": {"precio": 325.00, "garantia": "10 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA", "color": "BLANCO / ROJO"},
+    "MASTER LASSER 4.0 MM FP (ESCUELAS)": {"precio": 238.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA", "color": "BLANCO / ROJO"},
+    "MASTER LASSER 3.0 MM FP LISO SIN ACABADO": {"precio": 230.00, "garantia": "5 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP.replace("ACABADO GRANULAR", "ACABADO LISO"), "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA", "color": "NEGRO"},
+    "MASTER LASSER 4.0 MM FP LISO SIN ACABADO": {"precio": 280.00, "garantia": "8 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FP.replace("ACABADO GRANULAR", "ACABADO LISO"), "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA", "color": "NEGRO"},
+    "MASTER LASSER 3.0 MM FV": {"precio": 169.00, "garantia": "NO APLICA", "desc": DESC_PREFAB_FV, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA", "color": "BLANCO / ROJO"},
+    "MASTER LASSER 3.5 MM FV": {"precio": 211.00, "garantia": "3 AÑOS CONTRA DEFECTOS DE FABRICACIÓN", "desc": DESC_PREFAB_FV, "espec": ESPEC_PREFAB, "ficha": "DINAMICA_LOCAL_FORANEA", "color": "BLANCO / ROJO"},
+    "BITUFLEX": {"precio": 252.00, "garantia": "NO APLICA", "desc": "SUMINISTRO DE SOLVENTE Y/O MATERIAL BASE.", "espec": "APLICACIÓN SEGÚN REQUERIMIENTOS EN OBRA.", "ficha": "ficha_bituflex.pdf", "color": "NEGRO"}
 }
 
 class PDF(FPDF):
@@ -275,14 +278,30 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             pdf.ln(3); pdf.set_font('Arial', 'B', 11); pdf.set_text_color(0, 0, 0); pdf.cell(0, 5, f"PROYECTO: {proyecto.upper()}", ln=True)
             pdf.set_font('Arial', 'I', 10); pdf.cell(0, 5, f"UBICACIÓN: {ubicacion.upper()}", ln=True)
 
-            pdf.ln(5); pdf.set_font('Arial', 'I', 10); pdf.set_text_color(80, 80, 80); pdf.multi_cell(0, 5, txt="Nos permitimos poner a su amable consideración el siguiente presupuesto:"); pdf.ln(5)
+            pdf.ln(5); pdf.set_font('Arial', 'B', 10); pdf.set_text_color(0, 0, 0); pdf.multi_cell(0, 5, txt="Nos permitimos poner a su amable consideración el siguiente presupuesto:"); pdf.ln(5)
 
             for z in zonas_data:
                 precio_unitario_real = CATALOGO_SISTEMAS[z["sistema"]]["precio"]
                 subtotal_area_real = z["m2"] * precio_unitario_real
-                pdf.set_font('Arial', 'B', 11); pdf.set_text_color(0, 150, 255); pdf.multi_cell(0, 6, txt=f"SUMINISTRO Y APLICACIÓN EN {z['area'].upper()}:")
-                pdf.set_font('Arial', 'B', 11); pdf.set_text_color(15, 60, 140); pdf.cell(0, 6, z["sistema"], ln=True)
-                pdf.set_font('Arial', 'I', 9); pdf.set_text_color(80, 80, 80); pdf.multi_cell(0, 4, txt=CATALOGO_SISTEMAS[z["sistema"]]["desc"])
+                color_sistema = CATALOGO_SISTEMAS[z["sistema"]].get("color", "NO APLICA")
+                
+                pdf.set_font('Arial', 'B', 11); pdf.set_text_color(0, 150, 255)
+                pdf.multi_cell(0, 6, txt=f"SUMINISTRO Y APLICACIÓN EN {z['area'].upper()}:")
+                
+                # 🚀 DIBUJO DE LAS CAJAS CON BORDES COMO EN TU IMAGEN
+                pdf.set_font('Arial', 'B', 10); pdf.set_text_color(0, 0, 0)
+                if color_sistema != "NO APLICA":
+                    pdf.cell(120, 6, z["sistema"], border=1)
+                    pdf.cell(20, 6, "COLOR", border=0, align='R')
+                    pdf.cell(0, 6, color_sistema, border=1, ln=True, align='C')
+                else:
+                    pdf.cell(190, 6, z["sistema"], border=1, ln=True)
+                
+                pdf.ln(2)
+                # 🚀 DESCRIPCIÓN CON LA LETANÍA COMPLETA
+                pdf.set_font('Arial', '', 9); pdf.set_text_color(50, 50, 50)
+                pdf.multi_cell(0, 4.5, txt=CATALOGO_SISTEMAS[z["sistema"]]["desc"])
+                
                 pdf.ln(3); pdf.set_font('Arial', 'B', 9); pdf.set_text_color(0, 150, 255); pdf.cell(0, 5, "Especificaciones Técnicas:", ln=True)
                 pdf.set_text_color(50, 50, 50); pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, txt=CATALOGO_SISTEMAS[z["sistema"]]["espec"])
                 pdf.ln(4)

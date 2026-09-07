@@ -428,7 +428,15 @@ if st.button("🚀 Generar PDF y Enviar por Correo"):
             gran_total_pagado = 0.0
             gran_total_pendiente = 0.0
 
+            # 🚀 NUEVO FILTRO INTELIGENTE: Obtener solo los folios "EN EJECUCIÓN"
+            llave_estatus_local = next((k for k in (datos_obras[0].keys() if datos_obras else []) if "ESTATUS" in str(k).upper()), None)
+            folios_en_ejecucion = [str(f.get(llave_folio, "")).strip() for f in datos_obras if str(f.get(llave_estatus_local, "")).upper() == "EN EJECUCIÓN"]
+
             for folio, costo_total in obras_totales.items():
+                # 🚀 SI EL FOLIO NO ESTÁ EN EJECUCIÓN, LO SALTAMOS (IGNORAMOS CERRADAS O FANTASMAS)
+                if folio not in folios_en_ejecucion:
+                    continue
+
                 pagado = obras_pagadas.get(folio, 0.0)
                 saldo_pendiente = costo_total - pagado
                 
@@ -521,7 +529,7 @@ if st.button("🚀 Generar PDF y Enviar por Correo"):
                 destinatarios = [
                     "comercial@grupo-imac.com",
                     "pue@grupo-imac.com",
-                    "act@grupo-imac.com",
+                    "pue2@grupo-imac.com",
                     "pue1@grupo-imac.com"
                 ]
 

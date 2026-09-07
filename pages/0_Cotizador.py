@@ -349,7 +349,7 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             
             pdf.ln(8); pdf.set_text_color(15, 60, 140); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "Consideraciones Importantes:", ln=True)
             pdf.set_text_color(80, 80, 80); pdf.set_font('Arial', 'I', 8)
-            pdf.multi_cell(0, 4, txt="- Se deberá hacer un levantamiento físico...\n- No incluye trabajos de albañilería...\n- Trabajos no cotizados."); pdf.ln(3)
+            pdf.multi_cell(0, 4, txt="- Se deberá hacer un levantamiento físico para poder determinar los ancalces del trabajo solicitado\n- No incluye trabajos de albañilería no cotizados\n- Trabajos no cotizados."); pdf.ln(3)
             
             garantias_unicas = {}
             for z in zonas_data:

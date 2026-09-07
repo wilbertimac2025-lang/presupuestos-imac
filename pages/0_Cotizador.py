@@ -48,7 +48,6 @@ ESPEC_ACRILICO = """- PREPARACIÓN DE LA SUPERFICIE, BARRIDO Y LIMPIEZA DEL ÁRE
 - APLICACIÓN DE PRIMERA CAPA DE IMPERMEABILIZANTE ACRÍLICO.
 - APLICACIÓN DE SEGUNDA CAPA DE IMPERMEABILIZANTE EN SENTIDO CRUZADO."""
 
-# 🚀 SEPARACIÓN DE ROLLOS: FP (Poliéster) y FV (Fibra de Vidrio)
 DESC_PREFAB_FP = """ES UN SISTEMA DE IMPERMEABILIZACION PREFABRICADO, CONSISTE EN UNA MEMBRANA MULTICAPA ELABORADA A BASE DE ASFALTOS MODIFICADOS UN REFUERZO CENTRAL DE FIBRA DE POLIESTER, ACABADO GRANULAR, SON DE LARGA VIDA, RESISTIENDO MUCHO MAS AL INTERPERISMO, SON DE FACIL APLICACIÓN, SE ADHIERE POR FUSION TERMICA A CUALQUIER TECHO O SUSTRATO, ES FLEXIBLE POR LO QUE SE PUEDE COLOCAR EN CUALQUIER SUPERFICIE LOGRANDOSE TOTAL SEGURIDAD A LO LARGO DE TODAS SUS UNIONES Y REMATES PUES QUEDAN PRACTICAMENTE SOLDADAS, OBTENIENDOSE ASI UNA TOTAL IMPERMEABILIDAD"""
 
 DESC_PREFAB_FV = """ES UN SISTEMA DE IMPERMEABILIZACION PREFABRICADO, CONSISTE EN UNA MEMBRANA MULTICAPA ELABORADA A BASE DE ASFALTOS MODIFICADOS UN REFUERZO CENTRAL DE FIBRA DE VIDRIO, ACABADO GRANULAR, SON DE LARGA VIDA, RESISTIENDO MUCHO MAS AL INTERPERISMO, SON DE FACIL APLICACIÓN, SE ADHIERE POR FUSION TERMICA A CUALQUIER TECHO O SUSTRATO, ES FLEXIBLE POR LO QUE SE PUEDE COLOCAR EN CUALQUIER SUPERFICIE LOGRANDOSE TOTAL SEGURIDAD A LO LARGO DE TODAS SUS UNIONES Y REMATES PUES QUEDAN PRACTICAMENTE SOLDADAS, OBTENIENDOSE ASI UNA TOTAL IMPERMEABILIDAD"""
@@ -189,6 +188,16 @@ for i in range(int(num_areas)):
         n = st.text_input(f"Nombre de la zona", key=f"n_{i}")
         s = st.selectbox(f"Sistema", opciones_sistemas, key=f"s_{i}")
         
+        # 🚀 NUEVA INTELIGENCIA ARTIFICIAL PARA SELECCIONAR EL COLOR
+        color_base = CATALOGO_SISTEMAS[s].get("color", "NO APLICA")
+        if " / " in color_base:
+            opciones_color = color_base.split(" / ")
+            color_elegido = st.selectbox(f"🎨 Selecciona el Color:", opciones_color, key=f"color_{i}")
+        else:
+            color_elegido = color_base
+            if color_base != "NO APLICA":
+                st.info(f"🎨 **Color predeterminado:** {color_base}")
+        
     with col2:
         m = st.number_input(f"Metros (m²)", min_value=0.0, key=f"m_{i}")
         precio_dinamico = float(CATALOGO_SISTEMAS[s]["precio"])
@@ -197,7 +206,8 @@ for i in range(int(num_areas)):
         
         desc_pct = st.number_input(f"Descuento para esta área (%)", min_value=0.0, max_value=100.0, value=0.0, step=1.0, key=f"desc_{i}")
         
-    zonas_data.append({"area": n, "sistema": s, "m2": m, "descuento_pct": desc_pct})
+    # Guardamos el color elegido por el usuario en vez del general del catálogo
+    zonas_data.append({"area": n, "sistema": s, "m2": m, "descuento_pct": desc_pct, "color_final": color_elegido})
 
 st.write("---")
 st.write("### 4. Ajustes y Anexos")
@@ -254,8 +264,10 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
                 elif "FP" in sis or "FV" in sis or "MASTER LASSER" in sis: cant = math.ceil(m2 / 8.5); unidad = "ROLLOS"
                 else: cant = math.ceil(m2 / 19.0); unidad = "CUBETAS"
                     
-                if sis in materiales_calculados: materiales_calculados[sis]["cant"] += cant
-                else: materiales_calculados[sis] = {"cant": cant, "unidad": unidad}
+                # Guardar en base al color elegido para ser super exactos
+                mat_key = f"{sis} ({z['color_final']})" if z['color_final'] != "NO APLICA" else sis
+                if mat_key in materiales_calculados: materiales_calculados[mat_key]["cant"] += cant
+                else: materiales_calculados[mat_key] = {"cant": cant, "unidad": unidad}
             
             lista_textos_mat = [f"{v['cant']} {v['unidad']} DE {k}" for k, v in materiales_calculados.items()]
             resumen_insumos_str = " / ".join(lista_textos_mat) if lista_textos_mat else "SIN MATERIAL ASIGNADO"
@@ -283,22 +295,20 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             for z in zonas_data:
                 precio_unitario_real = CATALOGO_SISTEMAS[z["sistema"]]["precio"]
                 subtotal_area_real = z["m2"] * precio_unitario_real
-                color_sistema = CATALOGO_SISTEMAS[z["sistema"]].get("color", "NO APLICA")
+                color_pdf = z["color_final"] # 🚀 AHORA USA EL COLOR QUE ELEGISTE EN PANTALLA
                 
                 pdf.set_font('Arial', 'B', 11); pdf.set_text_color(0, 150, 255)
                 pdf.multi_cell(0, 6, txt=f"SUMINISTRO Y APLICACIÓN EN {z['area'].upper()}:")
                 
-                # 🚀 DIBUJO DE LAS CAJAS CON BORDES COMO EN TU IMAGEN
                 pdf.set_font('Arial', 'B', 10); pdf.set_text_color(0, 0, 0)
-                if color_sistema != "NO APLICA":
+                if color_pdf != "NO APLICA":
                     pdf.cell(120, 6, z["sistema"], border=1)
                     pdf.cell(20, 6, "COLOR", border=0, align='R')
-                    pdf.cell(0, 6, color_sistema, border=1, ln=True, align='C')
+                    pdf.cell(0, 6, color_pdf, border=1, ln=True, align='C')
                 else:
                     pdf.cell(190, 6, z["sistema"], border=1, ln=True)
                 
                 pdf.ln(2)
-                # 🚀 DESCRIPCIÓN CON LA LETANÍA COMPLETA
                 pdf.set_font('Arial', '', 9); pdf.set_text_color(50, 50, 50)
                 pdf.multi_cell(0, 4.5, txt=CATALOGO_SISTEMAS[z["sistema"]]["desc"])
                 

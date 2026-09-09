@@ -38,8 +38,28 @@ def registrar_bitacora(doc, modulo, accion):
     except Exception:
         pass 
 
-# 📋 CATÁLOGO MAESTRO DE IMPERMEABILIZANTES (Sincronizado con Cotizador)
-CATALOGO_IMPERMEABILIZANTES = [
+# 🚀 NUEVO: TRADUCTOR COMERCIAL A INVENTARIO FÍSICO
+def traducir_a_fisico(nombre):
+    nombre = str(nombre).strip()
+    
+    # 1. Quitamos la etiqueta de Escuelas (es el mismo rollo físico)
+    if "(ESCUELAS)" in nombre:
+        nombre = nombre.replace(" (ESCUELAS)", "").replace("(ESCUELAS)", "")
+        
+    # 2. Traducimos las Juntas Lineales a sus rollos o cubetas base reales
+    if "JUNTA LINEAL 30 CM MASTER LASSER 3.0 LISO" in nombre:
+        nombre = nombre.replace("JUNTA LINEAL 30 CM MASTER LASSER 3.0 LISO", "MASTER LASSER 3.0 MM FP LISO SIN ACABADO")
+    elif "JUNTA LINEAL 50 CM MASTER LASSER 3.0 LISO" in nombre:
+        nombre = nombre.replace("JUNTA LINEAL 50 CM MASTER LASSER 3.0 LISO", "MASTER LASSER 3.0 MM FP LISO SIN ACABADO")
+    elif "JUNTA LINEAL 50 CM MASTER LASSER 4.0 LISO" in nombre:
+        nombre = nombre.replace("JUNTA LINEAL 50 CM MASTER LASSER 4.0 LISO", "MASTER LASSER 4.0 MM FP LISO SIN ACABADO")
+    elif "JUNTA LINEAL 15 A 50 CM KRIPTOFLEX" in nombre:
+        nombre = nombre.replace("JUNTA LINEAL 15 A 50 CM KRIPTOFLEX", "KRIPTOFLEX 3 AÑOS FIBRATADO")
+        
+    return nombre.strip()
+
+# 📋 CATÁLOGO MAESTRO BODEGA (Puros insumos físicos reales)
+CATALOGO_BODEGA = [
     "ACRILTECHO GREEN POWER",
     "IMPAC 3000 FIBRATADO",
     "IMPAC 5000 FIBRATADO",
@@ -50,14 +70,9 @@ CATALOGO_IMPERMEABILIZANTES = [
     "IMPAC 7000 FIBRATADO",
     "IMPAC 7000 FIBRATADO CON MALLA",
     "SELLOTEX",
-    "JUNTA LINEAL 30 CM MASTER LASSER 3.0 LISO",
-    "JUNTA LINEAL 50 CM MASTER LASSER 3.0 LISO",
-    "JUNTA LINEAL 50 CM MASTER LASSER 4.0 LISO",
-    "JUNTA LINEAL 15 A 50 CM KRIPTOFLEX",
     "MASTER LASSER 3.5 MM FP",
     "MASTER LASSER 4.0 MM FP",
     "MASTER LASSER 4.5 MM FP",
-    "MASTER LASSER 4.0 MM FP (ESCUELAS)",
     "MASTER LASSER 3.0 MM FP LISO SIN ACABADO",
     "MASTER LASSER 4.0 MM FP LISO SIN ACABADO",
     "MASTER LASSER 3.0 MM FV",
@@ -69,13 +84,15 @@ CATALOGO_IMPERMEABILIZANTES = [
     "MALLA REFUERZO"
 ]
 
-# 💵 DICCIONARIO DE PRECIOS DE COSTO (Para Panel Financiero)
-PRECIO_BASE = 1200.00
-
 def obtener_precio(nombre_material):
-    # 🚀 CIRUGÍA DE PRECIOS: Limpiamos el "(COLOR)" del nombre para que encuentre el precio base exacto
-    nombre_base = str(nombre_material).split(" (")[0].strip()
-    
+    # 🚀 CIRUGÍA DE PRECIOS: Limpiamos los colores y apellidos para cruzar con el precio base exacto
+    nombre_base = str(nombre_material)
+    colores = ["(BLANCO / ROJO)", "(BLANCO)", "(ROJO)", "(NEGRO)", "(GRIS)", "(NO APLICA)"]
+    for col in colores:
+        if col in nombre_base:
+            nombre_base = nombre_base.replace(col, "").strip()
+            break
+            
     precios = {
         # --- ACRÍLICOS E IMPAC ---
         "ACRILTECHO GREEN POWER": 1200.00,
@@ -92,21 +109,14 @@ def obtener_precio(nombre_material):
         "SELLOTEX": 1200.00,
         "BITUFLEX": 1423.00,
         
-        # --- PREFABRICADOS (MASTER LASSER) ---
+        # --- PREFABRICADOS (Solo Bases Físicas) ---
         "MASTER LASSER 3.5 MM FP": 824.97,
         "MASTER LASSER 4.0 MM FP": 950.08,
         "MASTER LASSER 4.5 MM FP": 1066.04,
-        "MASTER LASSER 4.0 MM FP (ESCUELAS)": 913.00,
         "MASTER LASSER 3.0 MM FP LISO SIN ACABADO": 870.28,
         "MASTER LASSER 4.0 MM FP LISO SIN ACABADO": 965.72,
         "MASTER LASSER 3.0 MM FV": 608.64,
-        "MASTER LASSER 3.5 MM FV": 620,
-        
-        # --- JUNTAS LINEALES ---
-        "JUNTA LINEAL 30 CM MASTER LASSER 3.0 LISO": 870.28,
-        "JUNTA LINEAL 50 CM MASTER LASSER 3.0 LISO": 870.28,
-        "JUNTA LINEAL 50 CM MASTER LASSER 4.0 LISO": 965.72,
-        "JUNTA LINEAL 15 A 50 CM KRIPTOFLEX": 1284.64,
+        "MASTER LASSER 3.5 MM FV": 620.00,
         
         # --- CONSUMIBLES Y EXTRAS ---
         "Primario Hidroflex": 830.77,
@@ -114,7 +124,7 @@ def obtener_precio(nombre_material):
         "Cemento Plástico": 1200.00,
         "MALLA REFUERZO": 1200.00
     }
-    return precios.get(nombre_base, PRECIO_BASE)
+    return precios.get(nombre_base, 1200.00)
 
 @st.cache_resource
 def conectar_sheets():
@@ -190,12 +200,11 @@ if doc:
                     
                     with colB:
                         if categoria_lim == "Impermeabilización":
-                            mat_lim = st.selectbox("Insumo", CATALOGO_IMPERMEABILIZANTES, key="mat_lim_imp")
+                            mat_lim = st.selectbox("Insumo Físico", CATALOGO_BODEGA, key="mat_lim_imp")
                         else:
                             mat_lim = st.text_input("Especificar Insumo:", key="mat_lim_ot")
                             
                         cant_maxima = st.number_input("Cantidad Máxima a Autorizar:", min_value=0.0, step=1.0)
-                        
                         num_requisicion = st.text_input("Número de Requisición:", placeholder="Ej. REQ-1045", key="num_req_lim")
                     
                     btn_limite = st.form_submit_button("🔒 FIJAR LÍMITE MANUAL")
@@ -206,7 +215,6 @@ if doc:
                             hoja_limites.append_row([folio_limite, mat_lim, cant_maxima, req_final])
                             
                             registrar_bitacora(doc, "Control de Materiales", f"Autorizó límite manual de {cant_maxima} de {mat_lim} para la obra {folio_limite}. Req: {req_final}")
-                            
                             st.success(f"✅ Límite fijado para {folio_limite} bajo la Requisición: {req_final}.")
 
         # --- PESTAÑA DE SALIDAS ---
@@ -226,22 +234,26 @@ if doc:
                     st.markdown("---")
                     st.markdown("#### 📋 Insumos Autorizados para esta Obra")
                     
-                    # Agrupar insumos repetidos y sumarlos
+                    # 🚀 TRADUCTOR Y AGRUPADOR INTELIGENTE
                     limites_agrupados = {}
                     for fila in limites_data:
                         if str(fila.get("Folio Obra", "")) == folio_seleccionado:
-                            mat = str(fila.get("Material", ""))
+                            mat_original = str(fila.get("Material", ""))
+                            # Pasamos el material por el traductor para juntar Escuelas y Juntas con sus bases
+                            mat_traducido = traducir_a_fisico(mat_original)
+                            
                             try: cant = float(fila.get("Cantidad Maxima", 0))
                             except: cant = 0.0
                             
-                            if mat in limites_agrupados:
-                                limites_agrupados[mat] += cant
+                            if mat_traducido in limites_agrupados:
+                                limites_agrupados[mat_traducido] += cant
                             else:
-                                limites_agrupados[mat] = cant
+                                limites_agrupados[mat_traducido] = cant
                     
                     resumen_obra = []
                     for mat, max_cant in limites_agrupados.items():
-                        consumido = sum(float(c.get("Cantidad Usada", 0)) for c in consumos_data if str(c.get("Folio Obra", "")) == folio_seleccionado and str(c.get("Material / Insumo", "")) == mat)
+                        # Buscamos los consumos también pasándolos por el traductor por si hay registros viejos
+                        consumido = sum(float(c.get("Cantidad Usada", 0)) for c in consumos_data if str(c.get("Folio Obra", "")) == folio_seleccionado and traducir_a_fisico(str(c.get("Material / Insumo", ""))) == mat)
                         
                         disponible = max_cant - consumido
                         
@@ -263,13 +275,12 @@ if doc:
                     categoria = st.selectbox("Categoría del Material", ["Impermeabilización", "Otros / Consumibles"])
                     
                     if categoria == "Impermeabilización":
-                        # 🚀 MENÚ HÍBRIDO: Pone los autorizados de la obra primero, y luego el catálogo completo
+                        # 🚀 MENÚ HÍBRIDO BODEGA: Pone los autorizados primero, y el resto abajo
                         insumos_autorizados = list(limites_agrupados.keys())
                         opciones_menu = insumos_autorizados.copy()
                         
-                        for item_cat in CATALOGO_IMPERMEABILIZANTES:
+                        for item_cat in CATALOGO_BODEGA:
                             ya_esta = False
-                            # Verificamos que el item del catálogo no esté ya metido con todo y su color
                             for auth in insumos_autorizados:
                                 if item_cat in auth:
                                     ya_esta = True
@@ -278,26 +289,19 @@ if doc:
                                 opciones_menu.append(item_cat)
                                 
                         if not opciones_menu: 
-                            opciones_menu = CATALOGO_IMPERMEABILIZANTES
+                            opciones_menu = CATALOGO_BODEGA
                             
-                        material = st.selectbox("Insumo a Entregar", opciones_menu)
+                        material = st.selectbox("Insumo a Entregar (Inventario Físico)", opciones_menu)
                         unidad = "Piezas/Litros"
                     else:
                         material = st.text_input("Especificar Insumo:")
                         unidad = "Unidades"
 
-                    # Sumamos el límite total
-                    limite_actual = 0
-                    for fila in limites_data:
-                        if str(fila.get("Folio Obra", "")) == folio_seleccionado and str(fila.get("Material", "")) == material:
-                            try: limite_actual += float(fila.get("Cantidad Maxima", 0))
-                            except: pass
+                    # 🚀 VALIDACIÓN DE LÍMITES CON EL TRADUCTOR
+                    mat_seleccionado_traducido = traducir_a_fisico(material)
+                    limite_actual = limites_agrupados.get(mat_seleccionado_traducido, 0.0)
                             
-                    consumido_actual = 0
-                    for fila in consumos_data:
-                        if str(fila.get("Folio Obra", "")) == folio_seleccionado and str(fila.get("Material / Insumo", "")) == material:
-                            try: consumido_actual += float(fila.get("Cantidad Usada", 0))
-                            except: pass
+                    consumido_actual = sum(float(c.get("Cantidad Usada", 0)) for c in consumos_data if str(c.get("Folio Obra", "")) == folio_seleccionado and traducir_a_fisico(str(c.get("Material / Insumo", ""))) == mat_seleccionado_traducido)
                             
                     disponible = limite_actual - consumido_actual
                     
@@ -341,20 +345,20 @@ if doc:
                                 costo_total_movimiento = cantidad * precio_unitario
                                 ref_final = doc_referencia.strip().upper()
                                 
-                                # Guardamos en Consumos
+                                # Guardamos en Consumos (Guardamos el nombre Físico Traducido para limpiar la BD)
                                 hoja_consumos.append_row([
-                                    fecha_hoy, folio_seleccionado, categoria, material, cantidad, unidad, f"{tipo_movimiento} | {ref_final}"
+                                    fecha_hoy, folio_seleccionado, categoria, mat_seleccionado_traducido, cantidad, unidad, f"{tipo_movimiento} | {ref_final}"
                                 ])
                                 
                                 # Guardamos en Gastos Financieros
                                 hoja_gastos.append_row([
                                     fecha_hoy, 
                                     folio_seleccionado, 
-                                    f"{tipo_movimiento} ({ref_final}): {cantidad} {unidad} de {material}", 
+                                    f"{tipo_movimiento} ({ref_final}): {cantidad} {unidad} de {mat_seleccionado_traducido}", 
                                     "Costo de Material", 
                                     costo_total_movimiento
                                 ])
                                 
-                                registrar_bitacora(doc, "Control de Materiales", f"Registró {tipo_movimiento} de {cantidad} {material} para {folio_seleccionado}. Ref: {ref_final}")
+                                registrar_bitacora(doc, "Control de Materiales", f"Registró {tipo_movimiento} de {cantidad} {mat_seleccionado_traducido} para {folio_seleccionado}. Ref: {ref_final}")
                                 
-                                st.success(f"✅ Movimiento exitoso: Se asignaron {cantidad} de {material} mediante {tipo_movimiento} (Ref: {ref_final}). Costo cargado: ${costo_total_movimiento:,.2f}")
+                                st.success(f"✅ Movimiento exitoso: Se asignaron {cantidad} de {mat_seleccionado_traducido} mediante {tipo_movimiento} (Ref: {ref_final}). Costo cargado: ${costo_total_movimiento:,.2f}")

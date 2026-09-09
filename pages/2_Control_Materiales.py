@@ -263,10 +263,23 @@ if doc:
                     categoria = st.selectbox("Categoría del Material", ["Impermeabilización", "Otros / Consumibles"])
                     
                     if categoria == "Impermeabilización":
-                        # 🚀 MENÚ DESPLEGABLE INTELIGENTE: Lee los insumos exactos (con todo y color) autorizados para esta obra
-                        insumos_autorizados = [mat for mat in limites_agrupados.keys() if mat.split(" (")[0].strip() in CATALOGO_IMPERMEABILIZANTES]
-                        opciones_menu = insumos_autorizados if insumos_autorizados else CATALOGO_IMPERMEABILIZANTES
+                        # 🚀 MENÚ HÍBRIDO: Pone los autorizados de la obra primero, y luego el catálogo completo
+                        insumos_autorizados = list(limites_agrupados.keys())
+                        opciones_menu = insumos_autorizados.copy()
                         
+                        for item_cat in CATALOGO_IMPERMEABILIZANTES:
+                            ya_esta = False
+                            # Verificamos que el item del catálogo no esté ya metido con todo y su color
+                            for auth in insumos_autorizados:
+                                if item_cat in auth:
+                                    ya_esta = True
+                                    break
+                            if not ya_esta:
+                                opciones_menu.append(item_cat)
+                                
+                        if not opciones_menu: 
+                            opciones_menu = CATALOGO_IMPERMEABILIZANTES
+                            
                         material = st.selectbox("Insumo a Entregar", opciones_menu)
                         unidad = "Piezas/Litros"
                     else:

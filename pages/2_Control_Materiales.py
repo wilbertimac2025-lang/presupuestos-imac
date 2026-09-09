@@ -73,6 +73,9 @@ CATALOGO_IMPERMEABILIZANTES = [
 PRECIO_BASE = 1200.00
 
 def obtener_precio(nombre_material):
+    # 🚀 CIRUGÍA DE PRECIOS: Limpiamos el "(COLOR)" del nombre para que encuentre el precio base exacto
+    nombre_base = str(nombre_material).split(" (")[0].strip()
+    
     precios = {
         # --- ACRÍLICOS E IMPAC ---
         "ACRILTECHO GREEN POWER": 1200.00,
@@ -111,7 +114,7 @@ def obtener_precio(nombre_material):
         "Cemento Plástico": 1200.00,
         "MALLA REFUERZO": 1200.00
     }
-    return precios.get(nombre_material, PRECIO_BASE)
+    return precios.get(nombre_base, PRECIO_BASE)
 
 @st.cache_resource
 def conectar_sheets():
@@ -223,7 +226,7 @@ if doc:
                     st.markdown("---")
                     st.markdown("#### 📋 Insumos Autorizados para esta Obra")
                     
-                    # 🚀 NUEVA LÓGICA: Agrupar insumos repetidos y sumarlos
+                    # Agrupar insumos repetidos y sumarlos
                     limites_agrupados = {}
                     for fila in limites_data:
                         if str(fila.get("Folio Obra", "")) == folio_seleccionado:
@@ -260,13 +263,17 @@ if doc:
                     categoria = st.selectbox("Categoría del Material", ["Impermeabilización", "Otros / Consumibles"])
                     
                     if categoria == "Impermeabilización":
-                        material = st.selectbox("Insumo a Entregar", CATALOGO_IMPERMEABILIZANTES)
+                        # 🚀 MENÚ DESPLEGABLE INTELIGENTE: Lee los insumos exactos (con todo y color) autorizados para esta obra
+                        insumos_autorizados = [mat for mat in limites_agrupados.keys() if mat.split(" (")[0].strip() in CATALOGO_IMPERMEABILIZANTES]
+                        opciones_menu = insumos_autorizados if insumos_autorizados else CATALOGO_IMPERMEABILIZANTES
+                        
+                        material = st.selectbox("Insumo a Entregar", opciones_menu)
                         unidad = "Piezas/Litros"
                     else:
                         material = st.text_input("Especificar Insumo:")
                         unidad = "Unidades"
 
-                    # 🚀 NUEVA LÓGICA: Sumamos el límite total
+                    # Sumamos el límite total
                     limite_actual = 0
                     for fila in limites_data:
                         if str(fila.get("Folio Obra", "")) == folio_seleccionado and str(fila.get("Material", "")) == material:

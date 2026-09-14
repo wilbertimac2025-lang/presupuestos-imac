@@ -90,6 +90,16 @@ CATALOGO_SISTEMAS = {
     "BITUFLEX": {"precio": 252.00, "garantia": "NO APLICA", "desc": "SUMINISTRO DE SOLVENTE Y/O MATERIAL BASE.", "espec": "APLICACIÓN SEGÚN REQUERIMIENTOS EN OBRA.", "ficha": "ficha_bituflex.pdf", "color": "NEGRO"}
 }
 
+def obtener_material_base(sistema):
+    sis = str(sistema).upper()
+    if "(ESCUELAS)" in sis:
+        return sis.replace(" (ESCUELAS)", "").strip()
+    if "JUNTA LINEAL" in sis:
+        if "3.0 LISO" in sis: return "MASTER LASSER 3.0 MM FP LISO SIN ACABADO"
+        if "4.0 LISO" in sis: return "MASTER LASSER 4.0 MM FP LISO SIN ACABADO"
+        if "KRIPTOFLEX" in sis: return "KRIPTOFLEX 3 AÑOS FIBRATADO"
+    return sistema
+
 class PDF(FPDF):
     def header(self):
         if os.path.exists("marca_agua.jpg"): self.image("marca_agua.jpg", x=5, y=5, w=200, h=287)
@@ -188,7 +198,6 @@ for i in range(int(num_areas)):
         n = st.text_input(f"Nombre de la zona", key=f"n_{i}")
         s = st.selectbox(f"Sistema", opciones_sistemas, key=f"s_{i}")
         
-        # 🚀 NUEVA INTELIGENCIA ARTIFICIAL PARA SELECCIONAR EL COLOR
         color_base = CATALOGO_SISTEMAS[s].get("color", "NO APLICA")
         if " / " in color_base:
             opciones_color = color_base.split(" / ")
@@ -206,7 +215,6 @@ for i in range(int(num_areas)):
         
         desc_pct = st.number_input(f"Descuento para esta área (%)", min_value=0.0, max_value=100.0, value=0.0, step=1.0, key=f"desc_{i}")
         
-    # Guardamos el color elegido por el usuario en vez del general del catálogo
     zonas_data.append({"area": n, "sistema": s, "m2": m, "descuento_pct": desc_pct, "color_final": color_elegido})
 
 st.write("---")
@@ -264,8 +272,9 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
                 elif "FP" in sis or "FV" in sis or "MASTER LASSER" in sis: cant = math.ceil(m2 / 8.5); unidad = "ROLLOS"
                 else: cant = math.ceil(m2 / 19.0); unidad = "CUBETAS"
                     
-                # Guardar en base al color elegido para ser super exactos
-                mat_key = f"{sis} ({z['color_final']})" if z['color_final'] != "NO APLICA" else sis
+                material_fisico = obtener_material_base(sis)
+                mat_key = f"{material_fisico} ({z['color_final']})" if z['color_final'] != "NO APLICA" else material_fisico
+                
                 if mat_key in materiales_calculados: materiales_calculados[mat_key]["cant"] += cant
                 else: materiales_calculados[mat_key] = {"cant": cant, "unidad": unidad}
             
@@ -293,9 +302,12 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             pdf.ln(5); pdf.set_font('Arial', 'B', 10); pdf.set_text_color(0, 0, 0); pdf.multi_cell(0, 5, txt="Nos permitimos poner a su amable consideración el siguiente presupuesto:"); pdf.ln(5)
 
             for z in zonas_data:
+                # 🚀 SENSOR 1: Evita que el bloque entero de una zona empiece muy abajo en la hoja
+                if pdf.get_y() > 215: pdf.add_page()
+                
                 precio_unitario_real = CATALOGO_SISTEMAS[z["sistema"]]["precio"]
                 subtotal_area_real = z["m2"] * precio_unitario_real
-                color_pdf = z["color_final"] # 🚀 AHORA USA EL COLOR QUE ELEGISTE EN PANTALLA
+                color_pdf = z["color_final"]
                 
                 pdf.set_font('Arial', 'B', 11); pdf.set_text_color(0, 150, 255)
                 pdf.multi_cell(0, 6, txt=f"SUMINISTRO Y APLICACIÓN EN {z['area'].upper()}:")
@@ -315,6 +327,9 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
                 pdf.ln(3); pdf.set_font('Arial', 'B', 9); pdf.set_text_color(0, 150, 255); pdf.cell(0, 5, "Especificaciones Técnicas:", ln=True)
                 pdf.set_text_color(50, 50, 50); pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, txt=CATALOGO_SISTEMAS[z["sistema"]]["espec"])
                 pdf.ln(4)
+                
+                # 🚀 SENSOR 2: Seguro extra para que el encabezado azul y los números NUNCA se separen
+                if pdf.get_y() > 255: pdf.add_page()
                 
                 pdf.set_fill_color(240, 248, 255); pdf.set_text_color(15, 60, 140); pdf.set_font('Arial', 'B', 9); pdf.set_draw_color(200, 200, 200) 
                 pdf.cell(60, 6, "AREA (M2)", 'B', 0, 'C', True); pdf.cell(60, 6, "PRECIO UNIT.", 'B', 0, 'C', True); pdf.cell(70, 6, "SUBTOTAL", 'B', 1, 'C', True)

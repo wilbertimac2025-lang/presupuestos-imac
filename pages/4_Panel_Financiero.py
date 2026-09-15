@@ -127,7 +127,7 @@ if doc:
             costo_nomina = 0.0
             gastos_operativos = 0.0
             
-            # 🚀 NUEVAS VARIABLES PARA MATERIALES EXTRA Y DEVOLUCIONES
+            # 🚀 VARIABLES PARA MATERIALES EXTRA Y DEVOLUCIONES
             total_devoluciones = 0.0
             total_ajustes = 0.0
             
@@ -140,11 +140,9 @@ if doc:
                 elif categoria == "COSTO DE MATERIAL":
                     costo_materiales += monto
                 elif categoria == "DEVOLUCIÓN DE MATERIAL":
-                    # 🚀 MAGIA: Se resta del costo, lo que automáticamente sube la utilidad de la obra
                     costo_materiales -= monto
                     total_devoluciones += monto
                 elif categoria == "AJUSTE EXCEPCIONAL":
-                    # 🚀 Se suma al costo porque es material extra gastado
                     costo_materiales += monto
                     total_ajustes += monto
                 elif categoria == "FSR":
@@ -159,13 +157,14 @@ if doc:
             bolsa_mano_obra = limpiar_monto(obtener_valor(datos_completos, ["BOLSA MANO DE OBRA", "BOLSA", "DESTAJO"], 0.0))
             saldo_mano_obra = bolsa_mano_obra - costo_nomina
 
+            # ==========================================
+            # 📊 SECCIÓN 1: ESTADO DE CUENTA
+            # ==========================================
             st.subheader("📊 Estado de Cuenta del Proyecto")
             
-            # 🚀 LETRERO DE VICTORIA SI HAY DEVOLUCIONES
             if total_devoluciones > 0:
                 st.success(f"✅ **MATERIAL DEVUELTO (SOBRANTE EN BODEGA):** Se han recuperado **${total_devoluciones:,.2f} MXN** a favor de la rentabilidad de la obra.")
             
-            # Ajusté a 4 columnas para que se vea la Ganancia directo
             m1, m2, m3, m4 = st.columns(4)
             with m1: st.metric("Presupuesto Total", f"${presupuesto_total:,.2f}")
             with m2: st.metric("Costo de Material (Neto)", f"${costo_materiales:,.2f}")
@@ -186,55 +185,7 @@ if doc:
                 st.progress(porcentaje_gastado)
 
             # ==========================================
-            # 📦 NUEVO: RADIOGRAFÍA DE MATERIALES (DEVOLUCIONES Y EXTRAS)
-            # ==========================================
-            st.markdown("---")
-            st.subheader("📦 Radiografía de Materiales y Logística")
-            st.write("Control de material autorizado inicialmente vs. material sobrante o faltante en obra.")
-            
-            # Buscamos el insumo inicial que se guardó desde el cotizador
-            llave_insumo = next((k for k in datos_completos.keys() if "INSUMO" in str(k).upper() or "MATERIAL" in str(k).upper()), None)
-            insumos_iniciales = str(datos_completos.get(llave_insumo, "No especificado / Sin material asignado")) if llave_insumo else "No especificado en sistema"
-            
-            st.info(f"📋 **Autorizado Inicialmente (Cotizador):**\n{insumos_iniciales}")
-            
-            col_mov1, col_mov2 = st.columns([1, 2])
-            
-            with col_mov1:
-                with st.form("form_mat_mov"):
-                    st.write("**Registrar Movimiento Logístico**")
-                    tipo_movimiento = st.selectbox("Clasificación:", ["DEVOLUCIÓN DE MATERIAL", "AJUSTE EXCEPCIONAL"])
-                    cant_mat = st.number_input("Cantidad Devuelta/Extra", min_value=1.0, step=1.0)
-                    desc_mat = st.text_input("Nombre del Material", placeholder="Ej. MASTER LASSER 4.0")
-                    monto_mat = st.number_input("Monto Recuperado/Gastado ($)", min_value=0.0, step=100.0)
-                    
-                    if st.form_submit_button("💾 APLICAR A INVENTARIO"):
-                        if not desc_mat or monto_mat <= 0:
-                            st.warning("⚠️ Indica el nombre del material y el monto económico.")
-                        else:
-                            concepto_final = f"{int(cant_mat)}x {desc_mat.upper()}"
-                            fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
-                            hoja_gastos.append_row([fecha_actual, folio_seleccionado, concepto_final, tipo_movimiento, monto_mat])
-                            
-                            msj = "sumado a la utilidad." if "DEVOLUCIÓN" in tipo_movimiento else "cargado al costo."
-                            registrar_bitacora(doc, "Panel Financiero", f"Registró {tipo_movimiento}: {concepto_final} por ${monto_mat} ({folio_seleccionado})")
-                            st.success(f"✅ ¡Registro exitoso! Movimiento {msj}")
-                            st.rerun()
-            
-            with col_mov2:
-                st.write("**Historial de Sobrantes y Material Extra:**")
-                # Filtramos para mostrar solo devoluciones y ajustes
-                movimientos_materiales = [g for g in gastos_filtrados if str(g.get("Categoría", "")).upper() in ["DEVOLUCIÓN DE MATERIAL", "AJUSTE EXCEPCIONAL"]]
-                
-                if movimientos_materiales:
-                    df_mat = pd.DataFrame(movimientos_materiales)[["Fecha", "Concepto", "Categoría", "Monto ($)"]]
-                    st.dataframe(df_mat, use_container_width=True, hide_index=True)
-                else:
-                    st.write("Aún no hay devoluciones ni ajustes excepcionales registrados.")
-
-
-            # ==========================================
-            # 👷‍♂️ SECCIÓN VIP: AUDITORÍA DE DESTAJO (NÓMINA)
+            # 👷‍♂️ SECCIÓN 2: AUDITORÍA DE DESTAJO (NÓMINA)
             # ==========================================
             st.markdown("---")
             st.subheader("👷‍♂️ Control de Mano de Obra a Destajo")
@@ -255,7 +206,7 @@ if doc:
                 st.progress(pct_nomina)
 
             # ==========================================
-            # 📥 REGISTRO DE GASTOS GENERALES
+            # 📥 SECCIÓN 3: REGISTRO DE GASTOS GENERALES
             # ==========================================
             st.markdown("---")
             c_form, c_tabla = st.columns([1, 2])
@@ -264,6 +215,7 @@ if doc:
                 st.subheader("📥 Registrar Gasto Operativo / Nómina")
                 with st.form("form_gastos_fin"):
                     concepto = st.text_input("Concepto (o Nombre del Trabajador)", placeholder="Ej. Pago a Juan Pérez")
+                    # Quitamos Devolución y Ajuste de aquí para que no se revuelvan, se hacen abajo.
                     categoria_gasto = st.selectbox("Categoría de Cuenta", ["NÓMINA", "Costo de Material", "Viáticos y Comidas", "Gasolina y Fletes", "Herramientas y Equipos", "Otros Gastos Extras"])
                     monto_gasto = st.number_input("Monto de Gasto / Nómina ($ MXN)", min_value=0.0, step=500.0)
                     
@@ -279,10 +231,82 @@ if doc:
 
             with c_tabla:
                 st.subheader("📋 Historial Completo de Egresos")
-                # Filtramos para no repetir los de materiales en esta tabla general si no quieres, 
-                # o mostramos todos para transparencia. Los mostramos todos.
-                if gastos_filtrados:
-                    df = pd.DataFrame(gastos_filtrados)[["Fecha", "Concepto", "Categoría", "Monto ($)"]]
+                # Filtramos para no mostrar devoluciones y ajustes aquí y no ensuciar la tabla operativa
+                gastos_operativos_lista = [g for g in gastos_filtrados if str(g.get("Categoría", "")).upper() not in ["DEVOLUCIÓN DE MATERIAL", "AJUSTE EXCEPCIONAL"]]
+                
+                if gastos_operativos_lista:
+                    df = pd.DataFrame(gastos_operativos_lista)[["Fecha", "Concepto", "Categoría", "Monto ($)"]]
                     st.dataframe(df, use_container_width=True, hide_index=True)
                 else:
-                    st.info("No hay transacciones registradas de forma manual en esta obra.")
+                    st.info("No hay transacciones operativas registradas en esta obra.")
+
+            # ==========================================
+            # 📦 SECCIÓN 4: CONTROL LOGÍSTICO Y MATERIALES
+            # ==========================================
+            st.markdown("---")
+            st.subheader("📦 Radiografía de Materiales y Logística")
+            st.write("Control total del inventario despachado vs. material recuperado a la bodega.")
+            
+            col_aut, col_dev = st.columns(2)
+            
+            # --- PROCESO 1: LO AUTORIZADO Y LOS EXTRAS ---
+            with col_aut:
+                st.markdown("#### 1️⃣ Material Autorizado (Teórico vs Extra)")
+                llave_insumo = next((k for k in datos_completos.keys() if "INSUMO" in str(k).upper() or "MATERIAL" in str(k).upper()), None)
+                insumos_iniciales = str(datos_completos.get(llave_insumo, "No especificado / Sin material asignado")) if llave_insumo else "No especificado en sistema"
+                st.info(f"📋 **Base Inicial (Desde Cotizador):**\n{insumos_iniciales}")
+                
+                # Tabla de Ajustes Excepcionales (Extras)
+                ajustes_mat = [g for g in gastos_filtrados if str(g.get("Categoría", "")).upper() == "AJUSTE EXCEPCIONAL"]
+                if ajustes_mat:
+                    st.warning(f"⚠️ **Ajustes Excepcionales Autorizados (Costo Extra Acumulado: ${total_ajustes:,.2f}):**")
+                    df_ajustes = pd.DataFrame(ajustes_mat)[["Fecha", "Concepto", "Monto ($)"]]
+                    st.dataframe(df_ajustes, use_container_width=True, hide_index=True)
+                
+                # Formulario para autorizar un extra
+                with st.expander("➕ Autorizar Material Extra (Ajuste Excepcional)"):
+                    with st.form("form_ajuste_ext"):
+                        cant_ext = st.number_input("Cantidad Extra", min_value=1.0, step=1.0)
+                        desc_ext = st.text_input("Nombre del Material Extra", placeholder="Ej. MASTER LASSER 4.0")
+                        monto_ext = st.number_input("Costo del Material Extra ($)", min_value=0.0, step=100.0)
+                        if st.form_submit_button("Autorizar Extra"):
+                            if desc_ext and monto_ext > 0:
+                                concepto_ext = f"{int(cant_ext)}x {desc_ext.upper()}"
+                                fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
+                                hoja_gastos.append_row([fecha_actual, folio_seleccionado, concepto_ext, "AJUSTE EXCEPCIONAL", monto_ext])
+                                registrar_bitacora(doc, "Panel Financiero", f"Autorizó material extra: {concepto_ext} por ${monto_ext} ({folio_seleccionado})")
+                                st.success("✅ Ajuste Excepcional autorizado y cargado al costo de la obra.")
+                                st.rerun()
+                            else:
+                                st.error("Llenar descripción y costo válido.")
+
+            # --- PROCESO 2: DEVOLUCIONES DE MATERIAL ---
+            with col_dev:
+                st.markdown("#### 2️⃣ Devoluciones a Bodega (Sobrantes)")
+                
+                # Formulario de Devolución Exclusivo
+                with st.form("form_devolucion"):
+                    st.write("**Registrar Material Devuelto**")
+                    cant_dev = st.number_input("Cantidad Devuelta", min_value=1.0, step=1.0)
+                    desc_dev = st.text_input("Nombre del Material Devuelto", placeholder="Ej. IMPAC 5000")
+                    monto_dev = st.number_input("Valor Recuperado ($)", min_value=0.0, step=100.0)
+                    
+                    if st.form_submit_button("♻️ Aplicar Devolución a Utilidad"):
+                        if desc_dev and monto_dev > 0:
+                            concepto_dev = f"{int(cant_dev)}x {desc_dev.upper()}"
+                            fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
+                            hoja_gastos.append_row([fecha_actual, folio_seleccionado, concepto_dev, "DEVOLUCIÓN DE MATERIAL", monto_dev])
+                            registrar_bitacora(doc, "Panel Financiero", f"Registró devolución: {concepto_dev} recuperando ${monto_dev} ({folio_seleccionado})")
+                            st.success("✅ Devolución registrada con éxito. Utilidad aumentada.")
+                            st.rerun()
+                        else:
+                            st.error("Llenar descripción y monto válido.")
+                
+                # Tabla de Devoluciones
+                devoluciones_mat = [g for g in gastos_filtrados if str(g.get("Categoría", "")).upper() == "DEVOLUCIÓN DE MATERIAL"]
+                if devoluciones_mat:
+                    st.success(f"💰 **Historial de Devoluciones (Total: ${total_devoluciones:,.2f}):**")
+                    df_dev = pd.DataFrame(devoluciones_mat)[["Fecha", "Concepto", "Monto ($)"]]
+                    st.dataframe(df_dev, use_container_width=True, hide_index=True)
+                else:
+                    st.info("Aún no hay devoluciones registradas en esta obra.")

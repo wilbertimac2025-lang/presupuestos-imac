@@ -164,7 +164,6 @@ def generar_acta_entrega(cliente, folio, ubicacion, sistema, fecha_str, foto_byt
     pdf.ln(3)
     
     pdf.set_font('Arial', 'B', 10)
-    # 🚀 MULTI-CELL PARA QUE LOS SISTEMAS NO SE CORTEN SI SON MUCHOS
     pdf.multi_cell(0, 5, txt=f"SISTEMA APLICADO: {sistema.upper()}")
     pdf.ln(10)
     
@@ -237,7 +236,6 @@ def generar_poliza_garantia(cliente, ubicacion, sistema, fecha_str):
     pdf.ln(3)
     
     pdf.set_font('Arial', 'B', 10)
-    # 🚀 MULTI-CELL PARA SISTEMAS EN LA GARANTÍA
     pdf.multi_cell(0, 5, txt=f"SISTEMA APLICADO: {sistema.upper()}")
     pdf.ln(5)
     
@@ -454,16 +452,38 @@ if doc:
             proyecto_cierre = next((obra_completa[k] for k in obra_completa.keys() if any(p in str(k).upper() for p in ["PROYECTO", "OBRA", "CONCEPTO"])), "Proyecto Especificado")
             ubicacion_cierre = next((obra_completa[k] for k in obra_completa.keys() if any(p in str(k).upper() for p in ["UBICACION", "DIRECCION", "LUGAR"])), "Domicilio Conocido")
             
-            # 🚀 AQUÍ ESTÁ LA MAGIA DEL FILTRO DE SISTEMAS
-            llave_sistema = next((k for k in obra_completa.keys() if any(p in str(k).upper() for p in ["SISTEMA", "RESUMEN", "INSUMO"])), None)
-            sistema_crudo = str(obra_completa.get(llave_sistema, "SISTEMA IMPERMEABILIZANTE AUTORIZADO")) if llave_sistema else "SISTEMA IMPERMEABILIZANTE AUTORIZADO"
+            # 🚀 AQUÍ ESTÁ LA NUEVA MAGIA: EL EXTRACTOR DE SISTEMAS (TIJERA VIRTUAL)
+            # Buscamos específicamente la columna de INSUMOS (donde guardamos los rollos y cubetas)
+            llave_insumo = next((k for k in obra_completa.keys() if "INSUMO" in str(k).upper() or "MATERIAL" in str(k).upper()), None)
             
-            # Dividimos los sistemas (por si vienen separados por comas o diagonales)
-            sistemas_separados = sistema_crudo.replace(",", " / ").split(" / ")
-            # Filtramos cualquier cosa que diga LEVANTAMIENTO
-            sistemas_limpios = [s.strip() for s in sistemas_separados if "LEVANTAMIENTO" not in s.upper() and s.strip()]
-            # Los volvemos a unir
-            sistema_aplicado = " / ".join(sistemas_limpios) if sistemas_limpios else "SISTEMA IMPERMEABILIZANTE AUTORIZADO"
+            sistema_aplicado = "SISTEMA IMPERMEABILIZANTE AUTORIZADO" # Valor por defecto de seguridad
+            
+            if llave_insumo and str(obra_completa.get(llave_insumo, "")) != "":
+                texto_insumos = str(obra_completa.get(llave_insumo, ""))
+                partes = texto_insumos.split(" / ")
+                sistemas_puros = []
+                
+                for p in partes:
+                    # Tijera: Quitamos la cantidad (ej. "42 ROLLOS DE ") y nos quedamos con el puro material
+                    if " DE " in p.upper():
+                        material_puro = p.upper().split(" DE ", 1)[1].strip()
+                    else:
+                        material_puro = p.upper().strip()
+                    
+                    # Filtro anti-levantamiento
+                    if "LEVANTAMIENTO" not in material_puro and material_puro != "":
+                        sistemas_puros.append(material_puro)
+                
+                # Eliminamos duplicados y armamos la cadena final
+                sistemas_unicos = list(dict.fromkeys(sistemas_puros))
+                if sistemas_unicos:
+                    sistema_aplicado = " / ".join(sistemas_unicos)
+            else:
+                # Si por alguna razón la obra vieja no tiene insumos guardados, hace un "plan b" 
+                llave_resumen = next((k for k in obra_completa.keys() if "RESUMEN" in str(k).upper()), None)
+                if llave_resumen:
+                    sistema_aplicado = str(obra_completa.get(llave_resumen, "SISTEMA IMPERMEABILIZANTE AUTORIZADO"))
+
             
             # 2. Análisis Financiero en vivo
             llave_monto = next((k for k in obra_completa.keys() if any(p in str(k).upper() for p in ["TOTAL", "PRESUPUESTO", "MONTO"])), None)

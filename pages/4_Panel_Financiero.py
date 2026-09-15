@@ -50,7 +50,6 @@ def obtener_valor(diccionario, palabras_clave, default=0.0):
 @st.cache_resource
 def conectar_sheets():
     try:
-        # 🚀 BLINDAJE PARA RENDER
         credenciales_dic = json.loads(os.environ.get("GOOGLE_CREDENTIALS"))
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(credenciales_dic, scopes=scopes)
@@ -128,6 +127,10 @@ if doc:
             costo_nomina = 0.0
             gastos_operativos = 0.0
             
+            # 🚀 NUEVAS VARIABLES PARA MATERIALES EXTRA Y DEVOLUCIONES
+            total_devoluciones = 0.0
+            total_ajustes = 0.0
+            
             for g in gastos_filtrados:
                 monto = limpiar_monto(g.get("Monto ($)", 0))
                 categoria = str(g.get("Categoría", "")).upper().strip()
@@ -136,12 +139,21 @@ if doc:
                     costo_nomina += monto
                 elif categoria == "COSTO DE MATERIAL":
                     costo_materiales += monto
+                elif categoria == "DEVOLUCIÓN DE MATERIAL":
+                    # 🚀 MAGIA: Se resta del costo, lo que automáticamente sube la utilidad de la obra
+                    costo_materiales -= monto
+                    total_devoluciones += monto
+                elif categoria == "AJUSTE EXCEPCIONAL":
+                    # 🚀 Se suma al costo porque es material extra gastado
+                    costo_materiales += monto
+                    total_ajustes += monto
                 elif categoria == "FSR":
                     pass 
                 else:
                     gastos_operativos += monto
             
             total_gastado = costo_materiales + costo_nomina + costo_imss + gastos_operativos + gasto_financiamiento + gasto_administrativo
+            utilidad_estimada = presupuesto_total - total_gastado
 
             # 🚀 LECTURA DE LA BOLSA DE MANO DE OBRA
             bolsa_mano_obra = limpiar_monto(obtener_valor(datos_completos, ["BOLSA MANO DE OBRA", "BOLSA", "DESTAJO"], 0.0))
@@ -149,29 +161,77 @@ if doc:
 
             st.subheader("📊 Estado de Cuenta del Proyecto")
             
-            m1, m2, m3 = st.columns(3)
-            with m1:
-                st.metric("Presupuesto Total", f"${presupuesto_total:,.2f}")
-            with m2:
-                st.metric("Costo Material", f"${costo_materiales:,.2f}")
-            with m3:
-                st.metric("Gastos Operativos", f"${gastos_operativos:,.2f}")
+            # 🚀 LETRERO DE VICTORIA SI HAY DEVOLUCIONES
+            if total_devoluciones > 0:
+                st.success(f"✅ **MATERIAL DEVUELTO (SOBRANTE EN BODEGA):** Se han recuperado **${total_devoluciones:,.2f} MXN** a favor de la rentabilidad de la obra.")
+            
+            # Ajusté a 4 columnas para que se vea la Ganancia directo
+            m1, m2, m3, m4 = st.columns(4)
+            with m1: st.metric("Presupuesto Total", f"${presupuesto_total:,.2f}")
+            with m2: st.metric("Costo de Material (Neto)", f"${costo_materiales:,.2f}")
+            with m3: st.metric("Gasto Total Acumulado", f"${total_gastado:,.2f}")
+            with m4: st.metric("UTILIDAD / GANANCIA", f"${utilidad_estimada:,.2f}")
 
             st.write("") 
 
             m4, m5, m6 = st.columns(3)
-            with m4:
-                st.metric("Costos IMSS y Prest. Sociales", f"${costo_imss:,.2f}")
-            with m5:
-                st.metric("Financiamiento (1%)", f"${gasto_financiamiento:,.2f}")
-            with m6:
-                st.metric("Gasto Indirectos. (10%)", f"${gasto_administrativo:,.2f}")
+            with m4: st.metric("Costos IMSS y Prest. Sociales", f"${costo_imss:,.2f}")
+            with m5: st.metric("Financiamiento (1%)", f"${gasto_financiamiento:,.2f}")
+            with m6: st.metric("Gasto Indirectos. (10%)", f"${gasto_administrativo:,.2f}")
 
             st.write("")
             if presupuesto_total > 0:
                 porcentaje_gastado = min(total_gastado / presupuesto_total, 1.0)
                 st.write(f"**Consumo Financiero Global:** {porcentaje_gastado*100:.1f}%")
                 st.progress(porcentaje_gastado)
+
+            # ==========================================
+            # 📦 NUEVO: RADIOGRAFÍA DE MATERIALES (DEVOLUCIONES Y EXTRAS)
+            # ==========================================
+            st.markdown("---")
+            st.subheader("📦 Radiografía de Materiales y Logística")
+            st.write("Control de material autorizado inicialmente vs. material sobrante o faltante en obra.")
+            
+            # Buscamos el insumo inicial que se guardó desde el cotizador
+            llave_insumo = next((k for k in datos_completos.keys() if "INSUMO" in str(k).upper() or "MATERIAL" in str(k).upper()), None)
+            insumos_iniciales = str(datos_completos.get(llave_insumo, "No especificado / Sin material asignado")) if llave_insumo else "No especificado en sistema"
+            
+            st.info(f"📋 **Autorizado Inicialmente (Cotizador):**\n{insumos_iniciales}")
+            
+            col_mov1, col_mov2 = st.columns([1, 2])
+            
+            with col_mov1:
+                with st.form("form_mat_mov"):
+                    st.write("**Registrar Movimiento Logístico**")
+                    tipo_movimiento = st.selectbox("Clasificación:", ["DEVOLUCIÓN DE MATERIAL", "AJUSTE EXCEPCIONAL"])
+                    cant_mat = st.number_input("Cantidad Devuelta/Extra", min_value=1.0, step=1.0)
+                    desc_mat = st.text_input("Nombre del Material", placeholder="Ej. MASTER LASSER 4.0")
+                    monto_mat = st.number_input("Monto Recuperado/Gastado ($)", min_value=0.0, step=100.0)
+                    
+                    if st.form_submit_button("💾 APLICAR A INVENTARIO"):
+                        if not desc_mat or monto_mat <= 0:
+                            st.warning("⚠️ Indica el nombre del material y el monto económico.")
+                        else:
+                            concepto_final = f"{int(cant_mat)}x {desc_mat.upper()}"
+                            fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
+                            hoja_gastos.append_row([fecha_actual, folio_seleccionado, concepto_final, tipo_movimiento, monto_mat])
+                            
+                            msj = "sumado a la utilidad." if "DEVOLUCIÓN" in tipo_movimiento else "cargado al costo."
+                            registrar_bitacora(doc, "Panel Financiero", f"Registró {tipo_movimiento}: {concepto_final} por ${monto_mat} ({folio_seleccionado})")
+                            st.success(f"✅ ¡Registro exitoso! Movimiento {msj}")
+                            st.rerun()
+            
+            with col_mov2:
+                st.write("**Historial de Sobrantes y Material Extra:**")
+                # Filtramos para mostrar solo devoluciones y ajustes
+                movimientos_materiales = [g for g in gastos_filtrados if str(g.get("Categoría", "")).upper() in ["DEVOLUCIÓN DE MATERIAL", "AJUSTE EXCEPCIONAL"]]
+                
+                if movimientos_materiales:
+                    df_mat = pd.DataFrame(movimientos_materiales)[["Fecha", "Concepto", "Categoría", "Monto ($)"]]
+                    st.dataframe(df_mat, use_container_width=True, hide_index=True)
+                else:
+                    st.write("Aún no hay devoluciones ni ajustes excepcionales registrados.")
+
 
             # ==========================================
             # 👷‍♂️ SECCIÓN VIP: AUDITORÍA DE DESTAJO (NÓMINA)
@@ -195,13 +255,13 @@ if doc:
                 st.progress(pct_nomina)
 
             # ==========================================
-            # 📥 REGISTRO DE GASTOS
+            # 📥 REGISTRO DE GASTOS GENERALES
             # ==========================================
             st.markdown("---")
             c_form, c_tabla = st.columns([1, 2])
             
             with c_form:
-                st.subheader("📥 Registrar Nuevo Gasto")
+                st.subheader("📥 Registrar Gasto Operativo / Nómina")
                 with st.form("form_gastos_fin"):
                     concepto = st.text_input("Concepto (o Nombre del Trabajador)", placeholder="Ej. Pago a Juan Pérez")
                     categoria_gasto = st.selectbox("Categoría de Cuenta", ["NÓMINA", "Costo de Material", "Viáticos y Comidas", "Gasolina y Fletes", "Herramientas y Equipos", "Otros Gastos Extras"])
@@ -212,16 +272,15 @@ if doc:
                     if btn_gasto:
                         if monto_gasto > 0:
                             fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
-                            
                             hoja_gastos.append_row([fecha_actual, folio_seleccionado, concepto.upper(), categoria_gasto.upper(), monto_gasto])
                             st.success(f"✅ Transacción de ${monto_gasto:,.2f} registrada con éxito.")
-                            
                             registrar_bitacora(doc, "Panel Financiero", f"Inyectó gasto de ${monto_gasto:,.2f} a {folio_seleccionado} ({categoria_gasto}). Concepto: {concepto.upper()}")
-                            
                             st.rerun()
 
             with c_tabla:
-                st.subheader("📋 Historial Desglosado de Egresos")
+                st.subheader("📋 Historial Completo de Egresos")
+                # Filtramos para no repetir los de materiales en esta tabla general si no quieres, 
+                # o mostramos todos para transparencia. Los mostramos todos.
                 if gastos_filtrados:
                     df = pd.DataFrame(gastos_filtrados)[["Fecha", "Concepto", "Categoría", "Monto ($)"]]
                     st.dataframe(df, use_container_width=True, hide_index=True)

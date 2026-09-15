@@ -8,6 +8,7 @@ import os
 import smtplib
 from email.message import EmailMessage
 from PIL import Image
+from fpdf import FPDF
 
 # --- CONFIGURACIÓN CORPORATIVA ---
 icono_navegador = "logo_imac_2026.png" if os.path.exists("logo_imac_2026.png") else ("logo_tarc.png" if os.path.exists("logo_tarc.png") else "🏢")
@@ -37,7 +38,40 @@ def registrar_bitacora(doc, modulo, accion):
     except Exception:
         pass 
 
-# 📧 FUNCIÓN: REPORTE MANUAL DE VIGENCIAS A RRHH
+# --- CLASE PARA EL PDF CORPORATIVO DE TRABAJADORES ---
+class PDF_Trabajadores(FPDF):
+    def header(self):
+        if os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=10, y=8, w=40)
+        elif os.path.exists("logo_imac_2026.png"): self.image("logo_imac_2026.png", x=10, y=8, w=40)
+        
+        self.set_font('Arial', 'B', 14)
+        self.set_text_color(15, 60, 140)
+        self.cell(0, 10, 'GRUPO IMAC - REPORTE DE PERSONAL EN OBRA', ln=True, align='R')
+        self.set_font('Arial', 'I', 9)
+        self.set_text_color(100, 100, 100)
+        self.cell(0, 5, f'Fecha de Emision: {datetime.datetime.now().strftime("%d/%m/%Y")}', ln=True, align='R')
+        self.ln(10)
+
+    def footer(self):
+        self.set_y(-15)
+        self.set_font('Arial', 'I', 8)
+        self.set_text_color(128, 128, 128)
+        self.cell(0, 10, f'Pagina {self.page_no()} de {{nb}}', 0, 0, 'C')
+        
+    def draw_table_header(self, tipo):
+        self.set_fill_color(15, 60, 140) if tipo == "ACTIVOS" else self.set_fill_color(100, 100, 100)
+        self.set_text_color(255, 255, 255)
+        self.set_font('Arial', 'B', 9)
+        if tipo == "ACTIVOS":
+            self.cell(70, 7, "NOMBRE DEL TRABAJADOR", border=1, fill=True)
+            self.cell(45, 7, "OBRA ASIGNADA", border=1, fill=True)
+            self.cell(25, 7, "VIG. IMSS", border=1, align='C', fill=True)
+            self.cell(50, 7, "ESTATUS / ALERTA", border=1, align='C', fill=True, ln=True)
+        else:
+            self.cell(100, 7, "NOMBRE DEL TRABAJADOR", border=1, fill=True)
+            self.cell(90, 7, "ULTIMA OBRA REGISTRADA", border=1, fill=True, ln=True)
+
+# 📧 FUNCIÓN: REPORTE DE VIGENCIAS (AHORA CON PDF)
 def enviar_reporte_imss_manual(datos_trabajadores, datos_base):
     try:
         remitente = os.environ.get("CORREO_BOT", "").strip()
@@ -48,19 +82,13 @@ def enviar_reporte_imss_manual(datos_trabajadores, datos_base):
 
         hoy = datetime.datetime.now().date()
         
-        # Agrupamos la última asignación de cada trabajador
         ultimas_asignaciones = {}
         for reg in datos_trabajadores:
             nombre = str(reg.get("Nombre del Trabajador", "")).strip().upper()
-            if nombre:
-                ultimas_asignaciones[nombre] = reg
+            if nombre: ultimas_asignaciones[nombre] = reg
         
-        cuerpo = "🏢 REPORTE GENERAL DE VIGENCIAS IMSS Y ASIGNACIONES (GRUPO IMAC)\n"
-        cuerpo += f"Fecha de emisión: {hoy.strftime('%d/%m/%Y')}\n"
-        cuerpo += "-"*50 + "\n\n"
-        
-        activos_txt = "🟢 TRABAJADORES ACTIVOS EN OBRA:\n\n"
-        sin_obra_txt = "⚪ TRABAJADORES SIN OBRA (O DADOS DE BAJA):\n\n"
+        lista_activos = []
+        lista_inactivos = []
         
         for emp in datos_base:
             nombre = str(emp.get("Nombre del Trabajador", "")).strip().upper()
@@ -69,45 +97,108 @@ def enviar_reporte_imss_manual(datos_trabajadores, datos_base):
             asig = ultimas_asignaciones.get(nombre)
             if asig:
                 estatus = str(asig.get("Estatus IMSS", "")).upper()
-                obra = asig.get("Folio Obra", "N/A")
-                vigencia = asig.get("Vigencia IMSS", "N/A")
+                obra = str(asig.get("Folio Obra", "N/A"))
+                vigencia = str(asig.get("Vigencia IMSS", "N/A"))
                 
                 if "BAJA" in estatus:
-                    sin_obra_txt += f"• {nombre} | Última Obra: {obra}\n"
+                    lista_inactivos.append({"nombre": nombre, "obra": obra})
                 else:
-                    # Calculamos los días restantes para hacer el reporte más inteligente
                     estado_vigencia = ""
                     if vigencia and vigencia != "N/A":
                         try:
                             fecha_v = datetime.datetime.strptime(vigencia, "%d/%m/%Y").date()
                             dias = (fecha_v - hoy).days
-                            if dias < 0:
-                                estado_vigencia = "¡VENCIDO!"
-                            elif dias <= 7:
-                                estado_vigencia = f"¡ALERTA! Vence en {dias} días"
-                            else:
-                                estado_vigencia = f"Vigente ({dias} días restantes)"
+                            if dias < 0: estado_vigencia = "¡VENCIDO!"
+                            elif dias <= 7: estado_vigencia = f"¡ALERTA! Vence en {dias} dias"
+                            else: estado_vigencia = f"Vigente ({dias} d. restantes)"
                         except Exception:
-                            estado_vigencia = "Fecha con formato incorrecto"
-                            
-                    activos_txt += f"• {nombre} | Obra: {obra} | Vigencia: {vigencia} [{estado_vigencia}]\n"
+                            estado_vigencia = "Error de fecha"
+                    lista_activos.append({"nombre": nombre, "obra": obra, "vigencia": vigencia, "estado": estado_vigencia})
             else:
-                sin_obra_txt += f"• {nombre} | SIN ASIGNACIONES HISTÓRICAS\n"
-                
-        cuerpo_final = cuerpo + activos_txt + "\n" + "-"*50 + "\n\n" + sin_obra_txt
+                lista_inactivos.append({"nombre": nombre, "obra": "SIN ASIGNACIONES HISTORICAS"})
+
+        # --- CREACIÓN DEL PDF ---
+        pdf = PDF_Trabajadores()
+        pdf.alias_nb_pages()
+        pdf.add_page()
         
+        # TABLA DE ACTIVOS
+        pdf.set_font('Arial', 'B', 11)
+        pdf.set_text_color(15, 60, 140)
+        pdf.cell(0, 8, "TRABAJADORES ACTIVOS EN OBRA", ln=True)
+        pdf.draw_table_header("ACTIVOS")
+        
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font('Arial', '', 8)
+        
+        for act in lista_activos:
+            if pdf.get_y() > 260: 
+                pdf.add_page()
+                pdf.draw_table_header("ACTIVOS")
+                pdf.set_font('Arial', '', 8)
+            
+            # ✂️ Tijera anti-descuadre para nombres larguísimos
+            nom_str = act['nombre'][:35]
+            obra_str = act['obra'][:23]
+            vig_str = act['vigencia']
+            est_str = act['estado'][:25]
+            
+            pdf.set_text_color(0, 0, 0)
+            pdf.cell(70, 6, nom_str, border=1)
+            pdf.cell(45, 6, obra_str, border=1)
+            pdf.cell(25, 6, vig_str, border=1, align='C')
+            
+            # Semáforo de colores para Recursos Humanos
+            if "VENCIDO" in est_str: 
+                pdf.set_text_color(200, 0, 0); pdf.set_font('Arial', 'B', 8)
+            elif "ALERTA" in est_str: 
+                pdf.set_text_color(200, 120, 0); pdf.set_font('Arial', 'B', 8)
+            else: 
+                pdf.set_text_color(0, 100, 0); pdf.set_font('Arial', '', 8)
+                
+            pdf.cell(50, 6, est_str, border=1, ln=True, align='C')
+            pdf.set_font('Arial', '', 8)
+
+        # TABLA DE INACTIVOS
+        pdf.ln(10)
+        pdf.set_font('Arial', 'B', 11)
+        pdf.set_text_color(100, 100, 100)
+        pdf.cell(0, 8, "TRABAJADORES SIN OBRA (O DADOS DE BAJA)", ln=True)
+        pdf.draw_table_header("INACTIVOS")
+        
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font('Arial', '', 8)
+        
+        for ina in lista_inactivos:
+            if pdf.get_y() > 260: 
+                pdf.add_page()
+                pdf.draw_table_header("INACTIVOS")
+                pdf.set_text_color(0, 0, 0)
+                pdf.set_font('Arial', '', 8)
+            
+            nom_str = ina['nombre'][:50]
+            obra_str = ina['obra'][:45]
+            pdf.cell(100, 6, nom_str, border=1)
+            pdf.cell(90, 6, obra_str, border=1, ln=True)
+
+        pdf_bytes = pdf.output(dest='S').encode('latin-1')
+        
+        # --- ENVÍO DEL CORREO ---
         msg = EmailMessage()
-        msg['Subject'] = f'📊 REPORTE IMSS: Estatus de Plantilla al {hoy.strftime("%d/%m/%Y")}'
+        msg['Subject'] = f'REPORTE IMSS: Estatus de Plantilla al {hoy.strftime("%d/%m/%Y")}'
         msg['From'] = remitente
         msg['To'] = 'rh@grupo-imac.com, comercial@grupo-imac.com'
-        msg.set_content(cuerpo_final)
+        msg.set_content("Se adjunta a este correo el PDF con el Reporte Oficial de Trabajadores, Asignaciones de Obra y Vigencias IMSS actualizado.\n\nFavor de revisar las alertas de vencimiento en las casillas correspondientes.\n\nAtentamente,\nERP Grupo IMAC")
+        
+        nombre_archivo = f"Reporte_IMSS_{hoy.strftime('%d%m%Y')}.pdf"
+        msg.add_attachment(pdf_bytes, maintype='application', subtype='pdf', filename=nombre_archivo)
         
         with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
             smtp.starttls()
             smtp.login(remitente, password)
             smtp.send_message(msg)
             
-        return True, "El reporte fue enviado exitosamente a Recursos Humanos y Dirección."
+        return True, "El PDF fue generado y enviado exitosamente a Recursos Humanos."
     except Exception as e:
         return False, f"Ocurrió un error al enviar el correo: {e}"
 
@@ -306,19 +397,20 @@ if doc:
     # 🚀 PESTAÑA 3: NUEVO TABLERO MAESTRO DE OCUPACIÓN (SÁBANA GLOBAL)
     # ==================================================
     with tab3:
-        # 🚀 BOTÓN MANUAL PARA ENVIAR REPORTE A RRHH
+        # 🚀 BOTÓN MANUAL PARA ENVIAR REPORTE PDF A RRHH
         col_tit_tablero, col_btn_reporte = st.columns([2, 1])
         with col_tit_tablero:
             st.subheader("📊 Estatus de Ocupación General de Plantilla")
             st.write("Control total de asignaciones. Muestra de forma unificada dónde está parado cada elemento del catálogo maestro.")
         with col_btn_reporte:
             st.write("") # Espaciador
-            if st.button("📧 ENVIAR REPORTE IMSS POR CORREO", type="primary", use_container_width=True):
-                with st.spinner("Generando y enviando el reporte a RRHH..."):
+            # 🚀 EL BOTÓN AHORA INDICA QUE GENERA PDF
+            if st.button("📄 GENERAR Y ENVIAR PDF A RRHH", type="primary", use_container_width=True):
+                with st.spinner("Ensamblando PDF corporativo y enviando a Recursos Humanos..."):
                     exito, mensaje = enviar_reporte_imss_manual(datos_trabajadores, datos_base)
                     if exito:
                         st.success(mensaje)
-                        registrar_bitacora(doc, "Control de Trabajadores", "Envió reporte manual de vigencias IMSS")
+                        registrar_bitacora(doc, "Control de Trabajadores", "Envió reporte PDF manual de vigencias IMSS")
                     else:
                         st.error(mensaje)
         
@@ -336,8 +428,7 @@ if doc:
             tabla_global = []
             for emp in datos_base:
                 nombre_emp = str(emp.get("Nombre del Trabajador", "")).strip().upper()
-                if not nombre_emp:
-                    continue
+                if not nombre_emp: continue
                 
                 puesto_emp = emp.get("Puesto / Rol", "N/A")
                 nss_emp = emp.get("NSS", "N/A")
@@ -374,7 +465,6 @@ if doc:
                 })
 
             df_master = pd.DataFrame(tabla_global)
-
             filtro_texto = st.text_input("🔍 Filtrar Tabla (Escribe nombre, obra o puesto):", placeholder="Ej. Oficial, OBRA04, Juan...")
             
             if filtro_texto:

@@ -45,7 +45,6 @@ def limpiar_monto(valor):
 # 📧 FUNCIÓN: ENVÍO DE PDF (ACTA) A CORREOS CORPORATIVOS
 def enviar_cierre_por_correo(pdf_bytes, nombre_archivo, cliente, folio):
     try:
-        # 🚀 BLINDAJE PARA RENDER Y ANTI-ESPACIOS INVISIBLES
         remitente = os.environ.get("CORREO_BOT", "").strip()
         password = os.environ.get("PASS_BOT", "").strip()
         
@@ -68,14 +67,12 @@ def enviar_cierre_por_correo(pdf_bytes, nombre_archivo, cliente, folio):
             smtp.send_message(msg)
         return True
     except Exception as e: 
-        # 🚨 LE QUITAMOS LA MORDAZA AL ERROR PARA QUE NOS AVISE EN PANTALLA QUÉ PASA
         st.error(f"🚨 ERROR TÉCNICO DE CORREO: {e}")
         return False
 
 # --- CLASES PARA LOS 3 PDFs ---
 class PDF_Base(FPDF):
     def header(self):
-        # 🚀 SOLO LOGO VIEJO PARA LOS PDF OFICIALES (Evita que tape el texto)
         if os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=15, y=10, w=50)
         elif os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=15, y=10, w=50)
         
@@ -89,7 +86,6 @@ class PDF_Base(FPDF):
         self.set_y(35)
         
     def footer(self):
-        # 🚀 NUEVO: PIE DE PÁGINA CON NUMERACIÓN (Página 1 de 2, etc.)
         self.set_y(-15)
         self.set_font('Arial', 'I', 8)
         self.set_text_color(128, 128, 128)
@@ -168,14 +164,14 @@ def generar_acta_entrega(cliente, folio, ubicacion, sistema, fecha_str, foto_byt
     pdf.ln(3)
     
     pdf.set_font('Arial', 'B', 10)
-    pdf.cell(0, 5, f"SISTEMA APLICADO: {sistema.upper()}", ln=True)
+    # 🚀 MULTI-CELL PARA QUE LOS SISTEMAS NO SE CORTEN SI SON MUCHOS
+    pdf.multi_cell(0, 5, txt=f"SISTEMA APLICADO: {sistema.upper()}")
     pdf.ln(10)
     
     pdf.set_font('Arial', '', 10)
     pdf.multi_cell(0, 5, txt=f"SIN MÁS POR EL MOMENTO SE EXTIENDE LA PRESENTE ACTA DE ENTREGA DE OBRA EN LA CIUDAD DE VERACRUZ, VER.")
     pdf.ln(25)
     
-    # 🚀 LAS FIRMAS SE QUEDAN EN LA HOJA 1
     y_firmas = pdf.get_y()
     pdf.line(20, y_firmas, 90, y_firmas)
     pdf.line(120, y_firmas, 190, y_firmas)
@@ -183,7 +179,6 @@ def generar_acta_entrega(cliente, folio, ubicacion, sistema, fecha_str, foto_byt
     pdf.cell(95, 5, "CLIENTE", align='C')
     pdf.cell(95, 5, "CONTRATISTA", align='C', ln=True)
     
-    # 🚀 NUEVO: FOTO GIGANTE EN LA HOJA 2 (ANEXO)
     if foto_bytes:
         try:
             temp_img = "temp_acta.jpg"
@@ -192,12 +187,10 @@ def generar_acta_entrega(cliente, folio, ubicacion, sistema, fecha_str, foto_byt
             img.save(temp_img, format="JPEG")
             
             w_px, h_px = img.size
-            # Aumentamos los límites para que se vea mucho más grande (170x150 mm)
             ratio = min(170 / w_px, 150 / h_px)
             w_mm, h_mm = w_px * ratio, h_px * ratio
             x_mm = (210 - w_mm) / 2
             
-            # AGREGAMOS LA NUEVA PÁGINA
             pdf.add_page()
             
             pdf.set_font('Arial', 'B', 14)
@@ -208,7 +201,6 @@ def generar_acta_entrega(cliente, folio, ubicacion, sistema, fecha_str, foto_byt
             y_actual = pdf.get_y()
             pdf.image(temp_img, x=x_mm, y=y_actual, w=w_mm, h=h_mm)
             
-            # Ponemos el título solicitado debajo de la imagen
             pdf.set_y(y_actual + h_mm + 10)
             pdf.set_font('Arial', 'B', 12)
             pdf.set_text_color(80, 80, 80)
@@ -245,7 +237,8 @@ def generar_poliza_garantia(cliente, ubicacion, sistema, fecha_str):
     pdf.ln(3)
     
     pdf.set_font('Arial', 'B', 10)
-    pdf.cell(0, 5, f"SISTEMA APLICADO: {sistema.upper()}", ln=True)
+    # 🚀 MULTI-CELL PARA SISTEMAS EN LA GARANTÍA
+    pdf.multi_cell(0, 5, txt=f"SISTEMA APLICADO: {sistema.upper()}")
     pdf.ln(5)
     
     pdf.set_font('Arial', 'B', 11)
@@ -255,7 +248,7 @@ def generar_poliza_garantia(cliente, ubicacion, sistema, fecha_str):
     pdf.set_font('Arial', '', 9)
     clausulas = [
         "PRIMERA. - LA OBRA FUE EFECTUADA CON MATERIALES DE LA MÁS ALTA CALIDAD, QUE SE RIGEN CON NORMAS APROBADAS INTERNACIONALMENTE Y CON MANO DE OBRA ESPECIALIZADA, ASÍ COMO BAJO UNA SUPERVISIÓN ADECUADA.",
-        f"SEGUNDA. - ESTA PÓLIZA DE GARANTÍA AMPARA UN PERIODO DE 5 AÑOS EN {sistema.upper()} CONTRATADOS, A PARTIR DE LA FECHA DE ENTREGA DE LA OBRA, TRANSCURRIDO DICHO PLAZO SE EXTINGUE AUTOMÁTICAMENTE Y EL CLIENTE NO PODRÁ HACER NINGUNA RECLAMACIÓN AL CONTRATISTA.",
+        f"SEGUNDA. - ESTA PÓLIZA DE GARANTÍA AMPARA LOS SISTEMAS: {sistema.upper()} CONTRATADOS, A PARTIR DE LA FECHA DE ENTREGA DE LA OBRA, TRANSCURRIDO DICHO PLAZO SE EXTINGUE AUTOMÁTICAMENTE Y EL CLIENTE NO PODRÁ HACER NINGUNA RECLAMACIÓN AL CONTRATISTA.",
         "TERCERA. - EL CONTRATISTA SE COMPROMETE A REPARAR CON SU GESTACIÓN A LAS CLÁUSULAS QUE SIGUEN LAS FALLAS EN LA IMPERMEABILIZACIÓN EFECTUADA, PONIENDO MATERIALES Y MANO DE OBRA SIN CARGO PARA EL CLIENTE.",
         "CUARTA. - EL CONTRATISTA NO ESTÁ OBLIGADO A DAR SERVICIO REQUERIDO POR EL CLIENTE, SI SE COMPRUEBA QUE LOS DAÑOS OCASIONADOS EN EL TRABAJO DE IMPERMEABILIZACIÓN SE DEBEN A CAUSAS AJENAS A LOS PRODUCTOS EMPLEADOS O SU APLICACIÓN, TALES COMO ASENTAMIENTOS O FALLAS ESTRUCTURALES DEL EDIFICIO, INUNDACIONES, INCENDIOS, GRANIZOS, SISMOS, TERREMOTOS O CUALQUIER CASO FORTUITO O DE FUERZA MAYOR. LA PÓLIZA DE GARANTÍA QUEDARA NULA, SI SE OCASIONAN DAÑOS AL ÁREA TRABAJADA, COMO ARRASTRAR O MOVER OBJETOS QUE PERJUDIQUEN LA IMPERMEABILIZACIÓN. (ROMPAN EL SISTEMA)",
         "QUINTA. - EL CONTRATISTA NO SE HACE RESPONSABLE DE LOS DAÑOS Y/O PREJUICIOS QUE OCASIONEN LAS FALLAS DE LA IMPERMEABILIZACIÓN EN EL INTERIOR DEL INMUEBLE.",
@@ -430,7 +423,6 @@ if doc:
                                 hoja_convenios.append_row([fecha_hoy, folio_convenio, concepto_conv.upper(), monto_conv])
                                 nuevo_presupuesto = presupuesto_actual + monto_conv
                                 
-                                # 🚀 NUEVO MÉTODO LÁSER .FIND() PARA CONVENIOS
                                 try:
                                     celda_folio = hoja_obras.find(folio_convenio)
                                     celda_monto = hoja_obras.find(llave_monto, in_row=1)
@@ -461,7 +453,17 @@ if doc:
             cliente_cierre = next((obra_completa[k] for k in obra_completa.keys() if "CLIENTE" in str(k).upper()), "Cliente General")
             proyecto_cierre = next((obra_completa[k] for k in obra_completa.keys() if any(p in str(k).upper() for p in ["PROYECTO", "OBRA", "CONCEPTO"])), "Proyecto Especificado")
             ubicacion_cierre = next((obra_completa[k] for k in obra_completa.keys() if any(p in str(k).upper() for p in ["UBICACION", "DIRECCION", "LUGAR"])), "Domicilio Conocido")
-            sistema_aplicado = next((obra_completa[k] for k in obra_completa.keys() if "SISTEMA" in str(k).upper()), "Sistema Impermeabilizante Autorizado")
+            
+            # 🚀 AQUÍ ESTÁ LA MAGIA DEL FILTRO DE SISTEMAS
+            llave_sistema = next((k for k in obra_completa.keys() if any(p in str(k).upper() for p in ["SISTEMA", "RESUMEN", "INSUMO"])), None)
+            sistema_crudo = str(obra_completa.get(llave_sistema, "SISTEMA IMPERMEABILIZANTE AUTORIZADO")) if llave_sistema else "SISTEMA IMPERMEABILIZANTE AUTORIZADO"
+            
+            # Dividimos los sistemas (por si vienen separados por comas o diagonales)
+            sistemas_separados = sistema_crudo.replace(",", " / ").split(" / ")
+            # Filtramos cualquier cosa que diga LEVANTAMIENTO
+            sistemas_limpios = [s.strip() for s in sistemas_separados if "LEVANTAMIENTO" not in s.upper() and s.strip()]
+            # Los volvemos a unir
+            sistema_aplicado = " / ".join(sistemas_limpios) if sistemas_limpios else "SISTEMA IMPERMEABILIZANTE AUTORIZADO"
             
             # 2. Análisis Financiero en vivo
             llave_monto = next((k for k in obra_completa.keys() if any(p in str(k).upper() for p in ["TOTAL", "PRESUPUESTO", "MONTO"])), None)
@@ -479,7 +481,7 @@ if doc:
             # Panel de información y candado
             col_info, col_foto = st.columns([1, 1])
             with col_info:
-                st.info(f"**Cliente:** {cliente_cierre}\n\n**Dirección:** {ubicacion_cierre}\n\n**Sistema:** {sistema_aplicado}")
+                st.info(f"**Cliente:** {cliente_cierre}\n\n**Dirección:** {ubicacion_cierre}\n\n**Sistema Filtrado para PDF:** {sistema_aplicado}")
                 if saldo_pendiente > 0:
                     st.error(f"🔴 **SALDO PENDIENTE DE COBRO:** ${saldo_pendiente:,.2f} MXN. \n\n*La póliza de garantía permanecerá bloqueada hasta que el cliente liquide el total.*")
                 else:
@@ -520,13 +522,11 @@ if doc:
                     st.error("❌ Debes subir la foto de evidencia antes de cerrar la obra en el sistema.")
                 else:
                     with st.spinner("Actualizando sistema y enviando el Acta a corporativo..."):
-                        # 🚀 REBOBINAMOS LA FOTO Y GENERAMOS EL ACTA FINAL PARA EL CORREO
                         foto_responsiva.seek(0)
                         pdf_acta_final = generar_acta_entrega(cliente_cierre, folio_cierre, ubicacion_cierre, sistema_aplicado, fecha_str, foto_responsiva)
                         
                         envio_exitoso = enviar_cierre_por_correo(pdf_acta_final, f"Acta_{folio_cierre}.pdf", cliente_cierre, folio_cierre)
                         
-                        # 🚀 NUEVO MÉTODO LÁSER .FIND() PARA EL CIERRE DE OBRA
                         try:
                             celda_folio = hoja_obras.find(folio_cierre)
                             celda_estatus = hoja_obras.find(llave_estatus, in_row=1)

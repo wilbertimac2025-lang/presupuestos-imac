@@ -299,9 +299,9 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
 
             # CAJA 1: EMISOR (TARC)
             pdf.set_fill_color(245, 247, 250) 
-            pdf.rect(10, y_cards, 92, 42, 'F') # ✂️ Altura reducida a 42 para quitar el "sótano"
+            pdf.rect(10, y_cards, 92, 42, 'F') 
             pdf.set_fill_color(15, 60, 140) 
-            pdf.rect(10, y_cards, 2, 42, 'F') # ✂️ Altura ajustada a 42
+            pdf.rect(10, y_cards, 2, 42, 'F') 
 
             pdf.set_xy(16, y_cards + 5) 
             pdf.set_font('Arial', 'B', 9); pdf.set_text_color(15, 60, 140); pdf.cell(80, 5, "EMISOR:", ln=True)
@@ -312,9 +312,9 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
 
             # CAJA 2: CLIENTE
             pdf.set_fill_color(245, 247, 250) 
-            pdf.rect(108, y_cards, 92, 42, 'F') # ✂️ Altura reducida a 42
+            pdf.rect(108, y_cards, 92, 42, 'F') 
             pdf.set_fill_color(0, 150, 255) 
-            pdf.rect(108, y_cards, 2, 42, 'F') # ✂️ Altura ajustada a 42
+            pdf.rect(108, y_cards, 2, 42, 'F') 
 
             pdf.set_xy(114, y_cards + 5) 
             pdf.set_font('Arial', 'B', 9); pdf.set_text_color(15, 60, 140); pdf.cell(80, 5, "CLIENTE / PROYECTO:", ln=True)
@@ -328,12 +328,13 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             cliente_info += f"Proyecto: {proyecto.upper()}\nUbicación: {ubicacion.upper()}"
             pdf.multi_cell(82, 4.5, txt=cliente_info)
 
-            pdf.set_y(y_cards + 50) # ✂️ Espacio acortado después de las tarjetas
+            pdf.set_y(y_cards + 50) 
             
             pdf.set_font('Arial', 'B', 10); pdf.set_text_color(50, 50, 50); pdf.multi_cell(0, 5, txt="Nos permitimos poner a su amable consideración el siguiente presupuesto:"); pdf.ln(5)
 
             for z in zonas_data:
-                if pdf.get_y() > 215: pdf.add_page()
+                # 🚀 MEDIDOR INTELIGENTE: Calcula si cabe el bloque de la zona (aprox 45mm)
+                if pdf.get_y() + 45 > 275: pdf.add_page()
                 
                 precio_unitario_real = CATALOGO_SISTEMAS[z["sistema"]]["precio"]
                 subtotal_area_real = z["m2"] * precio_unitario_real
@@ -358,7 +359,8 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
                 pdf.set_text_color(50, 50, 50); pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, txt=CATALOGO_SISTEMAS[z["sistema"]]["espec"])
                 pdf.ln(4)
                 
-                if pdf.get_y() > 255: pdf.add_page()
+                # 🚀 MEDIDOR INTELIGENTE: Calcula si cabe la tabla de precios
+                if pdf.get_y() + 20 > 275: pdf.add_page()
                 
                 pdf.set_fill_color(240, 248, 255); pdf.set_text_color(15, 60, 140); pdf.set_font('Arial', 'B', 9); pdf.set_draw_color(200, 200, 200) 
                 pdf.cell(60, 6, "AREA (M2)", 'B', 0, 'C', True); pdf.cell(60, 6, "PRECIO UNIT.", 'B', 0, 'C', True); pdf.cell(70, 6, "SUBTOTAL", 'B', 1, 'C', True)
@@ -370,7 +372,11 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             iva = subtotal_neto * 0.16
             total_final = round(subtotal_neto + iva)
 
-            if pdf.get_y() > 210: pdf.add_page()
+            # 🚀 MEDIDOR INTELIGENTE: Calcula si cabe el bloque financiero total
+            espacio_finanzas = 30
+            if total_descuento > 0: espacio_finanzas += 10
+            if costo_extra > 0: espacio_finanzas += 6
+            if pdf.get_y() + espacio_finanzas > 275: pdf.add_page()
             
             if total_descuento > 0:
                 pdf.set_font('Arial', 'B', 10); pdf.set_text_color(50, 50, 50); pdf.cell(120, 6, "IMPORTE SISTEMAS:", border=0, align='R'); pdf.cell(70, 6, f"${subtotal_obras:,.2f}", border=0, align='R', ln=True)
@@ -390,6 +396,9 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             pdf.set_fill_color(200, 200, 200); pdf.rect(x_i + 60 + 1.5, y_i + 1.5, 130, 9, 'F')
             pdf.set_fill_color(15, 60, 140); pdf.set_text_color(255, 255, 255); pdf.set_font('Arial', 'B', 11); pdf.set_xy(x_i + 60, y_i)
             pdf.cell(60, 9, "INVERSIÓN TOTAL", border=0, fill=True, align='R'); pdf.set_fill_color(0, 150, 255); pdf.cell(70, 9, f"${total_final:,.2f} MXN", border=0, fill=True, align='C', ln=True)
+            
+            # 🚀 MEDIDOR INTELIGENTE: Calcula si caben los legales
+            if pdf.get_y() + 35 > 275: pdf.add_page()
             
             pdf.ln(8); pdf.set_text_color(15, 60, 140); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "Consideraciones Importantes:", ln=True)
             pdf.set_text_color(80, 80, 80); pdf.set_font('Arial', 'I', 8)
@@ -414,10 +423,16 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             pdf.set_font('Arial', 'I', 8); pdf.set_text_color(200, 30, 30); pdf.cell(60, 4, ""); pdf.cell(0, 4, "* Precio sujeto a cambios sin previo aviso.", ln=True); pdf.ln(5)
 
             if anotaciones_asesor:
+                # 🚀 MEDIDOR INTELIGENTE: Calcula si caben las anotaciones
+                espacio_anot = 15 + (len(anotaciones_asesor) // 50 * 5)
+                if pdf.get_y() + espacio_anot > 275: pdf.add_page()
+                
                 pdf.set_text_color(0, 150, 255); pdf.set_font('Arial', 'B', 10); pdf.cell(0, 6, "Anotaciones Especiales:", ln=True)
                 pdf.set_text_color(80, 80, 80); pdf.set_font('Arial', 'I', 9); pdf.multi_cell(0, 5, txt=anotaciones_asesor); pdf.ln(5)
 
-            if pdf.get_y() > 230: pdf.add_page()
+            # 🚀 MEDIDOR INTELIGENTE: Calcula si caben las firmas
+            if pdf.get_y() + 45 > 275: pdf.add_page()
+            
             y_base = pdf.get_y() + 10 
             if os.path.exists("logo_bbva.png"): pdf.image("logo_bbva.png", x=145, y=y_base, w=55)
             

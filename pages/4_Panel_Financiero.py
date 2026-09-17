@@ -127,7 +127,6 @@ if doc:
             costo_nomina = 0.0
             gastos_operativos = 0.0
             
-            # 🚀 VARIABLES PARA MATERIALES EXTRA Y DEVOLUCIONES
             total_devoluciones = 0.0
             total_ajustes = 0.0
             
@@ -153,7 +152,6 @@ if doc:
             total_gastado = costo_materiales + costo_nomina + costo_imss + gastos_operativos + gasto_financiamiento + gasto_administrativo
             utilidad_estimada = presupuesto_total - total_gastado
 
-            # 🚀 LECTURA DE LA BOLSA DE MANO DE OBRA
             bolsa_mano_obra = limpiar_monto(obtener_valor(datos_completos, ["BOLSA MANO DE OBRA", "BOLSA", "DESTAJO"], 0.0))
             saldo_mano_obra = bolsa_mano_obra - costo_nomina
 
@@ -215,7 +213,6 @@ if doc:
                 st.subheader("📥 Registrar Gasto Operativo / Nómina")
                 with st.form("form_gastos_fin"):
                     concepto = st.text_input("Concepto (o Nombre del Trabajador)", placeholder="Ej. Pago a Juan Pérez")
-                    # Quitamos Devolución y Ajuste de aquí para que no se revuelvan, se hacen abajo.
                     categoria_gasto = st.selectbox("Categoría de Cuenta", ["NÓMINA", "Costo de Material", "Viáticos y Comidas", "Gasolina y Fletes", "Herramientas y Equipos", "Otros Gastos Extras"])
                     monto_gasto = st.number_input("Monto de Gasto / Nómina ($ MXN)", min_value=0.0, step=500.0)
                     
@@ -231,7 +228,6 @@ if doc:
 
             with c_tabla:
                 st.subheader("📋 Historial Completo de Egresos")
-                # Filtramos para no mostrar devoluciones y ajustes aquí y no ensuciar la tabla operativa
                 gastos_operativos_lista = [g for g in gastos_filtrados if str(g.get("Categoría", "")).upper() not in ["DEVOLUCIÓN DE MATERIAL", "AJUSTE EXCEPCIONAL"]]
                 
                 if gastos_operativos_lista:
@@ -241,7 +237,7 @@ if doc:
                     st.info("No hay transacciones operativas registradas en esta obra.")
 
             # ==========================================
-            # 📦 SECCIÓN 4: CONTROL LOGÍSTICO Y MATERIALES
+            # 📦 SECCIÓN 4: CONTROL LOGÍSTICO (BLINDADO)
             # ==========================================
             st.markdown("---")
             st.subheader("📦 Radiografía de Materiales y Logística")
@@ -256,21 +252,25 @@ if doc:
                 insumos_iniciales = str(datos_completos.get(llave_insumo, "No especificado / Sin material asignado")) if llave_insumo else "No especificado en sistema"
                 st.info(f"📋 **Base Inicial (Desde Cotizador):**\n{insumos_iniciales}")
                 
-                # Tabla de Ajustes Excepcionales (Extras)
                 ajustes_mat = [g for g in gastos_filtrados if str(g.get("Categoría", "")).upper() == "AJUSTE EXCEPCIONAL"]
                 if ajustes_mat:
                     st.warning(f"⚠️ **Ajustes Excepcionales Autorizados (Costo Extra Acumulado: ${total_ajustes:,.2f}):**")
                     df_ajustes = pd.DataFrame(ajustes_mat)[["Fecha", "Concepto", "Monto ($)"]]
                     st.dataframe(df_ajustes, use_container_width=True, hide_index=True)
                 
-                # Formulario para autorizar un extra
                 with st.expander("➕ Autorizar Material Extra (Ajuste Excepcional)"):
                     with st.form("form_ajuste_ext"):
                         cant_ext = st.number_input("Cantidad Extra", min_value=1.0, step=1.0)
                         desc_ext = st.text_input("Nombre del Material Extra", placeholder="Ej. MASTER LASSER 4.0")
                         monto_ext = st.number_input("Costo del Material Extra ($)", min_value=0.0, step=100.0)
+                        
+                        # 🔒 CANDADO DE SEGURIDAD
+                        clave_auth_ext = st.text_input("🔑 Clave de Autorización (Dirección)", type="password")
+                        
                         if st.form_submit_button("Autorizar Extra"):
-                            if desc_ext and monto_ext > 0:
+                            if clave_auth_ext != "IMAC2026":
+                                st.error("🚫 Clave de autorización incorrecta. Movimiento denegado.")
+                            elif desc_ext and monto_ext > 0:
                                 concepto_ext = f"{int(cant_ext)}x {desc_ext.upper()}"
                                 fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
                                 hoja_gastos.append_row([fecha_actual, folio_seleccionado, concepto_ext, "AJUSTE EXCEPCIONAL", monto_ext])
@@ -284,15 +284,19 @@ if doc:
             with col_dev:
                 st.markdown("#### 2️⃣ Devoluciones a Bodega (Sobrantes)")
                 
-                # Formulario de Devolución Exclusivo
                 with st.form("form_devolucion"):
                     st.write("**Registrar Material Devuelto**")
                     cant_dev = st.number_input("Cantidad Devuelta", min_value=1.0, step=1.0)
                     desc_dev = st.text_input("Nombre del Material Devuelto", placeholder="Ej. IMPAC 5000")
                     monto_dev = st.number_input("Valor Recuperado ($)", min_value=0.0, step=100.0)
                     
+                    # 🔒 CANDADO DE SEGURIDAD
+                    clave_auth_dev = st.text_input("🔑 Clave de Autorización (Almacén/Dirección)", type="password")
+                    
                     if st.form_submit_button("♻️ Aplicar Devolución a Utilidad"):
-                        if desc_dev and monto_dev > 0:
+                        if clave_auth_dev != "IMAC2026":
+                            st.error("🚫 Clave de autorización incorrecta. Movimiento denegado.")
+                        elif desc_dev and monto_dev > 0:
                             concepto_dev = f"{int(cant_dev)}x {desc_dev.upper()}"
                             fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
                             hoja_gastos.append_row([fecha_actual, folio_seleccionado, concepto_dev, "DEVOLUCIÓN DE MATERIAL", monto_dev])
@@ -302,7 +306,6 @@ if doc:
                         else:
                             st.error("Llenar descripción y monto válido.")
                 
-                # Tabla de Devoluciones
                 devoluciones_mat = [g for g in gastos_filtrados if str(g.get("Categoría", "")).upper() == "DEVOLUCIÓN DE MATERIAL"]
                 if devoluciones_mat:
                     st.success(f"💰 **Historial de Devoluciones (Total: ${total_devoluciones:,.2f}):**")

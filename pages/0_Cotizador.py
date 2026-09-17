@@ -106,16 +106,16 @@ class PDF(FPDF):
         # 1. Fondo limpio con la marca de agua
         if os.path.exists("marca_agua.jpg"): self.image("marca_agua.jpg", x=0, y=0, w=210, h=297)
         
-        # 2. Logo de TARC pegado a la izquierda (x=4) para alineación perfecta
-        if os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=4, y=10, w=135) 
-        elif os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=4, y=10, w=135)
+        # 2. Logo de TARC PEGADO AL TECHO (y=0) y a la izquierda (x=4)
+        if os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=4, y=0, w=135) 
+        elif os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=4, y=0, w=135)
         else:
             self.set_font('Arial', 'B', 16)
             self.set_text_color(15, 60, 140)
             self.cell(0, 10, 'TARC S.A. DE C.V.', ln=True, align='L')
             
-        # 3. Ajuste INTELIGENTE para la Página 2 y posteriores (evita que se encime con el logo)
-        self.set_y(62)
+        # 3. Ajuste INTELIGENTE para la Página 2 y posteriores
+        self.set_y(52)
 
 @st.cache_resource
 def conectar_sheets():
@@ -287,14 +287,14 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             pdf.set_auto_page_break(auto=True, margin=20)
             pdf.add_page()
             
-            # --- 🚀 FOLIO Y FECHA ALINEADOS CON EL LOGO ---
-            pdf.set_y(24) 
+            # --- 🚀 FOLIO Y FECHA ALINEADOS CON EL LOGO (Subidos a y=14) ---
+            pdf.set_y(14) 
             pdf.set_font('Arial', 'B', 12); pdf.set_text_color(200, 30, 30); pdf.cell(0, 5, f"FOLIO: {folio_actual}", ln=True, align='R')
             fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
             pdf.set_font('Arial', 'I', 10); pdf.set_text_color(100, 100, 100); pdf.cell(0, 5, f'Veracruz, Ver. a {fecha_hoy}', ln=True, align='R')
             
-            # --- 🚀 NUEVO DISEÑO FLAT ACCENT CON FONDO GRIS Y MEJOR ESPACIADO ---
-            pdf.set_y(62) # Bajamos las tarjetas para que se mantenga limpio el espacio
+            # --- 🚀 NUEVO DISEÑO FLAT ACCENT CON FONDO GRIS ---
+            pdf.set_y(52) # Subimos las tarjetas también
             y_cards = pdf.get_y()
 
             # CAJA 1: EMISOR (TARC)
@@ -333,7 +333,7 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             pdf.set_font('Arial', 'B', 10); pdf.set_text_color(50, 50, 50); pdf.multi_cell(0, 5, txt="Nos permitimos poner a su amable consideración el siguiente presupuesto:"); pdf.ln(5)
 
             for z in zonas_data:
-                # 🚀 MEDIDOR INTELIGENTE: Calcula si cabe el bloque de la zona (aprox 45mm)
+                # 🚀 MEDIDOR INTELIGENTE: Calcula si cabe el bloque de la zona
                 if pdf.get_y() + 45 > 275: pdf.add_page()
                 
                 precio_unitario_real = CATALOGO_SISTEMAS[z["sistema"]]["precio"]
@@ -352,11 +352,13 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
                     pdf.cell(190, 6, z["sistema"], border=1, ln=True)
                 
                 pdf.ln(2)
+                # Descripción General (Se mantiene en Tamaño 9)
                 pdf.set_font('Arial', '', 9); pdf.set_text_color(50, 50, 50)
                 pdf.multi_cell(0, 4.5, txt=CATALOGO_SISTEMAS[z["sistema"]]["desc"])
                 
-                pdf.ln(3); pdf.set_font('Arial', 'B', 9); pdf.set_text_color(0, 150, 255); pdf.cell(0, 5, "Especificaciones Técnicas:", ln=True)
-                pdf.set_text_color(50, 50, 50); pdf.set_font('Arial', '', 9); pdf.multi_cell(0, 4, txt=CATALOGO_SISTEMAS[z["sistema"]]["espec"])
+                # 🚀 JERARQUÍA VISUAL: Especificaciones en Tamaño 8 y compactas
+                pdf.ln(3); pdf.set_font('Arial', 'B', 8.5); pdf.set_text_color(0, 150, 255); pdf.cell(0, 5, "Especificaciones Técnicas:", ln=True)
+                pdf.set_text_color(50, 50, 50); pdf.set_font('Arial', '', 8); pdf.multi_cell(0, 3.8, txt=CATALOGO_SISTEMAS[z["sistema"]]["espec"])
                 pdf.ln(4)
                 
                 # 🚀 MEDIDOR INTELIGENTE: Calcula si cabe la tabla de precios
@@ -372,7 +374,7 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             iva = subtotal_neto * 0.16
             total_final = round(subtotal_neto + iva)
 
-            # 🚀 MEDIDOR INTELIGENTE: Calcula si cabe el bloque financiero total
+            # 🚀 MEDIDOR INTELIGENTE: Calcula si cabe el bloque financiero
             espacio_finanzas = 30
             if total_descuento > 0: espacio_finanzas += 10
             if costo_extra > 0: espacio_finanzas += 6

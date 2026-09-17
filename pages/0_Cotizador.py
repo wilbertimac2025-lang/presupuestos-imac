@@ -106,7 +106,7 @@ class PDF(FPDF):
         # 1. Fondo limpio con la marca de agua
         if os.path.exists("marca_agua.jpg"): self.image("marca_agua.jpg", x=0, y=0, w=210, h=297)
         
-        # 2. Logo de TARC empujado MÁS a la izquierda (x=4) al límite seguro de impresión
+        # 2. Logo de TARC pegado a la izquierda (x=4) para alineación perfecta
         if os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=4, y=10, w=135) 
         elif os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=4, y=10, w=135)
         else:
@@ -287,7 +287,7 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             pdf.set_auto_page_break(auto=True, margin=20)
             pdf.add_page()
             
-            # --- 🚀 FOLIO Y FECHA ALINEADOS ---
+            # --- 🚀 FOLIO Y FECHA ALINEADOS CON EL LOGO ---
             pdf.set_y(24) 
             pdf.set_font('Arial', 'B', 12); pdf.set_text_color(200, 30, 30); pdf.cell(0, 5, f"FOLIO: {folio_actual}", ln=True, align='R')
             fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
@@ -298,12 +298,12 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             y_cards = pdf.get_y()
 
             # CAJA 1: EMISOR (TARC)
-            pdf.set_fill_color(245, 247, 250) # Fondo gris elegante restaurado
-            pdf.rect(10, y_cards, 92, 48, 'F') 
-            pdf.set_fill_color(15, 60, 140) # Barra Azul corporativa
-            pdf.rect(10, y_cards, 2, 48, 'F')
+            pdf.set_fill_color(245, 247, 250) 
+            pdf.rect(10, y_cards, 92, 42, 'F') # ✂️ Altura reducida a 42 para quitar el "sótano"
+            pdf.set_fill_color(15, 60, 140) 
+            pdf.rect(10, y_cards, 2, 42, 'F') # ✂️ Altura ajustada a 42
 
-            pdf.set_xy(16, y_cards + 5) # Mayor padding interno para que no se vea "junto"
+            pdf.set_xy(16, y_cards + 5) 
             pdf.set_font('Arial', 'B', 9); pdf.set_text_color(15, 60, 140); pdf.cell(80, 5, "EMISOR:", ln=True)
             pdf.set_x(16); pdf.set_font('Arial', 'B', 10); pdf.set_text_color(50, 50, 50); pdf.cell(80, 6, "TARC S.A. DE C.V. (GRUPO IMAC)", ln=True)
             pdf.set_x(16); pdf.set_font('Arial', '', 8); pdf.set_text_color(100, 100, 100)
@@ -311,12 +311,12 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             pdf.set_x(16); pdf.set_font('Arial', 'B', 8); pdf.set_text_color(0, 150, 255); pdf.cell(80, 6, f"ASESOR: {asesor.upper()}", ln=True)
 
             # CAJA 2: CLIENTE
-            pdf.set_fill_color(245, 247, 250) # Fondo gris elegante restaurado
-            pdf.rect(108, y_cards, 92, 48, 'F')
-            pdf.set_fill_color(0, 150, 255) # Barra Celeste para contraste
-            pdf.rect(108, y_cards, 2, 48, 'F')
+            pdf.set_fill_color(245, 247, 250) 
+            pdf.rect(108, y_cards, 92, 42, 'F') # ✂️ Altura reducida a 42
+            pdf.set_fill_color(0, 150, 255) 
+            pdf.rect(108, y_cards, 2, 42, 'F') # ✂️ Altura ajustada a 42
 
-            pdf.set_xy(114, y_cards + 5) # Padding interno
+            pdf.set_xy(114, y_cards + 5) 
             pdf.set_font('Arial', 'B', 9); pdf.set_text_color(15, 60, 140); pdf.cell(80, 5, "CLIENTE / PROYECTO:", ln=True)
             pdf.set_x(114); pdf.set_font('Arial', 'B', 10); pdf.set_text_color(50, 50, 50); pdf.cell(80, 6, f"{cliente.upper()}", ln=True)
             if compania:
@@ -328,7 +328,7 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             cliente_info += f"Proyecto: {proyecto.upper()}\nUbicación: {ubicacion.upper()}"
             pdf.multi_cell(82, 4.5, txt=cliente_info)
 
-            pdf.set_y(y_cards + 56) # Espacio después de las tarjetas
+            pdf.set_y(y_cards + 50) # ✂️ Espacio acortado después de las tarjetas
             
             pdf.set_font('Arial', 'B', 10); pdf.set_text_color(50, 50, 50); pdf.multi_cell(0, 5, txt="Nos permitimos poner a su amable consideración el siguiente presupuesto:"); pdf.ln(5)
 

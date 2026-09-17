@@ -106,16 +106,16 @@ class PDF(FPDF):
         # 1. Fondo limpio con la marca de agua
         if os.path.exists("marca_agua.jpg"): self.image("marca_agua.jpg", x=0, y=0, w=210, h=297)
         
-        # 2. Logo de TARC pegado a la izquierda (x=8) para alineación perfecta
-        if os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=8, y=10, w=135) 
-        elif os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=8, y=10, w=135)
+        # 2. Logo de TARC empujado MÁS a la izquierda (x=4) al límite seguro de impresión
+        if os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=4, y=10, w=135) 
+        elif os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=4, y=10, w=135)
         else:
             self.set_font('Arial', 'B', 16)
             self.set_text_color(15, 60, 140)
             self.cell(0, 10, 'TARC S.A. DE C.V.', ln=True, align='L')
             
         # 3. Ajuste INTELIGENTE para la Página 2 y posteriores (evita que se encime con el logo)
-        self.set_y(48)
+        self.set_y(62)
 
 @st.cache_resource
 def conectar_sheets():
@@ -287,14 +287,14 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             pdf.set_auto_page_break(auto=True, margin=20)
             pdf.add_page()
             
-            # --- 🚀 FOLIO Y FECHA ALINEADOS CON EL LOGO ---
-            pdf.set_y(15) 
+            # --- 🚀 FOLIO Y FECHA ALINEADOS ---
+            pdf.set_y(24) 
             pdf.set_font('Arial', 'B', 12); pdf.set_text_color(200, 30, 30); pdf.cell(0, 5, f"FOLIO: {folio_actual}", ln=True, align='R')
             fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
             pdf.set_font('Arial', 'I', 10); pdf.set_text_color(100, 100, 100); pdf.cell(0, 5, f'Veracruz, Ver. a {fecha_hoy}', ln=True, align='R')
             
             # --- 🚀 NUEVO DISEÑO FLAT ACCENT CON FONDO GRIS Y MEJOR ESPACIADO ---
-            pdf.set_y(52) # Damos un poco más de espacio debajo del logo
+            pdf.set_y(62) # Bajamos las tarjetas para que se mantenga limpio el espacio
             y_cards = pdf.get_y()
 
             # CAJA 1: EMISOR (TARC)

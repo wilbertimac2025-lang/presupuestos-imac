@@ -307,7 +307,7 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             pdf.set_font('Arial', 'B', 9); pdf.set_text_color(15, 60, 140); pdf.cell(80, 5, "EMISOR:", ln=True)
             pdf.set_x(16); pdf.set_font('Arial', 'B', 10); pdf.set_text_color(50, 50, 50); pdf.cell(80, 6, "TARC S.A. DE C.V. (GRUPO IMAC)", ln=True)
             pdf.set_x(16); pdf.set_font('Arial', '', 8); pdf.set_text_color(100, 100, 100)
-            pdf.multi_cell(80, 4.5, txt="BLVD. MIGUEL ALEMÁN 306\nCOL. CENTRO, BOCA DEL RÍO, VER.\nTEL. (229) 935 4525 | 229 337 1080\ncomercial@grupo-imac.com")
+            pdf.multi_cell(80, 4.5, txt="BLVD. MIGUEL ALEMÁN 306\nCOL. CENTRO, BOCA DEL RÍO, VER.\nTEL. (229) 935 4525 | 229 337 1080\nrh@grupo-imac.com")
             pdf.set_x(16); pdf.set_font('Arial', 'B', 8); pdf.set_text_color(0, 150, 255); pdf.cell(80, 6, f"ASESOR: {asesor.upper()}", ln=True)
 
             # CAJA 2: CLIENTE

@@ -100,21 +100,26 @@ def obtener_material_base(sistema):
         if "KRIPTOFLEX" in sis: return "KRIPTOFLEX 3 AÑOS FIBRATADO"
     return sistema
 
+# --- 🚀 CIRUGÍA ESTÉTICA DEL DISEÑO PDF ---
 class PDF(FPDF):
     def header(self):
-        # Fondo limpio con la marca de agua
+        # 1. Fondo limpio con la marca de agua
         if os.path.exists("marca_agua.jpg"): self.image("marca_agua.jpg", x=0, y=0, w=210, h=297)
         
-        # Logo de TARC Gigante y Dominante (w=135)
-        if os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=10, y=10, w=135) 
-        elif os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=10, y=10, w=135)
+        # 2. La Franja Superior Elegante (Azul corporativo)
+        self.set_fill_color(15, 60, 140)
+        self.rect(0, 0, 210, 4, 'F')
+        
+        # 3. Logo de TARC Gigante y Dominante (Aumentado a w=140)
+        if os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=10, y=8, w=140) 
+        elif os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=10, y=8, w=140)
         else:
             self.set_font('Arial', 'B', 16)
             self.set_text_color(15, 60, 140)
             self.cell(0, 10, 'TARC S.A. DE C.V.', ln=True, align='L')
-        self.set_y(40)
-
-    # Nota: Se eliminó la función footer() por completo para evitar texto duplicado con la marca de agua
+            
+        # 4. Ajuste INTELIGENTE para la Página 2 y posteriores (evita que se encime con el logo)
+        self.set_y(48)
 
 @st.cache_resource
 def conectar_sheets():
@@ -286,46 +291,48 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             pdf.set_auto_page_break(auto=True, margin=20)
             pdf.add_page()
             
-            # --- 🚀 FOLIO Y FECHA INTOCABLES A LA DERECHA ---
+            # --- 🚀 FOLIO Y FECHA ALINEADOS CON EL LOGO ---
+            pdf.set_y(15) 
             pdf.set_font('Arial', 'B', 12); pdf.set_text_color(200, 30, 30); pdf.cell(0, 5, f"FOLIO: {folio_actual}", ln=True, align='R')
             fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
-            pdf.set_font('Arial', 'I', 10); pdf.set_text_color(100, 100, 100); pdf.cell(0, 5, f'Veracruz, Ver. a {fecha_hoy}', ln=True, align='R'); pdf.ln(5)
+            pdf.set_font('Arial', 'I', 10); pdf.set_text_color(100, 100, 100); pdf.cell(0, 5, f'Veracruz, Ver. a {fecha_hoy}', ln=True, align='R')
             
-            # --- 🚀 NUEVO DISEÑO FLAT ACCENT (SIN BORDES CUADRADOS) ---
+            # --- 🚀 NUEVO DISEÑO FLAT ACCENT CON FONDO GRIS Y MEJOR ESPACIADO ---
+            pdf.set_y(52) # Damos un poco más de espacio debajo del logo
             y_cards = pdf.get_y()
 
             # CAJA 1: EMISOR (TARC)
-            pdf.set_fill_color(248, 250, 252) # Fondo gris ultra claro (casi blanco)
-            pdf.rect(10, y_cards, 90, 42, 'F') 
+            pdf.set_fill_color(245, 247, 250) # Fondo gris elegante restaurado
+            pdf.rect(10, y_cards, 92, 48, 'F') 
             pdf.set_fill_color(15, 60, 140) # Barra Azul corporativa
-            pdf.rect(10, y_cards, 1.5, 42, 'F')
+            pdf.rect(10, y_cards, 2, 48, 'F')
 
-            pdf.set_xy(15, y_cards + 4)
+            pdf.set_xy(16, y_cards + 5) # Mayor padding interno para que no se vea "junto"
             pdf.set_font('Arial', 'B', 9); pdf.set_text_color(15, 60, 140); pdf.cell(80, 5, "EMISOR:", ln=True)
-            pdf.set_x(15); pdf.set_font('Arial', 'B', 10); pdf.set_text_color(50, 50, 50); pdf.cell(80, 5, "TARC S.A. DE C.V. (GRUPO IMAC)", ln=True)
-            pdf.set_x(15); pdf.set_font('Arial', '', 8); pdf.set_text_color(100, 100, 100)
-            pdf.multi_cell(80, 4, txt="BLVD. MIGUEL ALEMÁN 306\nCOL. CENTRO, BOCA DEL RÍO, VER.\nTEL. (229) 935 4525 | 229 337 1080\ncomercial@grupo-imac.com")
-            pdf.set_x(15); pdf.set_font('Arial', 'B', 8); pdf.set_text_color(0, 150, 255); pdf.cell(80, 5, f"ASESOR: {asesor.upper()}", ln=True)
+            pdf.set_x(16); pdf.set_font('Arial', 'B', 10); pdf.set_text_color(50, 50, 50); pdf.cell(80, 6, "TARC S.A. DE C.V. (GRUPO IMAC)", ln=True)
+            pdf.set_x(16); pdf.set_font('Arial', '', 8); pdf.set_text_color(100, 100, 100)
+            pdf.multi_cell(80, 4.5, txt="BLVD. MIGUEL ALEMÁN 306\nCOL. CENTRO, BOCA DEL RÍO, VER.\nTEL. (229) 935 4525 | 229 337 1080\ncomercial@grupo-imac.com")
+            pdf.set_x(16); pdf.set_font('Arial', 'B', 8); pdf.set_text_color(0, 150, 255); pdf.cell(80, 6, f"ASESOR: {asesor.upper()}", ln=True)
 
             # CAJA 2: CLIENTE
-            pdf.set_fill_color(248, 250, 252)
-            pdf.rect(110, y_cards, 90, 42, 'F')
+            pdf.set_fill_color(245, 247, 250) # Fondo gris elegante restaurado
+            pdf.rect(108, y_cards, 92, 48, 'F')
             pdf.set_fill_color(0, 150, 255) # Barra Celeste para contraste
-            pdf.rect(110, y_cards, 1.5, 42, 'F')
+            pdf.rect(108, y_cards, 2, 48, 'F')
 
-            pdf.set_xy(115, y_cards + 4)
+            pdf.set_xy(114, y_cards + 5) # Padding interno
             pdf.set_font('Arial', 'B', 9); pdf.set_text_color(15, 60, 140); pdf.cell(80, 5, "CLIENTE / PROYECTO:", ln=True)
-            pdf.set_x(115); pdf.set_font('Arial', 'B', 10); pdf.set_text_color(50, 50, 50); pdf.cell(80, 5, f"{cliente.upper()}", ln=True)
+            pdf.set_x(114); pdf.set_font('Arial', 'B', 10); pdf.set_text_color(50, 50, 50); pdf.cell(80, 6, f"{cliente.upper()}", ln=True)
             if compania:
-                pdf.set_x(115); pdf.set_font('Arial', 'B', 9); pdf.set_text_color(0, 150, 255); pdf.cell(80, 4, f"{compania.upper()}", ln=True)
-            pdf.set_x(115); pdf.set_font('Arial', '', 8); pdf.set_text_color(100, 100, 100)
+                pdf.set_x(114); pdf.set_font('Arial', 'B', 9); pdf.set_text_color(0, 150, 255); pdf.cell(80, 5, f"{compania.upper()}", ln=True)
+            pdf.set_x(114); pdf.set_font('Arial', '', 8); pdf.set_text_color(100, 100, 100)
             cliente_info = ""
             if telefono: cliente_info += f"Tel: {telefono}\n"
             if correo_cliente: cliente_info += f"Email: {correo_cliente}\n"
             cliente_info += f"Proyecto: {proyecto.upper()}\nUbicación: {ubicacion.upper()}"
-            pdf.multi_cell(80, 4, txt=cliente_info)
+            pdf.multi_cell(82, 4.5, txt=cliente_info)
 
-            pdf.set_y(y_cards + 48)
+            pdf.set_y(y_cards + 56) # Espacio después de las tarjetas
             
             pdf.set_font('Arial', 'B', 10); pdf.set_text_color(50, 50, 50); pdf.multi_cell(0, 5, txt="Nos permitimos poner a su amable consideración el siguiente presupuesto:"); pdf.ln(5)
 

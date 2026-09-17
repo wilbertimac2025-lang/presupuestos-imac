@@ -106,9 +106,9 @@ class PDF(FPDF):
         # 1. Fondo limpio con la marca de agua
         if os.path.exists("marca_agua.jpg"): self.image("marca_agua.jpg", x=0, y=0, w=210, h=297)
         
-        # 2. Logo de TARC PEGADO AL TECHO (y=0) y a la izquierda (x=4)
-        if os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=4, y=0, w=135) 
-        elif os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=4, y=0, w=135)
+        # 2. 🚀 TRUCO: Coordenadas negativas (y=-3) para ocultar el margen blanco de tu imagen original
+        if os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=0, y=-3, w=140) 
+        elif os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=0, y=-3, w=140)
         else:
             self.set_font('Arial', 'B', 16)
             self.set_text_color(15, 60, 140)
@@ -287,14 +287,14 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             pdf.set_auto_page_break(auto=True, margin=20)
             pdf.add_page()
             
-            # --- 🚀 FOLIO Y FECHA ALINEADOS CON EL LOGO (Subidos a y=14) ---
-            pdf.set_y(14) 
+            # --- 🚀 FOLIO Y FECHA ALINEADOS CON EL LOGO ---
+            pdf.set_y(12) # Ajustado al nuevo tamaño del logo
             pdf.set_font('Arial', 'B', 12); pdf.set_text_color(200, 30, 30); pdf.cell(0, 5, f"FOLIO: {folio_actual}", ln=True, align='R')
             fecha_hoy = datetime.datetime.now().strftime("%d/%m/%Y")
             pdf.set_font('Arial', 'I', 10); pdf.set_text_color(100, 100, 100); pdf.cell(0, 5, f'Veracruz, Ver. a {fecha_hoy}', ln=True, align='R')
             
             # --- 🚀 NUEVO DISEÑO FLAT ACCENT CON FONDO GRIS ---
-            pdf.set_y(52) # Subimos las tarjetas también
+            pdf.set_y(52)
             y_cards = pdf.get_y()
 
             # CAJA 1: EMISOR (TARC)
@@ -307,7 +307,13 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             pdf.set_font('Arial', 'B', 9); pdf.set_text_color(15, 60, 140); pdf.cell(80, 5, "EMISOR:", ln=True)
             pdf.set_x(16); pdf.set_font('Arial', 'B', 10); pdf.set_text_color(50, 50, 50); pdf.cell(80, 6, "TARC S.A. DE C.V. (GRUPO IMAC)", ln=True)
             pdf.set_x(16); pdf.set_font('Arial', '', 8); pdf.set_text_color(100, 100, 100)
-            pdf.multi_cell(80, 4.5, txt="BLVD. MIGUEL ALEMÁN 306\nCOL. CENTRO, BOCA DEL RÍO, VER.\nTEL. (229) 935 4525 | 229 337 1080\nrh@grupo-imac.com")
+            
+            if tipo_obra == "LOCAL":
+                texto_emisor = "BLVD. MIGUEL ALEMÁN 759\nCOL. CENTRO, VERACRUZ, VER.\nTEL. (229) 935 3940 | 229 337 1080\ncomercial@grupo-imac.com"
+            else:
+                texto_emisor = "BLVD. MIGUEL ALEMÁN 306\nCOL. CENTRO, BOCA DEL RÍO, VER.\nTEL. (229) 935 4525 | 229 337 1080\ncomercial@grupo-imac.com"
+                
+            pdf.multi_cell(80, 4.5, txt=texto_emisor)
             pdf.set_x(16); pdf.set_font('Arial', 'B', 8); pdf.set_text_color(0, 150, 255); pdf.cell(80, 6, f"ASESOR: {asesor.upper()}", ln=True)
 
             # CAJA 2: CLIENTE
@@ -333,7 +339,7 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             pdf.set_font('Arial', 'B', 10); pdf.set_text_color(50, 50, 50); pdf.multi_cell(0, 5, txt="Nos permitimos poner a su amable consideración el siguiente presupuesto:"); pdf.ln(5)
 
             for z in zonas_data:
-                # 🚀 MEDIDOR INTELIGENTE: Calcula si cabe el bloque de la zona
+                # 🚀 MEDIDOR INTELIGENTE
                 if pdf.get_y() + 45 > 275: pdf.add_page()
                 
                 precio_unitario_real = CATALOGO_SISTEMAS[z["sistema"]]["precio"]
@@ -352,16 +358,15 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
                     pdf.cell(190, 6, z["sistema"], border=1, ln=True)
                 
                 pdf.ln(2)
-                # Descripción General (Se mantiene en Tamaño 9)
+                # 🚀 JERARQUÍA VISUAL 1: Descripción General (Tamaño 9, espaciado normal)
                 pdf.set_font('Arial', '', 9); pdf.set_text_color(50, 50, 50)
                 pdf.multi_cell(0, 4.5, txt=CATALOGO_SISTEMAS[z["sistema"]]["desc"])
                 
-                # 🚀 JERARQUÍA VISUAL: Especificaciones en Tamaño 8 y compactas
-                pdf.ln(3); pdf.set_font('Arial', 'B', 8.5); pdf.set_text_color(0, 150, 255); pdf.cell(0, 5, "Especificaciones Técnicas:", ln=True)
-                pdf.set_text_color(50, 50, 50); pdf.set_font('Arial', '', 8); pdf.multi_cell(0, 3.8, txt=CATALOGO_SISTEMAS[z["sistema"]]["espec"])
+                # 🚀 JERARQUÍA VISUAL 2: Especificaciones (Tamaño 7.5, color tenue, más compactas)
+                pdf.ln(2); pdf.set_font('Arial', 'B', 8); pdf.set_text_color(0, 150, 255); pdf.cell(0, 4, "Especificaciones Técnicas:", ln=True)
+                pdf.set_text_color(100, 100, 100); pdf.set_font('Arial', '', 7.5); pdf.multi_cell(0, 3.5, txt=CATALOGO_SISTEMAS[z["sistema"]]["espec"])
                 pdf.ln(4)
                 
-                # 🚀 MEDIDOR INTELIGENTE: Calcula si cabe la tabla de precios
                 if pdf.get_y() + 20 > 275: pdf.add_page()
                 
                 pdf.set_fill_color(240, 248, 255); pdf.set_text_color(15, 60, 140); pdf.set_font('Arial', 'B', 9); pdf.set_draw_color(200, 200, 200) 
@@ -374,7 +379,6 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             iva = subtotal_neto * 0.16
             total_final = round(subtotal_neto + iva)
 
-            # 🚀 MEDIDOR INTELIGENTE: Calcula si cabe el bloque financiero
             espacio_finanzas = 30
             if total_descuento > 0: espacio_finanzas += 10
             if costo_extra > 0: espacio_finanzas += 6
@@ -399,7 +403,6 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             pdf.set_fill_color(15, 60, 140); pdf.set_text_color(255, 255, 255); pdf.set_font('Arial', 'B', 11); pdf.set_xy(x_i + 60, y_i)
             pdf.cell(60, 9, "INVERSIÓN TOTAL", border=0, fill=True, align='R'); pdf.set_fill_color(0, 150, 255); pdf.cell(70, 9, f"${total_final:,.2f} MXN", border=0, fill=True, align='C', ln=True)
             
-            # 🚀 MEDIDOR INTELIGENTE: Calcula si caben los legales
             if pdf.get_y() + 35 > 275: pdf.add_page()
             
             pdf.ln(8); pdf.set_text_color(15, 60, 140); pdf.set_font('Arial', 'B', 9); pdf.cell(0, 5, "Consideraciones Importantes:", ln=True)
@@ -425,14 +428,12 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             pdf.set_font('Arial', 'I', 8); pdf.set_text_color(200, 30, 30); pdf.cell(60, 4, ""); pdf.cell(0, 4, "* Precio sujeto a cambios sin previo aviso.", ln=True); pdf.ln(5)
 
             if anotaciones_asesor:
-                # 🚀 MEDIDOR INTELIGENTE: Calcula si caben las anotaciones
                 espacio_anot = 15 + (len(anotaciones_asesor) // 50 * 5)
                 if pdf.get_y() + espacio_anot > 275: pdf.add_page()
                 
                 pdf.set_text_color(0, 150, 255); pdf.set_font('Arial', 'B', 10); pdf.cell(0, 6, "Anotaciones Especiales:", ln=True)
                 pdf.set_text_color(80, 80, 80); pdf.set_font('Arial', 'I', 9); pdf.multi_cell(0, 5, txt=anotaciones_asesor); pdf.ln(5)
 
-            # 🚀 MEDIDOR INTELIGENTE: Calcula si caben las firmas
             if pdf.get_y() + 45 > 275: pdf.add_page()
             
             y_base = pdf.get_y() + 10 

@@ -106,11 +106,7 @@ class PDF(FPDF):
         # 1. Fondo limpio con la marca de agua
         if os.path.exists("marca_agua.jpg"): self.image("marca_agua.jpg", x=0, y=0, w=210, h=297)
         
-        # 2. La Franja Superior Elegante (Azul corporativo)
-        self.set_fill_color(15, 60, 140)
-        self.rect(0, 0, 210, 4, 'F')
-        
-        # 3. Logo de TARC Gigante y Dominante (Aumentado a w=140)
+        # 2. Logo de TARC Gigante y Dominante (Aumentado a w=140)
         if os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=10, y=8, w=140) 
         elif os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=10, y=8, w=140)
         else:
@@ -118,7 +114,7 @@ class PDF(FPDF):
             self.set_text_color(15, 60, 140)
             self.cell(0, 10, 'TARC S.A. DE C.V.', ln=True, align='L')
             
-        # 4. Ajuste INTELIGENTE para la Página 2 y posteriores (evita que se encime con el logo)
+        # 3. Ajuste INTELIGENTE para la Página 2 y posteriores (evita que se encime con el logo)
         self.set_y(48)
 
 @st.cache_resource

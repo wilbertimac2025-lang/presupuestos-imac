@@ -106,9 +106,9 @@ class PDF(FPDF):
         # 1. Fondo limpio con la marca de agua
         if os.path.exists("marca_agua.jpg"): self.image("marca_agua.jpg", x=0, y=0, w=210, h=297)
         
-        # 2. Logo de TARC Gigante y Dominante (Aumentado a w=140)
-        if os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=10, y=8, w=140) 
-        elif os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=10, y=8, w=140)
+        # 2. Logo de TARC pegado a la izquierda (x=8) para alineación perfecta
+        if os.path.exists("logo_tarc.png"): self.image("logo_tarc.png", x=8, y=10, w=135) 
+        elif os.path.exists("logo_tarc.jpg"): self.image("logo_tarc.jpg", x=8, y=10, w=135)
         else:
             self.set_font('Arial', 'B', 16)
             self.set_text_color(15, 60, 140)

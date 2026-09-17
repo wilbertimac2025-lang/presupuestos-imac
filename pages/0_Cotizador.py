@@ -309,9 +309,9 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
             pdf.set_x(16); pdf.set_font('Arial', '', 8); pdf.set_text_color(100, 100, 100)
             
             if tipo_obra == "LOCAL":
-                texto_emisor = "BLVD. MIGUEL ALEMÁN 759\nCOL. CENTRO, VERACRUZ, VER.\nTEL. (229) 935 3940 | 229 337 1080\ncomercial@grupo-imac.com"
+                texto_emisor = "BLVD. MIGUEL ALEMÁN 759\nCOL. CENTRO, VERACRUZ, VER.\nTEL. (229) 935 3940 | 229 337 1080\nrh@grupo-imac.com"
             else:
-                texto_emisor = "BLVD. MIGUEL ALEMÁN 306\nCOL. CENTRO, BOCA DEL RÍO, VER.\nTEL. (229) 935 4525 | 229 337 1080\ncomercial@grupo-imac.com"
+                texto_emisor = "BLVD. MIGUEL ALEMÁN 306\nCOL. CENTRO, BOCA DEL RÍO, VER.\nTEL. (229) 935 4525 | 229 337 2062\nop@grupo-imac.com"
                 
             pdf.multi_cell(80, 4.5, txt=texto_emisor)
             pdf.set_x(16); pdf.set_font('Arial', 'B', 8); pdf.set_text_color(0, 150, 255); pdf.cell(80, 6, f"ASESOR: {asesor.upper()}", ln=True)

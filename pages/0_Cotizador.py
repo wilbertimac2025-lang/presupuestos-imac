@@ -450,7 +450,7 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
                 pdf.cell(0, 4, 'TEL. (000) 000 00 00 | correo_foraneo@grupo-imac.com', ln=True)
             
             pdf.set_y(y_base + 40)
-            if os.path.exists("footer_marcas.png"):
+            if os.path.exists("footer_marcas_v2.png"):
                 if pdf.get_y() > 250: pdf.add_page()
                 pdf.image("footer_marcas.png", x=10, y=pdf.get_y(), w=190)
 

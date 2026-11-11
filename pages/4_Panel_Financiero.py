@@ -35,6 +35,56 @@ def registrar_bitacora(doc, modulo, accion):
     except Exception:
         pass 
 
+# 🔄 FUNCIÓN DE IMPACTO TOTAL EN LÍMITES Y ALMACÉN FÍSICO
+def sincronizar_inventario_y_limites(doc, folio, material, cantidad_fraccion, unidad, tipo_movimiento, corte=""):
+    if not doc:
+        return
+    # 1. Impacto en Limites_Materiales (Trazabilidad física por obra)
+    try:
+        hoja_limites = doc.worksheet("Limites_Materiales")
+        signo = "+" if tipo_movimiento == "EXTRA" else "-"
+        cant_fmt = f"{signo}{cantidad_fraccion:g} {unidad}"
+        etiqueta_estatus = f"{tipo_movimiento} {corte}".strip()
+        hoja_limites.append_row([folio, material.upper(), cant_fmt, etiqueta_estatus])
+    except Exception:
+        pass
+
+    # 2. Impacto en Almacén / Inventario General (si existe la pestaña en el Excel)
+    for nombre_hoja_inv in ["Inventario", "Almacen", "Almacén", "Bodega"]:
+        try:
+            hoja_inv = doc.worksheet(nombre_hoja_inv)
+            filas_inv = hoja_inv.get_all_values()
+            for idx, fila in enumerate(filas_inv):
+                if idx == 0:
+                    continue
+                if len(fila) >= 2 and material.upper() in str(fila[0]).upper():
+                    stock_actual = limpiar_monto(fila[1])
+                    if tipo_movimiento == "DEVOLUCION":
+                        nuevo_stock = stock_actual + float(cantidad_fraccion)
+                    else:
+                        nuevo_stock = stock_actual - float(cantidad_fraccion)
+                    hoja_inv.update_cell(idx + 1, 2, round(nuevo_stock, 2))
+                    break
+            break
+        except Exception:
+            continue
+
+def obtener_materiales_del_folio(doc, folio):
+    materiales = []
+    if not doc:
+        return materiales
+    try:
+        hoja_limites = doc.worksheet("Limites_Materiales")
+        filas = hoja_limites.get_all_values()
+        for fila in filas[1:]:
+            if len(fila) >= 2 and str(fila[0]).strip().upper() == str(folio).strip().upper():
+                mat_nombre = str(fila[1]).strip().upper()
+                if mat_nombre and mat_nombre not in materiales:
+                    materiales.append(mat_nombre)
+    except Exception:
+        pass
+    return materiales
+
 def limpiar_monto(valor):
     if str(valor).strip() == "" or valor is None: return 0.0
     try: return float(str(valor).replace("$", "").replace(",", "").replace(" ", "").strip())
@@ -112,6 +162,8 @@ if doc:
             obra_presupuesto = next((f for f in datos_presupuestos if str(obtener_valor(f, ["FOLIO"], "")).upper() == folio_seleccionado.upper()), {})
             
             datos_completos = {**obra_activa, **obra_presupuesto}
+            materiales_del_folio = obtener_materiales_del_folio(doc, folio_seleccionado)
+            opciones_selector_mat = materiales_del_folio + ["OTRO (ESCRIBIR MANUALMENTE)"] if materiales_del_folio else ["OTRO (ESCRIBIR MANUALMENTE)"]
             
             valor_monto = obtener_valor(datos_completos, ["TOTAL", "MONTO", "PRESUPUESTO", "AUTORIZADO"], 0.0)
             presupuesto_total = limpiar_monto(valor_monto)
@@ -180,7 +232,7 @@ if doc:
             if total_devoluciones > 0:
                 st.success(f"✅ **MATERIAL DEVUELTO (SOBRANTE EN BODEGA):** Se han recuperado **${total_devoluciones:,.2f} MXN** a favor de la rentabilidad de la obra.")
             if total_desperdicio > 0:
-                st.warning(f"⚠️ **MERMA / DESPERDICIO POR DESTAJO ACUMULADO:** Se han registrado **${total_desperdicio:,.2f} MXN** en desperdicio de material (${descuento_destajo_desperdicio:,.2f} con cargo a destajo del aplicador).")
+                st.warning(f"⚠️ **MERMA / DESPERDICIO POR DESTAJO ACUMULADO:** Se han registrado **${total_desperdicio:,.2f} MXN** en desperdicio de material (${descuento_destajo_desperdicio:,.2f} descontados a destajo del aplicador).")
             
             m1, m2, m3, m4 = st.columns(4)
             with m1: st.metric("Presupuesto Total", f"${presupuesto_total:,.2f}")
@@ -211,7 +263,7 @@ if doc:
             
             c_bolsa1, c_bolsa2, c_bolsa3, c_bolsa4 = st.columns(4)
             c_bolsa1.metric("Bolsa Autorizada (Por m²)", f"${bolsa_mano_obra:,.2f}")
-            c_bolsa2.metric("Cargo por Desperdicio", f"-${descuento_destajo_desperdicio:,.2f}")
+            c_bolsa2.metric("Descuento por Desperdicio", f"-${descuento_destajo_desperdicio:,.2f}")
             c_bolsa3.metric("Nómina Pagada (Total)", f"${costo_nomina:,.2f}")
             
             if saldo_mano_obra >= 0:
@@ -262,7 +314,7 @@ if doc:
             # ==========================================
             st.markdown("---")
             st.subheader("📦 Radiografía de Materiales, Devoluciones y Destajo de Desperdicio")
-            st.write("Control exacto (admite decimales y fracciones por destajo) del inventario despachado, recuperado y desperdiciado en obra.")
+            st.write("Control exacto con impacto simultáneo en Utilidad, Nómina a Destajo, Límites de Materiales y Almacén.")
             
             col_aut, col_dev, col_desp = st.columns(3)
             
@@ -281,27 +333,30 @@ if doc:
                 
                 with st.expander("➕ Autorizar Material Extra (Admite Fracciones)"):
                     with st.form("form_ajuste_ext"):
+                        mat_sel_ext = st.selectbox("Seleccionar Material de la Obra", opciones_selector_mat, key="sel_ext")
+                        desc_ext_manual = st.text_input("O escribe el Material (si elegiste OTRO)", placeholder="Ej. MASTER LASSER 4.0")
                         cant_ext = st.number_input("Cantidad Extra (Ej. 0.5, 1.25, 2.0)", min_value=0.05, value=1.0, step=0.25, format="%.2f")
                         unidad_ext = st.selectbox("Unidad", ["ROLLOS", "CUBETAS", "BULTOS", "LITROS", "M2", "PIEZAS"], key="uni_ext")
-                        desc_ext = st.text_input("Nombre del Material Extra", placeholder="Ej. MASTER LASSER 4.0")
                         monto_ext = st.number_input("Costo del Material Extra ($)", min_value=0.0, step=50.0, format="%.2f")
                         
                         # 🔒 CANDADO DE SEGURIDAD
                         clave_auth_ext = st.text_input("🔑 Clave de Autorización (Dirección)", type="password")
                         
                         if st.form_submit_button("Autorizar Extra"):
+                            nombre_final_ext = desc_ext_manual.strip() if mat_sel_ext == "OTRO (ESCRIBIR MANUALMENTE)" else mat_sel_ext
                             if clave_auth_ext != "IMAC2026":
                                 st.error("🚫 Clave de autorización incorrecta. Movimiento denegado.")
-                            elif desc_ext and monto_ext > 0:
+                            elif nombre_final_ext and monto_ext > 0:
                                 cant_ext_str = f"{cant_ext:g}"
-                                concepto_ext = f"{cant_ext_str} {unidad_ext} - {desc_ext.upper()}"
+                                concepto_ext = f"{cant_ext_str} {unidad_ext} - {nombre_final_ext.upper()}"
                                 fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
                                 hoja_gastos.append_row([fecha_actual, folio_seleccionado, concepto_ext, "AJUSTE EXCEPCIONAL", round(monto_ext, 2)])
+                                sincronizar_inventario_y_limites(doc, folio_seleccionado, nombre_final_ext, cant_ext, unidad_ext, "EXTRA")
                                 registrar_bitacora(doc, "Panel Financiero", f"Autorizó material extra: {concepto_ext} por ${monto_ext:,.2f} ({folio_seleccionado})")
-                                st.success("✅ Ajuste Excepcional autorizado y cargado al costo de la obra.")
+                                st.success("✅ Ajuste Excepcional autorizado e impactado en costos y límites.")
                                 st.rerun()
                             else:
-                                st.error("Llenar descripción y costo válido.")
+                                st.error("Selecciona o escribe el material e ingresa un costo válido.")
 
             # --- PROCESO 2: DEVOLUCIONES DE MATERIAL (ADMITE FRACCIONES / DESTAJOS) ---
             with col_dev:
@@ -309,27 +364,30 @@ if doc:
                 
                 with st.form("form_devolucion"):
                     st.write("**Registrar Material Devuelto (Entero o Fracción)**")
+                    mat_sel_dev = st.selectbox("Seleccionar Material Devuelto", opciones_selector_mat, key="sel_dev")
+                    desc_dev_manual = st.text_input("O escribe el Material (si elegiste OTRO)", placeholder="Ej. IMPAC 5000")
                     cant_dev = st.number_input("Cantidad Devuelta (Ej. 0.25, 0.5, 1.0)", min_value=0.05, value=1.0, step=0.25, format="%.2f")
                     unidad_dev = st.selectbox("Unidad Devuelta", ["ROLLOS", "CUBETAS", "BULTOS", "LITROS", "M2", "PIEZAS"], key="uni_dev")
-                    desc_dev = st.text_input("Nombre del Material Devuelto", placeholder="Ej. IMPAC 5000")
                     monto_dev = st.number_input("Valor Recuperado ($)", min_value=0.0, step=50.0, format="%.2f")
                     
                     # 🔒 CANDADO DE SEGURIDAD
                     clave_auth_dev = st.text_input("🔑 Clave de Autorización (Almacén/Dirección)", type="password")
                     
                     if st.form_submit_button("♻️ Aplicar Devolución a Utilidad"):
+                        nombre_final_dev = desc_dev_manual.strip() if mat_sel_dev == "OTRO (ESCRIBIR MANUALMENTE)" else mat_sel_dev
                         if clave_auth_dev != "IMAC2026":
                             st.error("🚫 Clave de autorización incorrecta. Movimiento denegado.")
-                        elif desc_dev and monto_dev > 0:
+                        elif nombre_final_dev and monto_dev > 0:
                             cant_dev_str = f"{cant_dev:g}"
-                            concepto_dev = f"{cant_dev_str} {unidad_dev} - {desc_dev.upper()}"
+                            concepto_dev = f"{cant_dev_str} {unidad_dev} - {nombre_final_dev.upper()}"
                             fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
                             hoja_gastos.append_row([fecha_actual, folio_seleccionado, concepto_dev, "DEVOLUCIÓN DE MATERIAL", round(monto_dev, 2)])
+                            sincronizar_inventario_y_limites(doc, folio_seleccionado, nombre_final_dev, cant_dev, unidad_dev, "DEVOLUCION")
                             registrar_bitacora(doc, "Panel Financiero", f"Registró devolución fraccionada: {concepto_dev} recuperando ${monto_dev:,.2f} ({folio_seleccionado})")
-                            st.success("✅ Devolución registrada con éxito. Utilidad aumentada.")
+                            st.success("✅ Devolución registrada en finanzas, límites y almacén.")
                             st.rerun()
                         else:
-                            st.error("Llenar descripción y monto válido.")
+                            st.error("Selecciona o escribe el material e ingresa un monto válido.")
                 
                 devoluciones_mat = [g for g in gastos_filtrados if str(g.get("Categoría", "")).upper().strip() == "DEVOLUCIÓN DE MATERIAL"]
                 if devoluciones_mat:
@@ -339,7 +397,7 @@ if doc:
                 else:
                     st.info("Aún no hay devoluciones registradas en esta obra.")
 
-            # --- PROCESO 3: DESTAJO DE DESPERDICIO DE MATERIAL (FRACCIONADO / POR ETAPA) ---
+            # --- PROCESO 3: DESTAJO DE DESPERDICIO DE MATERIAL (IMPACTO TOTAL) ---
             with col_desp:
                 st.markdown("#### 3️⃣ Destajo de Desperdicio (Merma)")
                 
@@ -349,11 +407,13 @@ if doc:
                         "Corte / Etapa de Destajo",
                         ["DESTAJO 1 (AVANCE)", "DESTAJO 2 (AVANCE)", "DESTAJO 3 (AVANCE)", "DESTAJO 4 (AVANCE)", "CIERRE / FINIQUITO DE OBRA"]
                     )
+                    mat_sel_desp = st.selectbox("Material Desperdiciado", opciones_selector_mat, key="sel_desp")
+                    desc_desp_manual = st.text_input("Detalle Adicional / Responsable", placeholder="Ej. Cuadrilla Juan / Losa Norte")
+                    
                     cant_desp = st.number_input("Cantidad Desperdiciada (Fracción o Entero)", min_value=0.05, value=0.25, step=0.05, format="%.2f")
                     unidad_desp = st.selectbox("Unidad de Medida", ["CUBETAS", "ROLLOS", "BULTOS", "LITROS", "M2", "PIEZAS"], key="uni_desp")
-                    desc_desp = st.text_input("Material / Responsable", placeholder="Ej. ACRILTECHO - Cuadrilla Juan")
                     
-                    st.caption("💡 Ingresa el Costo por Unidad Completa para cálculo automático (Cantidad × Costo), o pon el Monto Directo:")
+                    st.caption("💡 Ingresa Costo por Unidad Completa (calcula Cantidad × Costo) o Monto Directo:")
                     col_c1, col_c2 = st.columns(2)
                     with col_c1:
                         costo_unit_desp = st.number_input("Costo x Unidad ($)", min_value=0.0, step=50.0, format="%.2f")
@@ -361,28 +421,36 @@ if doc:
                         monto_directo_desp = st.number_input("O Monto Directo ($)", min_value=0.0, step=50.0, format="%.2f")
                     
                     tipo_cargo_desp = st.radio(
-                        "Aplicación del Desperdicio:",
-                        [" Cargo a Destajo (Descuenta al Aplicador)", "🏢 Merma Operativa (Absorbe la Obra)"]
+                        "Impacto Financiero del Desperdicio:",
+                        ["👷‍♂️ Cargo a Destajo (Descuenta al Aplicador y Sube Costo)", "🏢 Merma Operativa (Solo Absorbe la Obra)"]
                     )
                     
                     # 🔒 CANDADO DE SEGURIDAD
-                    clave_auth_desp = st.text_input("🔑 Clave de Autorización ( Auditoría/Dirección)", type="password")
+                    clave_auth_desp = st.text_input("🔑 Clave de Autorización (Auditoría/Dirección)", type="password")
                     
                     if st.form_submit_button("📉 Registrar Destajo de Desperdicio"):
+                        nombre_base_desp = desc_desp_manual.strip() if mat_sel_desp == "OTRO (ESCRIBIR MANUALMENTE)" else mat_sel_desp
+                        detalle_resp = f" ({desc_desp_manual.strip().upper()})" if (mat_sel_desp != "OTRO (ESCRIBIR MANUALMENTE)" and desc_desp_manual.strip()) else ""
                         monto_final_desp = round(monto_directo_desp if monto_directo_desp > 0 else (cant_desp * costo_unit_desp), 2)
+                        
                         if clave_auth_desp != "IMAC2026":
                             st.error("🚫 Clave de autorización incorrecta. Movimiento denegado.")
-                        elif not desc_desp.strip() or monto_final_desp <= 0:
-                            st.error("⚠️ Ingresa el nombre del material y un costo unitario o monto directo mayor a $0.")
+                        elif not nombre_base_desp or monto_final_desp <= 0:
+                            st.error("⚠️ Selecciona el material e ingresa un costo unitario o monto directo mayor a $0.")
                         else:
                             cant_desp_str = f"{cant_desp:g}"
-                            concepto_desp = f"[{corte_destajo}] {cant_desp_str} {unidad_desp} - {desc_desp.upper()}"
+                            concepto_desp = f"[{corte_destajo}] {cant_desp_str} {unidad_desp} - {nombre_base_desp.upper()}{detalle_resp}"
                             categoria_desp = "DESPERDICIO CARGO DESTAJO" if "Cargo a Destajo" in tipo_cargo_desp else "DESPERDICIO DE MATERIAL"
                             fecha_actual = datetime.datetime.now().strftime("%d/%m/%Y")
                             
+                            # 1. Impacta Gastos_Financieros (Utilidad y Bolsa de Destajo)
                             hoja_gastos.append_row([fecha_actual, folio_seleccionado, concepto_desp, categoria_desp, monto_final_desp])
+                            # 2. Impacta Limites_Materiales y Almacén
+                            sincronizar_inventario_y_limites(doc, folio_seleccionado, nombre_base_desp, cant_desp, unidad_desp, "MERMA", corte_destajo)
+                            # 3. Impacta Bitácora de Auditoría
                             registrar_bitacora(doc, "Panel Financiero", f"Registró desperdicio por destajo ({categoria_desp}): {concepto_desp} por ${monto_final_desp:,.2f} ({folio_seleccionado})")
-                            st.success(f"✅ Desperdicio de ${monto_final_desp:,.2f} registrado en {corte_destajo}.")
+                            
+                            st.success(f"✅ Desperdicio de ${monto_final_desp:,.2f} impactado en Finanzas, Destajo y Límites.")
                             st.rerun()
                 
                 desperdicios_mat = [g for g in gastos_filtrados if str(g.get("Categoría", "")).upper().strip() in ["DESPERDICIO DE MATERIAL", "DESPERDICIO CARGO DESTAJO"]]

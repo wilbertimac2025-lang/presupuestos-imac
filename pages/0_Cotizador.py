@@ -11,6 +11,7 @@ from PIL import Image
 import io
 from PyPDF2 import PdfMerger
 import math
+import re
 
 # --- CONFIGURACIÓN CORPORATIVA ---
 icono_navegador = "logo_imac_2026.png" if os.path.exists("logo_imac_2026.png") else ("logo_tarc.png" if os.path.exists("logo_tarc.png") else "🏢")
@@ -90,6 +91,9 @@ CATALOGO_SISTEMAS = {
     "BITUFLEX": {"precio": 252.00, "garantia": "NO APLICA", "desc": "SUMINISTRO DE SOLVENTE Y/O MATERIAL BASE.", "espec": "APLICACIÓN SEGÚN REQUERIMIENTOS EN OBRA.", "ficha": "ficha_bituflex.pdf", "color": "NEGRO"}
 }
 
+LISTA_ASESORES = ["JOSE CARLOS MORALES MORALES", "FRANCISCO JAVIER CARO YAÑEZ"]
+LISTA_TIPOS_OBRA = ["LOCAL", "FORÁNEA"]
+
 def obtener_material_base(sistema):
     sis = str(sistema).upper()
     if "(ESCUELAS)" in sis:
@@ -139,7 +143,120 @@ def obtener_nuevo_folio(hoja):
     anio_corto = datetime.datetime.now().strftime("%y")
     return f"OBRA-TEMP-{datetime.datetime.now().strftime('%H%M')}-{anio_corto}"
 
-def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio, tipo_obra, proyecto, ubicacion):
+def actualizar_fila_presupuesto(hoja, fila_idx, valores_fila):
+    try:
+        rango = f"A{fila_idx}:O{fila_idx}"
+        try:
+            hoja.update(rango, [valores_fila])
+        except TypeError:
+            hoja.update(values=[valores_fila], range_name=rango)
+        return True
+    except Exception:
+        return False
+
+def sincronizar_limites_materiales(doc, folio_actual, materiales_calculados, es_edicion=False):
+    if not doc: return
+    try:
+        hoja_limites = doc.worksheet("Limites_Materiales")
+        if es_edicion:
+            filas_lim = hoja_limites.get_all_values()
+            indices_borrar = [idx + 1 for idx, fila in enumerate(filas_lim) if len(fila) > 0 and str(fila[0]).strip() == str(folio_actual).strip()]
+            for r_idx in reversed(indices_borrar):
+                hoja_limites.delete_rows(r_idx)
+        estatus_lim = "ACTUALIZADO COTIZADOR" if es_edicion else "AUTORIZADO COTIZADOR"
+        for mat_sis, info in materiales_calculados.items():
+            hoja_limites.append_row([folio_actual, mat_sis, info["cant"], estatus_lim])
+    except Exception:
+        pass
+
+def reconstruir_areas_desde_resumen(resumen_str):
+    zonas_reconstruidas = []
+    if not resumen_str:
+        return [{"area": "ÁREA PRINCIPAL", "sistema": "LEVANTAMIENTO", "m2": 1.0, "descuento_pct": 0.0, "color_final": "NO APLICA"}]
+    partes = resumen_str.split(" / ")
+    for p in partes:
+        match = re.match(r"^(.*?)\s*\(([\d.,]+)m2\)$", p.strip())
+        if match:
+            nombre_z = match.group(1).strip()
+            try:
+                m2_z = float(match.group(2).replace(",", ""))
+            except Exception:
+                m2_z = 0.0
+            zonas_reconstruidas.append({"area": nombre_z, "sistema": "LEVANTAMIENTO", "m2": m2_z, "descuento_pct": 0.0, "color_final": "NO APLICA"})
+        else:
+            zonas_reconstruidas.append({"area": p.strip(), "sistema": "LEVANTAMIENTO", "m2": 0.0, "descuento_pct": 0.0, "color_final": "NO APLICA"})
+    return zonas_reconstruidas if zonas_reconstruidas else [{"area": "ÁREA 1", "sistema": "LEVANTAMIENTO", "m2": 0.0, "descuento_pct": 0.0, "color_final": "NO APLICA"}]
+
+def cargar_folio_en_sesion(fila, fila_idx):
+    st.session_state["folio_en_edicion"] = fila[0]
+    st.session_state["fila_idx_edicion"] = fila_idx
+    st.session_state["form_asesor"] = fila[2] if len(fila) > 2 and fila[2] in LISTA_ASESORES else LISTA_ASESORES[0]
+    st.session_state["form_cliente"] = fila[3] if len(fila) > 3 else ""
+    st.session_state["form_compania"] = fila[4] if len(fila) > 4 else ""
+    st.session_state["form_telefono"] = fila[5] if len(fila) > 5 else ""
+    st.session_state["form_correo"] = fila[6] if len(fila) > 6 else ""
+    st.session_state["form_proyecto"] = fila[7] if len(fila) > 7 else ""
+    st.session_state["form_ubicacion"] = fila[8] if len(fila) > 8 else ""
+    st.session_state["form_tipo_obra"] = fila[11] if len(fila) > 11 and fila[11] in LISTA_TIPOS_OBRA else LISTA_TIPOS_OBRA[0]
+
+    zonas_cargadas = []
+    if len(fila) > 14 and fila[14].strip():
+        try:
+            payload = json.loads(fila[14])
+            zonas_cargadas = payload.get("zonas", [])
+            st.session_state["form_costo_extra"] = float(payload.get("costo_extra", 0.0))
+            st.session_state["form_desc_extra"] = payload.get("desc_extra", "")
+            st.session_state["form_anotaciones"] = payload.get("anotaciones", "")
+            st.session_state["form_desc_global"] = float(payload.get("desc_global_pct", 0.0))
+            if "fecha_validez" in payload:
+                try:
+                    st.session_state["form_fecha_validez"] = datetime.datetime.strptime(payload["fecha_validez"], "%d/%m/%Y").date()
+                except Exception:
+                    st.session_state["form_fecha_validez"] = datetime.date.today() + datetime.timedelta(days=15)
+        except Exception:
+            zonas_cargadas = reconstruir_areas_desde_resumen(fila[9] if len(fila) > 9 else "")
+    else:
+        zonas_cargadas = reconstruir_areas_desde_resumen(fila[9] if len(fila) > 9 else "")
+        st.session_state["form_costo_extra"] = 0.0
+        st.session_state["form_desc_extra"] = ""
+        st.session_state["form_anotaciones"] = ""
+        st.session_state["form_desc_global"] = 0.0
+
+    if not zonas_cargadas:
+        zonas_cargadas = [{"area": "", "sistema": "LEVANTAMIENTO", "m2": 0.0, "descuento_pct": 0.0, "color_final": "NO APLICA"}]
+
+    st.session_state["form_num_areas"] = min(max(len(zonas_cargadas), 1), 10)
+    for idx, z in enumerate(zonas_cargadas):
+        st.session_state[f"n_{idx}"] = z.get("area", "")
+        sis_z = z.get("sistema", "LEVANTAMIENTO")
+        st.session_state[f"s_{idx}"] = sis_z if sis_z in CATALOGO_SISTEMAS else "LEVANTAMIENTO"
+        st.session_state[f"m_{idx}"] = float(z.get("m2", 0.0))
+        st.session_state[f"desc_{idx}"] = float(z.get("descuento_pct", 0.0))
+        color_guardado = z.get("color_final", "NO APLICA")
+        if color_guardado in ["BLANCO", "ROJO"]:
+            st.session_state[f"color_{idx}"] = color_guardado
+
+def limpiar_sesion_formulario():
+    st.session_state["folio_en_edicion"] = None
+    st.session_state["fila_idx_edicion"] = None
+    st.session_state["form_cliente"] = ""
+    st.session_state["form_compania"] = ""
+    st.session_state["form_telefono"] = ""
+    st.session_state["form_correo"] = ""
+    st.session_state["form_proyecto"] = ""
+    st.session_state["form_ubicacion"] = ""
+    st.session_state["form_costo_extra"] = 0.0
+    st.session_state["form_desc_extra"] = ""
+    st.session_state["form_anotaciones"] = ""
+    st.session_state["form_desc_global"] = 0.0
+    st.session_state["form_num_areas"] = 1
+    for i in range(10):
+        st.session_state[f"n_{i}"] = ""
+        st.session_state[f"s_{i}"] = "LEVANTAMIENTO"
+        st.session_state[f"m_{i}"] = 0.0
+        st.session_state[f"desc_{i}"] = 0.0
+
+def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio, tipo_obra, proyecto, ubicacion, es_edicion=False):
     try:
         remitente = os.environ.get("CORREO_BOT")
         password = os.environ.get("PASS_BOT")
@@ -147,11 +264,14 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio, ti
         if tipo_obra == "LOCAL": correo_destino = "comercial@grupo-imac.com, rh@grupo-imac.com, aco@grupo-imac.com, act@grupo-imac.com"
         else: correo_destino = "comercial@grupo-imac.com, foraneos@grupo-imac.com, direccion@grupo-imac.com"
         
+        prefijo_asunto = "ACTUALIZACIÓN FOLIO" if es_edicion else "NUEVO FOLIO"
+        accion_texto = "actualizado (edición / descuento / anexo)" if es_edicion else "registrado"
+        
         msg = EmailMessage()
-        msg['Subject'] = f'NUEVO FOLIO {folio}: Presupuesto {cliente} - Zona: {tipo_obra}'
+        msg['Subject'] = f'{prefijo_asunto} {folio}: Presupuesto {cliente} - Zona: {tipo_obra}'
         msg['From'] = remitente
         msg['To'] = correo_destino
-        msg.set_content(f"Se ha registrado un nuevo presupuesto en el sistema.\n\nFolio Asignado: {folio}\nCliente: {cliente}\nAsesor: {asesor}\nProyecto: {proyecto}\nUbicación: {ubicacion}\nZona Logística: {tipo_obra}\n\nSe adjunta el documento oficial.")
+        msg.set_content(f"Se ha {accion_texto} un presupuesto en el sistema.\n\nFolio Asignado: {folio}\nCliente: {cliente}\nAsesor: {asesor}\nProyecto: {proyecto}\nUbicación: {ubicacion}\nZona Logística: {tipo_obra}\n\nSe adjunta el documento oficial actualizado.")
         msg.add_attachment(pdf_bytes, maintype='application', subtype='pdf', filename=nombre_archivo)
         
         with smtplib.SMTP('smtp.gmail.com', 587) as smtp:
@@ -160,6 +280,24 @@ def enviar_respaldo_correo(pdf_bytes, nombre_archivo, cliente, asesor, folio, ti
             smtp.send_message(msg)
         return True, "OK"
     except Exception as e: return False, str(e)
+
+# --- INICIALIZAR VARIABLES DE ESTADO ---
+if "form_num_areas" not in st.session_state: st.session_state["form_num_areas"] = 1
+if "form_fecha_validez" not in st.session_state: st.session_state["form_fecha_validez"] = datetime.date.today() + datetime.timedelta(days=15)
+if "form_cliente" not in st.session_state: st.session_state["form_cliente"] = ""
+if "form_compania" not in st.session_state: st.session_state["form_compania"] = ""
+if "form_telefono" not in st.session_state: st.session_state["form_telefono"] = ""
+if "form_correo" not in st.session_state: st.session_state["form_correo"] = ""
+if "form_asesor" not in st.session_state: st.session_state["form_asesor"] = LISTA_ASESORES[0]
+if "form_tipo_obra" not in st.session_state: st.session_state["form_tipo_obra"] = LISTA_TIPOS_OBRA[0]
+if "form_proyecto" not in st.session_state: st.session_state["form_proyecto"] = ""
+if "form_ubicacion" not in st.session_state: st.session_state["form_ubicacion"] = ""
+if "form_costo_extra" not in st.session_state: st.session_state["form_costo_extra"] = 0.0
+if "form_desc_extra" not in st.session_state: st.session_state["form_desc_extra"] = ""
+if "form_anotaciones" not in st.session_state: st.session_state["form_anotaciones"] = ""
+if "form_desc_global" not in st.session_state: st.session_state["form_desc_global"] = 0.0
+if "folio_en_edicion" not in st.session_state: st.session_state["folio_en_edicion"] = None
+if "fila_idx_edicion" not in st.session_state: st.session_state["fila_idx_edicion"] = None
 
 col_logo, col_tit = st.columns([1, 4])
 with col_logo:
@@ -172,20 +310,65 @@ with col_logo:
 with col_tit: st.title("Presupuestos Obras Grupo IMAC")
 st.markdown("---")
 
-num_areas = st.number_input("¿Cuántas áreas distintas vas a cotizar?", min_value=1, max_value=10, value=1)
+# --- 🚀 SELECTOR DE MODO: NUEVO VS EDITAR ---
+modo_operacion = st.radio(
+    "Seleccione la operación que desea realizar:",
+    ["🆕 Crear Nueva Cotización", "✏️ Editar / Aplicar Descuento a Cotización Existente"],
+    horizontal=True
+)
+es_modo_edicion = (modo_operacion == "✏️ Editar / Aplicar Descuento a Cotización Existente")
+
+if not es_modo_edicion and st.session_state.get("folio_en_edicion") is not None:
+    limpiar_sesion_formulario()
+
+if es_modo_edicion:
+    st.info("💡 **Modo Edición Activo:** Selecciona un Folio existente para cargar sus datos automáticamente. Puedes aplicar descuentos, ajustar metros o aumentar el número de áreas para agregar un nuevo sistema.")
+    doc_busqueda = conectar_sheets()
+    hoja_busqueda = doc_busqueda.worksheet("Presupuestos") if doc_busqueda else None
+    if hoja_busqueda:
+        todas_las_filas = hoja_busqueda.get_all_values()
+        opciones_folios = {}
+        for idx, fila in enumerate(todas_las_filas):
+            if idx == 0 and ("FOLIO" in str(fila[0]).upper() or "FECHA" in str(fila[1]).upper()):
+                continue
+            if len(fila) > 3 and str(fila[0]).strip():
+                etiqueta = f"{fila[0]} | {fila[3]} - {fila[7] if len(fila) > 7 else ''}"
+                opciones_folios[etiqueta] = (fila, idx + 1)
+        
+        if opciones_folios:
+            col_sel, col_btn = st.columns([3, 1])
+            with col_sel:
+                seleccion_etiqueta = st.selectbox("🔍 Buscar Presupuesto por Folio / Cliente:", list(opciones_folios.keys()))
+            with col_btn:
+                st.write("")
+                st.write("")
+                if st.button("📥 Cargar Folio", use_container_width=True):
+                    fila_sel, idx_sel = opciones_folios[seleccion_etiqueta]
+                    cargar_folio_en_sesion(fila_sel, idx_sel)
+                    st.rerun()
+            
+            if st.session_state.get("folio_en_edicion"):
+                st.success(f"✏️ Editando actualmente el Folio: **{st.session_state['folio_en_edicion']}**")
+        else:
+            st.warning("⚠️ No se encontraron presupuestos registrados en la hoja.")
+    else:
+        st.error("⚠️ No se pudo conectar con Google Sheets para listar los folios.")
+    st.markdown("---")
+
+num_areas = st.number_input("¿Cuántas áreas distintas vas a cotizar? (Aumenta este número si deseas agregar un área nueva)", min_value=1, max_value=10, key="form_num_areas")
 st.write("### 1. Datos de Contacto y Asignación")
-fecha_validez = st.date_input("Presupuesto válido hasta:", value=datetime.date.today() + datetime.timedelta(days=15))
-cliente = st.text_input("Nombre del Cliente")
-compania = st.text_input("Compañía / Empresa")
-telefono = st.text_input("Teléfono de Contacto")
-correo_cliente = st.text_input("Correo Electrónico del Cliente")
-asesor = st.selectbox("Nombre del Asesor", ["JOSE CARLOS MORALES MORALES", "FRANCISCO JAVIER CARO YAÑEZ"])
-tipo_obra = st.selectbox("Tipo de Proyecto / Logística:", ["LOCAL", "FORÁNEA"])
+fecha_validez = st.date_input("Presupuesto válido hasta:", key="form_fecha_validez")
+cliente = st.text_input("Nombre del Cliente", key="form_cliente")
+compania = st.text_input("Compañía / Empresa", key="form_compania")
+telefono = st.text_input("Teléfono de Contacto", key="form_telefono")
+correo_cliente = st.text_input("Correo Electrónico del Cliente", key="form_correo")
+asesor = st.selectbox("Nombre del Asesor", LISTA_ASESORES, key="form_asesor")
+tipo_obra = st.selectbox("Tipo de Proyecto / Logística:", LISTA_TIPOS_OBRA, key="form_tipo_obra")
 
 st.write("---")
 st.write("### 2. Información del Proyecto")
-proyecto = st.text_input("Nombre del Proyecto / Obra")
-ubicacion = st.text_input("Ubicación / Dirección de la Obra")
+proyecto = st.text_input("Nombre del Proyecto / Obra", key="form_proyecto")
+ubicacion = st.text_input("Ubicación / Dirección de la Obra", key="form_ubicacion")
 
 st.write("---")
 st.write("### 3. Desglose de Áreas")
@@ -215,15 +398,16 @@ for i in range(int(num_areas)):
         
         st.info(f"**Precio x m² (Fijo + IVA):** ${precio_dinamico:,.2f}")
         
-        desc_pct = st.number_input(f"Descuento para esta área (%)", min_value=0.0, max_value=100.0, value=0.0, step=1.0, key=f"desc_{i}")
+        desc_pct = st.number_input(f"Descuento para esta área (%)", min_value=0.0, max_value=100.0, step=1.0, key=f"desc_{i}")
         
     zonas_data.append({"area": n, "sistema": s, "m2": m, "descuento_pct": desc_pct, "color_final": color_elegido})
 
 st.write("---")
-st.write("### 4. Ajustes y Anexos")
-costo_extra = st.number_input("Costo Extra Adicional (Pesos $)", min_value=0.0)
-desc_extra = st.text_input("Concepto del Costo Extra")
-anotaciones_asesor = st.text_area("Anotaciones Especiales para el Cliente")
+st.write("### 4. Ajustes, Descuento General y Anexos")
+desc_global_pct = st.number_input("🏷️ Descuento General Adicional a toda la Cotización (%)", min_value=0.0, max_value=100.0, step=1.0, key="form_desc_global")
+costo_extra = st.number_input("Costo Extra Adicional (Pesos $)", min_value=0.0, key="form_costo_extra")
+desc_extra = st.text_input("Concepto del Costo Extra", key="form_desc_extra")
+anotaciones_asesor = st.text_area("Anotaciones Especiales para el Cliente", key="form_anotaciones")
 
 st.write("**Evidencia Fotográfica de la Obra:**")
 fotos_subidas = st.file_uploader("📸 Subir Evidencia (Opcional)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
@@ -234,9 +418,14 @@ with colB:
     c1 = st.text_input("Nota para Foto 2"); c3 = st.text_input("Nota para Foto 4"); c5 = st.text_input("Nota para Foto 6")
 comentarios_fotos = [c0, c1, c2, c3, c4, c5]
 
-if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
+texto_boton = "💾 ACTUALIZAR PRESUPUESTO Y REGENERAR PDF" if es_modo_edicion else "GENERAR PRESUPUESTO OFICIAL"
+
+if st.button(texto_boton, type="primary"):
     c_valido = cliente.strip(); a_valido = asesor.strip(); u_valido = ubicacion.strip(); p_valido = proyecto.strip()
-    if not c_valido or not a_valido or not u_valido or not p_valido: st.error("⚠️ El Cliente, Asesor, Nombre del Proyecto y Ubicación son obligatorios.")
+    if es_modo_edicion and not st.session_state.get("folio_en_edicion"):
+        st.error("⚠️ Primero debes seleccionar un Folio de la lista y hacer clic en '📥 Cargar Folio'.")
+    elif not c_valido or not a_valido or not u_valido or not p_valido:
+        st.error("⚠️ El Cliente, Asesor, Nombre del Proyecto y Ubicación son obligatorios.")
     else:
         with st.spinner("Calculando Rendimientos, Aplicando Descuentos y Ensamblando PDF..."):
             temp_paths = []
@@ -249,10 +438,16 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
 
             doc = conectar_sheets()
             hoja = doc.worksheet("Presupuestos") if doc else None
-            folio_actual = obtener_nuevo_folio(hoja)
+            
+            if es_modo_edicion and st.session_state.get("folio_en_edicion"):
+                folio_actual = st.session_state["folio_en_edicion"]
+            else:
+                folio_actual = obtener_nuevo_folio(hoja)
 
             subtotal_obras = sum(z["m2"] * CATALOGO_SISTEMAS[z["sistema"]]["precio"] for z in zonas_data)
-            total_descuento = sum((z["m2"] * CATALOGO_SISTEMAS[z["sistema"]]["precio"]) * (z["descuento_pct"] / 100.0) for z in zonas_data)
+            descuento_por_areas = sum((z["m2"] * CATALOGO_SISTEMAS[z["sistema"]]["precio"]) * (z["descuento_pct"] / 100.0) for z in zonas_data)
+            descuento_global_monto = (subtotal_obras - descuento_por_areas) * (desc_global_pct / 100.0)
+            total_descuento = descuento_por_areas + descuento_global_monto
             
             bolsa_mano_obra = 0.0
             materiales_calculados = {}
@@ -495,18 +690,38 @@ if st.button("GENERAR PRESUPUESTO OFICIAL", type="primary"):
 
             nombre_file = f"Presupuesto_{folio_actual}_{cliente.replace(' ', '_')}.pdf"
             
-            if doc:
-                try:
-                    hoja_limites = doc.worksheet("Limites_Materiales")
-                    for mat_sis, info in materiales_calculados.items(): hoja_limites.append_row([folio_actual, mat_sis, info["cant"], "AUTORIZADO COTIZADOR"])
-                except Exception: pass
+            # --- 🚀 SINCRONIZACIÓN DE LÍMITES Y PRESUPUESTOS (NUEVO O EDICIÓN) ---
+            sincronizar_limites_materiales(doc, folio_actual, materiales_calculados, es_edicion=es_modo_edicion)
 
             if hoja:
                 resumen = " / ".join([f"{z['area']} ({z['m2']}m2)" for z in zonas_data])
-                hoja.append_row([folio_actual, fecha_hoy, asesor, cliente, compania, telefono, correo_cliente, proyecto.upper(), ubicacion.upper(), resumen, total_final, tipo_obra, bolsa_mano_obra, resumen_insumos_str])
-                registrar_bitacora(doc, "Cotizador", f"Generó presupuesto {folio_actual}")
+                datos_tecnicos_json = json.dumps({
+                    "zonas": zonas_data,
+                    "costo_extra": costo_extra,
+                    "desc_extra": desc_extra,
+                    "anotaciones": anotaciones_asesor,
+                    "desc_global_pct": desc_global_pct,
+                    "fecha_validez": fecha_validez.strftime("%d/%m/%Y")
+                }, ensure_ascii=False)
+                
+                fila_datos = [
+                    folio_actual, fecha_hoy, asesor, cliente, compania,
+                    telefono, correo_cliente, proyecto.upper(), ubicacion.upper(),
+                    resumen, total_final, tipo_obra, bolsa_mano_obra,
+                    resumen_insumos_str, datos_tecnicos_json
+                ]
+                
+                if es_modo_edicion and st.session_state.get("fila_idx_edicion"):
+                    actualizar_fila_presupuesto(hoja, st.session_state["fila_idx_edicion"], fila_datos)
+                    registrar_bitacora(doc, "Cotizador", f"Actualizó presupuesto {folio_actual} (Descuento/Anexo)")
+                else:
+                    hoja.append_row(fila_datos)
+                    registrar_bitacora(doc, "Cotizador", f"Generó presupuesto {folio_actual}")
             
-            enviar_respaldo_correo(pdf_final_para_descargar, nombre_file, cliente, asesor, folio_actual, tipo_obra, proyecto, ubicacion)
+            enviar_respaldo_correo(pdf_final_para_descargar, nombre_file, cliente, asesor, folio_actual, tipo_obra, proyecto, ubicacion, es_edicion=es_modo_edicion)
             
-        st.success(f"✅ Presupuesto {folio_actual} generado y Límites autorizados con éxito.")
+        if es_modo_edicion:
+            st.success(f"✅ Presupuesto {folio_actual} actualizado en Google Sheets y Límites recalculados con éxito.")
+        else:
+            st.success(f"✅ Presupuesto {folio_actual} generado y Límites autorizados con éxito.")
         st.download_button(label="📄 DESCARGAR PRESUPUESTO", data=pdf_final_para_descargar, file_name=nombre_file, mime="application/pdf")
